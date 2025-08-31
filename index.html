@@ -601,7 +601,7 @@ let currentQuizData = null;
 let currentQuestionIndex = 0;
 let score = 0;
 
-const API_KEY = "";
+const API_KEY = "AIzaSyC9_Wtjdqdf3Phn3rCUlr0EcDEu2cqsWWk";
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
 
 async function callGemini(prompt) {
@@ -663,6 +663,9 @@ async function callGemini(prompt) {
 
     } catch (error) {
         console.error("Gemini API call error:", error);
+        if (error.message && error.message.includes("403")) {
+             return `<p class="text-red-500">AI 기능에 대한 접근 권한이 없습니다 (오류 코드: 403). API 키 설정이나 서버 권한 문제일 수 있습니다. 잠시 후 다시 시도해 주세요.</p>`;
+        }
         return `<p class="text-red-500">오류가 발생했습니다: ${error.message}</p>`;
     }
 }
@@ -744,8 +747,7 @@ function renderContent(category, searchTerm = '') {
     if (category === 'intro') {
         html = `
             <div class="content-card p-6 md:p-8 mb-6">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4">사진학 인터랙티브 가이드에 오신 것을 환영합니다.</h2>
-                <p class="text-lg text-gray-600 mb-6">이 가이드는 방대한 사진학 이론을 쉽게 탐색하고 학습할 수 있도록 설계되었습니다. 좌측 메뉴를 통해 주제별로 질문과 답변을 확인하거나, 상단의 검색창을 이용해 원하는 용어를 빠르게 찾아보세요.</p>
+                <h2 class="text-3xl font-bold text-gray-800 mb-4">사람새퀴면 이정도면 알아봐야 한다. 알아서 공부해라.</h2>
                 <p class="text-lg text-gray-600">아래 차트는 사진 노출의 핵심 요소인 '조리개'와 '셔터 속도'의 '스톱' 개념을 시각화한 것입니다. 각 막대를 클릭하거나 마우스를 올려 빛의 양이 어떻게 변하는지 직관적으로 확인해보세요. 1스톱 차이는 빛의 양이 두 배 또는 절반이 되는 것을 의미합니다.</p>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -778,21 +780,17 @@ function renderContent(category, searchTerm = '') {
                 createChart('shutterChart', '셔터 속도', shutterData, 'rgba(255, 159, 64, 0.6)', 'rgba(255, 159, 64, 1)');
             }
         }, 0);
-
     } else {
         let itemsToRender = [];
         if (searchTerm) {
             Object.values(photographyData).forEach(cat => {
                 itemsToRender.push(...cat.filter(item => item.q.toLowerCase().includes(searchTerm.toLowerCase()) || item.a.toLowerCase().includes(searchTerm.toLowerCase())));
             });
-            if (itemsToRender.length === 0) {
-                html = `<div class="content-card p-6 text-center"><p class="text-gray-500">"${searchTerm}"에 대한 검색 결과가 없습니다.</p></div>`;
-            }
         } else {
-            itemsToRender = photographyData[category];
+            itemsToRender = photographyData[category] || [];
         }
 
-        if (itemsToRender && itemsToRender.length > 0) {
+        if (itemsToRender.length > 0) {
             html = itemsToRender.map((item, index) => `
                 <div class="content-card mb-4">
                     <div class="question p-6 flex justify-between items-center">
@@ -802,12 +800,18 @@ function renderContent(category, searchTerm = '') {
                     <div class="answer border-t border-gray-200 text-gray-700 leading-relaxed">
                         <p>${item.a.replace(/\n/g, '<br>')}</p>
                         <div class="mt-4 pt-4 border-t border-dashed flex flex-wrap gap-2">
-                            <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${item.q}" data-a="${item.a}">✨ 쉽게 설명</button>
-                            <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${item.q}" data-a="${item.a}">✨ 깊이 알아보기</button>
+                            <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${item.q.replace(/"/g, '&quot;')}" data-a="${item.a.replace(/"/g, '&quot;')}">✨ 쉽게 설명</button>
+                            <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${item.q.replace(/"/g, '&quot;')}" data-a="${item.a.replace(/"/g, '&quot;')}">✨ 깊이 알아보기</button>
                         </div>
                     </div>
                 </div>
             `).join('');
+        } else {
+            if (searchTerm) {
+                html = `<div class="content-card p-6 text-center"><p class="text-gray-500">"${searchTerm}"에 대한 검색 결과가 없습니다.</p></div>`;
+            } else {
+                html = `<div class="content-card p-6 text-center"><p class="text-gray-500">표시할 내용이 없습니다.</p></div>`;
+            }
         }
         mainContent.innerHTML = html;
     }
@@ -857,7 +861,7 @@ function renderContent(category, searchTerm = '') {
 function displayQuizQuestion() {
     const q = currentQuizData.questions[currentQuestionIndex];
     const optionsHtml = q.options.map(option => `
-        <div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option}">
+        <div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option.replace(/"/g, '&quot;')}">
             ${option}
         </div>
     `).join('');
@@ -900,7 +904,7 @@ function checkQuizAnswer() {
     const correctAnswer = currentQuizData.questions[currentQuestionIndex].answer;
 
     modalBody.querySelectorAll('.quiz-option').forEach(opt => {
-        opt.style.pointerEvents = 'none'; // Disable further clicks
+        opt.style.pointerEvents = 'none'; 
         const optionText = opt.dataset.option;
         if (optionText === correctAnswer) {
             opt.classList.add('correct');
@@ -938,7 +942,7 @@ async function generateQuiz() {
     modalTitle.textContent = `${categoryName} 퀴즈`;
     
     let contentForQuiz = [];
-    if (category === 'intro' || category === 'all') {
+    if (category === 'intro' || category === 'all' || !photographyData[category]) {
          Object.values(photographyData).forEach(cat => contentForQuiz.push(...cat));
     } else {
         contentForQuiz = photographyData[category];
@@ -1000,9 +1004,6 @@ searchInput.addEventListener('input', handleSearch);
 
 // Initial render
 renderContent('intro');
-
 </script>
 </body>
 </html>
-
-
