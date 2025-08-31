@@ -3,19 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>좀 열심히 해보자.. (✨)</title>
+    <title>이쉐키들아.. 좀 열심히 해보자.. (✨)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jamo-js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chosen Palette: Calm Harmony Neutrals -->
-    <!-- Application Structure Plan: 사람쉐키면.. -->
-    <!-- Visualization & Content Choices: 
-        - [노출 값 비교] -> Goal: Compare -> Viz: Bar Chart -> Interaction: Hover for details -> Justification: 셔터 속도와 조리개 값의 단계별 변화(빛의 양이 두 배/절반이 되는 관계)를 시각적으로 명확하게 보여주어 스톱 개념을 직관적으로 이해시킵니다. -> Library: Chart.js (Canvas).
-        - [Q&A 목록] -> Goal: Organize/Inform -> Viz: Accordion List -> Interaction: Click to expand/collapse answer, Click Gemini buttons for modal content -> Justification: 방대한 양의 질문과 답변을 깔끔하게 정리하고, 사용자가 관심 있는 질문에만 집중하여 화면의 복잡도를 낮추고 가독성을 높입니다. -> Library/Method: HTML/CSS/JS.
-        - [Gemini 기능] -> Goal: Explain/Explore/Test -> Viz: Modal Window -> Interaction: Click button to generate content -> Justification: LLM을 통해 생성된 추가 정보를 기존 UI를 해치지 않는 모달 창에 표시하여 심화 학습 및 자가 진단 기능을 제공합니다. -> Library/Method: JS Fetch API, HTML/CSS.
-        - [전체 콘텐츠 검색] -> Goal: Explore -> Viz: Input Field -> Interaction: Type to filter -> Justification: 사용자가 특정 용어나 개념을 빠르게 찾을 수 있도록 하여 학습 효율성을 극대화하는 필수적인 탐색 도구입니다. -> Library/Method: JS.
-    -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
             font-family: 'Pretendard', sans-serif;
@@ -130,7 +122,7 @@
         <nav class="w-full md:w-64 bg-white md:bg-gray-100 p-4 md:p-6 shadow-md md:shadow-none shrink-0">
             <div class="flex items-center mb-6">
                 <i class="fas fa-camera-retro text-3xl text-gray-700 mr-3"></i>
-                <h1 class="text-xl font-bold text-gray-800">쮸쀼의 비밀교실 ✨</h1>
+                <h1 class="text-xl font-bold text-gray-800">쮸쀼의 비밀교실✨</h1>
             </div>
             <div class="mb-4">
                 <input type="text" id="searchInput" placeholder="용어 검색..." class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400">
@@ -141,11 +133,11 @@
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="exposure">노출</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="lens">렌즈와 광학</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="digital">디지털</a></li>
-                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="history">사진사 & 사조</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="film">필름과 현상</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="lighting">조명과 필터</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="history">사진사 & 사조</a></li>
             </ul>
-             <div class="mt-6">
+            <div class="mt-6">
                 <button id="quizBtn" class="w-full bg-gray-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors">✨ AI 퀴즈 생성</button>
             </div>
         </nav>
@@ -174,6 +166,7 @@ const photographyData = {
     structure: [
         { q: "거리계 창", a: "RF(레인지파인더) 카메라에서 초점을 맞추기 위해 사용하는 창." },
         { q: "대형 카메라", a: "4x5인치 이상의 시트 필름을 사용하는 카메라로, 최고 화질과 무브먼트 기능을 가짐." },
+        { q: "렌즈 셔터", a: "렌즈 내부에 위치한 셔터. 플래시 전속 동조가 가능하나 고속 셔터에 한계가 있음." },
         { q: "미러 (Mirror)", a: "DSLR 내부에서 렌즈를 통과한 빛을 뷰파인더로 반사시키는 거울." },
         { q: "OVF (Optical Viewfinder)", a: "광학식 뷰파인더. DSLR에서 미러와 펜타프리즘을 통해 렌즈로 들어오는 상을 직접 보는 방식." },
         { q: "펜타프리즘 (Pentaprism)", a: "DSLR에서 미러에 반사된 상의 좌우를 바로잡아 뷰파인더로 보여주는 오각기둥 프리즘." },
@@ -189,12 +182,14 @@ const photographyData = {
         { q: "TLR 카메라", a: "상단의 보는 렌즈와 하단의 촬영 렌즈가 분리된 이안 반사식 카메라." }
     ],
     exposure: [
+        { q: "B셔터 (Bulb)", a: "셔터 버튼을 누르고 있는 동안 셔터가 계속 열려있는 모드." },
+        { q: "i 셔터 (Instantaneous)", a: "설정된 시간만큼 셔터가 자동으로 열리고 닫히는 일반 촬영 모드." },
+        { q: "t 셔터 (Time)", a: "셔터 버튼을 한 번 누르면 열리고, 다시 누를 때까지 계속 열려있는 모드." },
         { q: "가이드 넘버 (GN)", a: "플래시의 광량을 나타내는 수치. GN = f값 × 거리로 계산." },
         { q: "감도 (ISO)", a: "빛에 반응하는 필름/센서의 민감도." },
         { q: "노출 (Exposure)", a: "센서나 필름에 도달하는 빛의 총량으로, 조리개, 셔터 속도, ISO로 조절됨." },
         { q: "등가노출", a: "조리개와 셔터속도 조합을 바꿔도 빛의 총량이 같아 동일한 노출을 얻는 것. (상반법칙 기반)" },
         { q: "반사식 노출계", a: "피사체에서 반사되는 빛을 측정하는 노출계. 카메라에 내장된 TTL 방식이 대표적." },
-        { q: "벌브(b) 셔터", a: "셔터 버튼을 누르고 있는 동안 셔터가 계속 열려있는 모드." },
         { q: "부분측광", a: "화면 중앙의 일부 영역(약 6.5%)만으로 노출을 측정하는 방식." },
         { q: "상반법칙", a: "빛의 강도(조리개)와 노출 시간(셔터속도)의 곱이 같으면 결과물의 밝기도 같다는 원리." },
         { q: "셔터우선식", a: "촬영자가 셔터 속도를 설정하면 카메라가 조리개를 자동으로 맞추는 노출 모드." },
@@ -204,8 +199,6 @@ const photographyData = {
         { q: "적정 노출", a: "작가의 의도에 맞게 장면의 밝기가 적절히 표현된 노출." },
         { q: "중앙중점 평균측광", a: "화면 중앙부에 비중을 두고 전체적으로 노출을 측정하는 방식." },
         { q: "평가측광", a: "화면 전체를 여러 영역으로 나눠 분석하여 노출을 결정하는 가장 일반적인 측광 방식." },
-        { q: "i 셔터 (Instantaneous)", a: "설정된 시간만큼 셔터가 자동으로 열리고 닫히는 일반 촬영 모드." },
-        { q: "t 셔터 (Time)", a: "셔터 버튼을 한 번 누르면 열리고, 다시 누를 때까지 계속 열려있는 모드." },
         { q: "TTL (Through-The-Lens)", a: "렌즈를 통해 들어온 빛을 측정하는 방식." }
     ],
     lens: [
@@ -255,17 +248,20 @@ const photographyData = {
         { q: "리버스 링", a: "렌즈를 뒤집어 바디에 장착하여 고배율 접사를 가능하게 하는 액세서리." }
     ],
     digital: [
+        { q: "Adobe RGB", a: "전문가용 작업에 적합한 넓은 색공간." },
+        { q: "Lab Color", a: "인간의 시각을 기반으로 한 색상 모델로, 장비나 매체에 독립적인 색을 표현." },
         { q: "가상 드럼 스캐너", a: "드럼 스캐너와 유사한 고품질 스캔 방식." },
         { q: "감마 (Gamma)", a: "디스플레이의 입력 신호와 실제 밝기 출력 간의 비선형 관계를 나타낸 값." },
         { q: "계단현상 (Aliasing)", a: "이미지의 경계선이나 그라데이션이 계단처럼 깨져 보이는 현상." },
-        { q: "글로벌셔터 (Global Shutter)", a: "센서의 모든 픽셀이 동시에 빛을 기록하는 방식으로, 롤링셔터 왜곡이 없음." },
+        { q: "글로벌셔터 (Global Shutter)", a: "미러리스 카메라 등에 사용되는 방식으로, 센서의 모든 픽셀이 동시에 빛을 기록하여 롤링셔터 왜곡이 없음." },
         { q: "노이즈 (Noise)", a: "고감도나 장노출 시 이미지에 생기는 불규칙한 점이나 얼룩." },
         { q: "다이내믹 레인지 (DR)", a: "이미지 센서가 한 번에 기록할 수 있는 가장 어두운 부분부터 가장 밝은 부분까지의 범위." },
         { q: "디지털 은염(C) 프린터", a: "디지털 데이터를 인화지에 레이저로 노광한 뒤 화학 처리로 출력하는 방식." },
         { q: "드럼 스캐너", a: "최고 품질의 스캔이 가능한 고성능 스캐너." },
-        { q: "롤링셔터 (Rolling Shutter)", a: "센서가 이미지를 순차적으로 읽어들여 빠른 움직임이 왜곡되는 현상 (젤로 현상)." },
+        { q: "롤링셔터 (Rolling Shutter)", a: "미러리스 카메라 등에 주로 사용되는 방식으로, 센서가 이미지를 순차적으로 읽어들여 빠른 움직임이 왜곡되는 현상 (젤로 현상)." },
         { q: "루미넌스 노이즈", a: "노이즈의 종류로, 이미지의 밝기 값에 나타나는 불규칙한 입자." },
         { q: "레이저 프린터", a: "토너 가루를 용지에 정전기로 부착시킨 뒤 열로 고정하는 방식의 프린터." },
+        { q: "메타데이터", a: "이미지 파일에 포함된 촬영 정보(노출값, 날짜, 카메라 기종 등) 및 저작권 정보." },
         { q: "모아레 (Moiré)", a: "피사체의 반복적인 패턴이 센서 픽셀과 간섭하여 생기는 물결무늬 왜곡." },
         { q: "미러리스 카메라", a: "DSLR의 미러와 펜타프리즘을 제거하고 전자식 뷰파인더(EVF)를 사용하는 카메라." },
         { q: "밝기 (Brightness)", a: "빛 자체의 물리적 양." },
@@ -280,6 +276,7 @@ const photographyData = {
         { q: "스미어 (Smear)", a: "CCD 센서에서 강한 빛이 들어올 때 수직으로 빛의 띠가 생기는 현상." },
         { q: "스캐너", a: "아날로그 이미지(필름, 인화지)를 디지털 파일로 변환하는 장치." },
         { q: "스풀 (Spool)", a: "인쇄 데이터를 프린터로 보내기 전 임시 저장하는 공간이나 기능." },
+        { q: "순색", a: "가장 맑고 순수한 색으로, 채도가 가장 높은 상태." },
         { q: "안료 잉크", a: "입자 형태의 잉크. 보존성은 좋으나 색 표현 영역은 염료보다 좁음." },
         { q: "염료 잉크", a: "액체에 완전히 녹는 잉크. 색 표현 영역은 넓으나 보존성은 안료보다 약함." },
         { q: "염료승화 프린터", a: "열을 가해 잉크를 기화시켜 용지에 색을 입히는 방식의 프린터." },
@@ -290,7 +287,7 @@ const photographyData = {
         { q: "전자 셔터", a: "기계적 움직임 없이 전자적으로 센서 노출을 제어하는 셔터. 롤링셔터 왜곡이 발생할 수 있음." },
         { q: "조도 (Lux)", a: "특정 면에 도달하는 빛의 양." },
         { q: "채널 (Channel)", a: "이미지를 구성하는 색상 정보의 단위 (예: RGB 채널, CMYK 채널)." },
-        { q: "채도 (Saturation)", a: "색의 맑고 탁한 정도, 즉 순도." },
+        { q: "채도", a: "색의 맑고 탁한 정도, 즉 순도." },
         { q: "캘리브레이션 (Calibration)", a: "장비(모니터, 프린터)의 색상 표현을 표준에 맞게 교정하는 작업." },
         { q: "컬러 노이즈", a: "노이즈의 종류로, 이미지에 나타나는 불규칙한 색상 얼룩." },
         { q: "컬러미터", a: "모니터 캘리브레이션에 사용되는 색 측정 장치." },
@@ -373,6 +370,7 @@ const photographyData = {
         { q: "로버트 프랭크", a: "사진집 '미국인들'을 통해 미국 사회의 이면을 주관적 시선으로 기록." },
         { q: "로드첸코, 알렉산더", a: "러시아 구성주의 사진가. 과감한 앵글과 기하학적 구도를 사용." },
         { q: "롤랑 바르트", a: "'카메라 루시다'에서 스투디움과 푼크툼의 개념을 제시한 기호학자." },
+        { q: "로저 펜튼", a: "크림 전쟁을 기록한 사진가. 조작된 전쟁 사진으로 논란이 되기도 했으나, 초기 전쟁 사진의 선구자로 평가됨." },
         { q: "루이스 발츠", a: "'뉴 토포그라픽스' 사진가로, 산업 단지 등 인공적 풍경을 무표정하게 기록." },
         { q: "루이스 하인", a: "아동 노동의 실태를 고발하여 사회 변화에 기여한 다큐멘터리 사진가." },
         { q: "리 프리들랜더", a: "도시 풍경 속 그림자, 반사 등을 활용해 복잡한 시각적 구성을 만든 사진가. '뉴 도큐먼츠' 참여." },
@@ -383,6 +381,7 @@ const photographyData = {
         { q: "마틴 파", a: "소비문화와 관광 사회를 풍자적이고 과장된 컬러로 기록하는 매그넘 소속 작가." },
         { q: "만 레이", a: "다다이즘과 초현실주의 사진가. 레이요그라피(포토그램)로 유명." },
         { q: "매그넘 포토스", a: "카파, 브레송 등이 창립한, 사진가의 권익을 보호하는 국제 사진가 그룹." },
+        { q: "매튜 브래디", a: "미국 남북전쟁을 기록한 사진가. 사진을 '역사적 기록'으로 확립하는 데 기여." },
         { q: "메이킹 포토", a: "작가가 장면을 적극적으로 연출하여 만드는 사진." },
         { q: "모홀리 나기, 라즐로", a: "바우하우스의 교수로, '뉴 비전'을 이끌며 사진의 실험적 가능성을 확장." },
         { q: "미니멀리즘", a: "최소한의 요소와 단순한 형태로 본질을 표현하려는 예술 경향." },
@@ -400,8 +399,6 @@ const photographyData = {
         { q: "샤우덱, 얀", a: "사진에 직접 채색을 하여 에로틱하고 그로테스크한 분위기를 연출하는 작가." },
         { q: "소냐 노스코비아크", a: "f/64 그룹의 창립 멤버." },
         { q: "스티븐 쇼어", a: "'뉴 컬러' 사진가로, 대형 카메라를 이용해 미국 일상의 풍경을 객관적으로 기록." },
-        { q: "알프레드 스티글리츠", a: "사진분리파 운동을 이끌며 미국 현대사진의 기틀을 마련한 사진가." },
-        { q: "시퀀스 포토", a: "듀안 마이클이 사용한, 여러 장의 사진을 연속적으로 배열해 이야기를 만드는 방식." },
         { q: "신디 셔먼", a: "작가 자신이 직접 모델이 되어 대중매체 속 여성 이미지를 재현하고 해체하는 작업을 함." },
         { q: "신조형주의", a: "마이너 화이트, 아론 시스킨드 등 추상적이고 내면적인 표현을 추구한 사진 경향." },
         { q: "스트레이트 포토그래피", a: "사진 고유의 특성을 살려 대상을 정직하게 묘사하려는 경향." },
@@ -409,6 +406,7 @@ const photographyData = {
         { q: "아라키 노부요시", a: "성(에로스)과 죽음(타나토스)을 주제로 사적인 일상을 노골적으로 기록한 일본 사진가." },
         { q: "아론 시스킨드", a: "추상표현주의의 영향을 받아 벽의 낙서나 얼룩 등을 평면적으로 촬영한 추상사진가." },
         { q: "아우라 (Aura)", a: "발터 벤야민이 제시한, 원본 예술작품만이 가지는 고유한 분위기나 기운." },
+        { q: "안드레아스 거스키", a: "베허 부부의 제자로, 대형 카메라로 자본주의 사회의 풍경을 거대한 스케일로 기록하는 작가." },
         { q: "안셀 아담스", a: "'존 시스템'을 창시하고 미국 서부의 웅장한 자연을 담은 풍경 사진의 대가." },
         { q: "앙드레 케르테츠", a: "일상의 순간을 시적이고 기하학적인 구도로 포착한 헝가리 출신 사진가." },
         { q: "앙리 카르티에 브레송", a: "'결정적 순간'의 개념을 정립한 스냅 사진의 대가. 매그넘 창립 멤버." },
@@ -421,12 +419,12 @@ const photographyData = {
         { q: "에로스/타나토스", a: "아라키 노부요시의 작업에서 나타나는 삶(성)과 죽음의 주제." },
         { q: "오스카 귀스타브 레일랜더", a: "여러 네거티브를 합성한 '두 갈래 길'로 유명한 회화주의 사진가." },
         { q: "워커 에반스", a: "FSA 소속으로 활동하며, 미국 대공황기의 모습을 냉정하고 객관적인 시선으로 기록." },
+        { q: "유형학적 사진", a: "동일한 대상을 일관된 규칙으로 촬영, 병렬 배치하여 형태를 탐구하는 사진." },
         { q: "윌러드 반 다이크", a: "f/64 그룹의 멤버." },
         { q: "윌리엄 이글스턴", a: "일상의 평범한 장면을 컬러로 담아 컬러 사진을 예술의 반열에 올린 '뉴 컬러'의 선구자." },
         { q: "윌리엄 클라인", a: "거칠고, 흔들리고, 과감한 스타일로 도시의 에너지를 담아낸 스트리트 포토그래퍼." },
         { q: "으젠느 앗제", a: "사라져가는 근대 파리의 모습을 방대하게 기록한 사진가." },
-        { q: "유형학적 사진", a: "동일한 대상을 일관된 규칙으로 촬영, 병렬 배치하여 형태를 탐구하는 사진." },
-        { q: "이모젠 커닝험", a: "f/64 그룹의 여성 멤버로, 식물 클로즈업과 인물 사진으로 유명." },
+        { q: "이모젠 커닝엄", a: "f/64 그룹의 여성 멤버로, 식물 클로즈업과 인물 사진으로 유명." },
         { q: "이퀴벌런트 (Equivalent)", a: "스티글리츠의 작업. 구름 사진을 통해 자신의 내면과 감정을 표현한 추상적 사진." },
         { q: "인간 가족전", a: "에드워드 스타이켄이 기획한, 인류의 보편적 모습을 담은 대규모 사진전." },
         { q: "자연주의 사진", a: "인위적 연출을 배제하고 자연 그대로의 모습을 사실적으로 담으려는 사진 경향." },
@@ -441,7 +439,7 @@ const photographyData = {
         { q: "존 사코우스키", a: "MoMA의 사진 큐레이터로, '뉴 도큐먼츠', '창과 거울' 등 중요한 전시를 기획." },
         { q: "존 폴 에드워즈", a: "f/64 그룹의 멤버." },
         { q: "존 하트필드", a: "정치적 메시지를 담은 포토몽타주로 유명한 다다이즘 작가." },
-        { q: "즉물주의 (New Objectivity)", a: "대상을 감정 없이 객관적이고 사실적으로 묘사하려는 사진 경향." },
+        { q: "즉물주의 (Neue Sachlichkeit)", a: "대상을 감정 없이 객관적이고 사실적으로 묘사하려는 사진 경향." },
         { q: "창과 거울", a: "존 사코우스키가 기획한 전시. 사진을 세상을 기록하는 '창'과 작가의 내면을 비추는 '거울'로 구분." },
         { q: "초현실주의", a: "꿈과 무의식의 세계를 표현하려 한 예술 사조." },
         { q: "추상사진", a: "구체적인 대상을 재현하기보다 선, 면, 질감 등 조형 요소 자체를 탐구하는 사진." },
@@ -464,7 +462,7 @@ const photographyData = {
         { q: "프레드 아처", a: "안셀 아담스와 함께 존 시스템을 만든 인물." },
         { q: "피터 헨리 에머슨", a: "자연주의 사진을 주장한 사진가." },
         { q: "해리 캘러한", a: "아내 엘레노어 등 일상적 소재를 통해 빛과 형태를 탐구한 실험적 사진가." },
-        { q: "헨리 피치 로빈슨", a: "'임종' 등 여러 사진을 합성하여 극적인 장면을 연출한 회화주의 사진가." },
+        { q: "헨리 피치 로빈슨", a: "여러 사진을 합성하여 극적인 장면을 연출한 회화주의 사진가." },
         { q: "헬리오그래피", a: "니엡스가 발명한 세계 최초의 사진술." },
         { q: "회화주의 사진", a: "사진을 회화처럼 보이게 하려 한 19세기 후반의 예술 경향." },
         { q: "Aperture (어퍼쳐)", a: "마이너 화이트가 창간한, 예술사진 비평과 담론을 다룬 influential 사진 잡지." },
@@ -546,7 +544,6 @@ const photographyData = {
         { q: "동조 한계속도", a: "포컬 플레인 셔터에서 플래시가 화면 전체에 문제없이 터질 수 있는 가장 빠른 셔터 속도." },
         { q: "라이트 페인팅", a: "장노출 동안 광원을 움직여 빛의 궤적을 기록하는 촬영 기법." },
         { q: "램브란트 라이팅", a: "인물의 한쪽 뺨에 역삼각형 모양의 하이라이트를 만드는 고전적인 조명 방식." },
-        { q: "렌즈 셔터", a: "렌즈 내부에 위치한 셔터. 플래시 전속 동조가 가능하나 고속 셔터에 한계가 있음." },
         { q: "렌즈 후드", a: "렌즈 전면에 부착하여 불필요한 빛(플레어)을 막고 렌즈를 보호하는 액세서리." },
         { q: "리플렉터 (Reflector)", a: "조명 앞에 장착하여 빛을 모으거나 방향을 제어하는 반사판." },
         { q: "모델링 램프", a: "스튜디오 조명에서 플래시가 터지기 전 빛의 방향과 그림자를 미리 보여주는 지속광." },
@@ -581,12 +578,17 @@ const photographyData = {
         { q: "FL 필터", a: "형광등(Fluorescent) 조명 아래서 촬영 시 발생하는 녹색 기운을 보정하는 필터." },
         { q: "LB 필터", a: "색온도를 미세하게 조정하는(Light Balancing) 필터." },
         { q: "LED 조명", a: "발열이 적고 효율이 높은 지속광 조명." },
-        { q: "LPL (Linear Polarizing) 필터", a: "선편광 필터. DSLR 등에서 측광 오류를 일으킬 수 있음." },
+        { q: "LPL (Linear Polarizing) Filter", a: "선편광 필터. DSLR 등에서 측광 오류를 일으킬 수 있음." },
         { q: "ND (Neutral Density) Filter", a: "색에 영향을 주지 않고 광량만 줄이는 필터." },
         { q: "PL (Polarizing) Filter", a: "편광 필터. 물이나 유리의 표면 반사를 제거하는 데 사용." },
         { q: "UV (Ultraviolet) Filter", a: "자외선을 차단하는 필터. 현재는 주로 렌즈 보호용으로 사용." }
     ]
 };
+
+// Sort all data in Korean alphabetical order
+Object.keys(photographyData).forEach(key => {
+    photographyData[key].sort((a, b) => a.q.localeCompare(b.q, 'ko-KR'));
+});
 
 const mainContent = document.getElementById('mainContent');
 const navLinks = document.querySelectorAll('.nav-item');
@@ -653,12 +655,18 @@ async function callGemini(prompt) {
         }
 
         const result = await response.json();
-        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
         
         if (!text) {
              throw new Error("No content received from API.");
         }
         
+        // Remove markdown code block fences if they exist
+        text = text.trim();
+        if (text.startsWith('```json') && text.endsWith('```')) {
+            text = text.substring('```json'.length, text.length - '```'.length).trim();
+        }
+
         return text;
 
     } catch (error) {
@@ -694,6 +702,11 @@ geminiModal.addEventListener('click', (e) => {
     }
 });
 
+document.addEventListener('keydown', (e) => {
+    if (e.key === "Escape" && !geminiModal.classList.contains('hidden')) {
+        hideModal();
+    }
+});
 
 function createChart(canvasId, label, data, backgroundColor, borderColor) {
     const ctx = document.getElementById(canvasId).getContext('2d');
@@ -729,9 +742,23 @@ function createChart(canvasId, label, data, backgroundColor, borderColor) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    displayColors: false,
                     callbacks: {
                         label: function(context) {
                             let value = context.dataset.data[context.dataIndex];
+                            let description = '';
+                            if (canvasId === 'apertureChart') {
+                                if (value <= 3) description = '매우 깊은 심도 (모든 것이 선명)';
+                                else if (value <= 6) description = '깊은 심도 (대부분 선명)';
+                                else if (value <= 9) description = '얕은 심도 (배경 흐림)';
+                                else description = '매우 얕은 심도 (배경이 많이 흐림)';
+                                return `${context.label}: ${description}`;
+                            } else if (canvasId === 'shutterChart') {
+                                if (value <= 4) description = '순간 포착 (움직임 정지)';
+                                else if (value <= 8) description = '일반적 촬영 (자연스러운 움직임)';
+                                else description = '장노출 (움직임 흐림 효과)';
+                                return `${context.label}: ${description}`;
+                            }
                             return `${context.label}: 빛의 양 ${Math.pow(2, context.dataset.data.length - 1 - value).toFixed(0)}배 감소`;
                         }
                     }
@@ -747,8 +774,8 @@ function renderContent(category, searchTerm = '') {
     if (category === 'intro') {
         html = `
             <div class="content-card p-6 md:p-8 mb-6">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4">9월이다..</h2><br><br><br>
-                <p class="text-lg text-gray-600">아래 차트는 사진 노출의 핵심 요소인 '조리개'와 '셔터 속도'의 '스톱' 개념을 시각화한 것입니다. 각 막대를 클릭하거나 마우스를 올려 빛의 양이 어떻게 변하는지 직관적으로 확인해보세요. 1스톱 차이는 빛의 양이 두 배 또는 절반이 되는 것을 의미합니다.</p>
+                <h2 class="text-3xl font-bold text-gray-800 mb-4">9월이다.. 알아서 공부해라.</h2><br><br>
+                <p class="text-lg text-gray-600">아래 차트는 사진 노출의 핵심 요소인 '조리개'와 '셔터 속도'의 '스톱' 개념을 시각화한 것입니다. 각 막대에 마우스를 올려 빛의 양, **심도**와 **움직임 표현**이 어떻게 변하는지 직관적으로 확인해보세요.</p>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="content-card p-6">
@@ -764,27 +791,40 @@ function renderContent(category, searchTerm = '') {
         mainContent.innerHTML = html;
 
         const apertureData = [
-            { label: 'f/1.4', value: 10 }, { label: 'f/2', value: 9 }, { label: 'f/2.8', value: 8 }, 
-            { label: 'f/4', value: 7 }, { label: 'f/5.6', value: 6 }, { label: 'f/8', value: 5 }, 
-            { label: 'f/11', value: 4 }, { label: 'f/16', value: 3 }, { label: 'f/22', value: 2 }
+            { label: 'f/1', value: 11 }, { label: 'f/1.4', value: 10 }, { label: 'f/2', value: 9 }, 
+            { label: 'f/2.8', value: 8 }, { label: 'f/4', value: 7 }, { label: 'f/5.6', value: 6 }, 
+            { label: 'f/8', value: 5 }, { label: 'f/11', value: 4 }, { label: 'f/16', value: 3 }, 
+            { label: 'f/22', value: 2 }
         ];
         const shutterData = [
-            { label: '1/15s', value: 10 }, { label: '1/30s', value: 9 }, { label: '1/60s', value: 8 }, 
-            { label: '1/125s', value: 7 }, { label: '1/250s', value: 6 }, { label: '1/500s', value: 5 }, 
-            { label: '1/1000s', value: 4 }, { label: '1/2000s', value: 3 }, { label: '1/4000s', value: 2 }
+            { label: '1s', value: 12}, { label: '1/2s', value: 11 }, { label: '1/4s', value: 10 }, 
+            { label: '1/8s', value: 9 }, { label: '1/15s', value: 8 }, { label: '1/30s', value: 7 }, 
+            { label: '1/60s', value: 6 }, { label: '1/125s', value: 5 }, { label: '1/250s', value: 4 }, 
+            { label: '1/500s', value: 3 }, { label: '1/1000s', value: 2 }
         ];
         
-        setTimeout(() => {
+        // This is where the charts are created.
+        const createCharts = () => {
             if (document.getElementById('apertureChart') && document.getElementById('shutterChart')) {
                 createChart('apertureChart', '조리개', apertureData, 'rgba(75, 192, 192, 0.6)', 'rgba(75, 192, 192, 1)');
                 createChart('shutterChart', '셔터 속도', shutterData, 'rgba(255, 159, 64, 0.6)', 'rgba(255, 159, 64, 1)');
             }
-        }, 0);
+        };
+
+        // Use a small timeout to ensure the canvas elements are in the DOM before trying to get their context
+        setTimeout(createCharts, 0);
+
     } else {
         let itemsToRender = [];
         if (searchTerm) {
+            const jamoSearch = (typeof Jamo !== 'undefined') ? Jamo.jamo(searchTerm.toLowerCase()) : '';
             Object.values(photographyData).forEach(cat => {
-                itemsToRender.push(...cat.filter(item => item.q.toLowerCase().includes(searchTerm.toLowerCase()) || item.a.toLowerCase().includes(searchTerm.toLowerCase())));
+                itemsToRender.push(...cat.filter(item => 
+                    item.q.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    item.a.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (jamoSearch && Jamo.jamo(item.q.toLowerCase()).includes(jamoSearch)) ||
+                    (jamoSearch && Jamo.jamo(item.a.toLowerCase()).includes(jamoSearch))
+                ));
             });
         } else {
             itemsToRender = photographyData[category] || [];
@@ -844,7 +884,7 @@ function renderContent(category, searchTerm = '') {
 
             if (action === 'explain') {
                 modalTitle.textContent = `"${question}" 쉽게 이해하기`;
-                prompt = `사진학 용어인 "${question}"에 대한 다음 설명을 초등학생도 이해할 수 있도록 쉽고 간단한 비유를 들어 한 문단으로 설명해줘. 설명: ${answer}`;
+                prompt = `사진학 용어인 "${question}"에 대해 핵심만 짚어 입시생이 시험장에서 바로 활용할 수 있도록 간결하게 설명해줘. 설명: ${answer}`;
             } else if (action === 'deepen') {
                 modalTitle.textContent = `"${question}" 깊이 알아보기`;
                 prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 심화 개념, 역사적 배경, 또는 실전 촬영 팁을 포함하여 전문가 수준의 추가 정보를 제공해줘. 설명: ${answer}`;
@@ -943,24 +983,27 @@ async function generateQuiz() {
     
     let contentForQuiz = [];
     if (category === 'intro' || category === 'all' || !photographyData[category]) {
-         Object.values(photographyData).forEach(cat => contentForQuiz.push(...cat));
+        Object.values(photographyData).forEach(cat => contentForQuiz.push(...cat));
     } else {
         contentForQuiz = photographyData[category];
     }
     
-    const topics = contentForQuiz.map(item => item.q).slice(0, 15).join(', ');
+    // Shuffle and select up to 15 terms
+    const shuffledTerms = contentForQuiz.sort(() => 0.5 - Math.random());
+    const topics = shuffledTerms.slice(0, 15).map(item => item.q).join(', ');
+
     const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
     
     const responseText = await callGemini(prompt);
     
     try {
         currentQuizData = JSON.parse(responseText);
-        currentQuestionIndex = 0;
-        score = 0;
-        if (currentQuizData.questions && currentQuizData.questions.length > 0) {
+        if (Array.isArray(currentQuizData.questions) && currentQuizData.questions.length > 0) {
+            currentQuestionIndex = 0;
+            score = 0;
             displayQuizQuestion();
         } else {
-            throw new Error("Invalid quiz format received.");
+            throw new Error("Invalid quiz format or empty questions array received.");
         }
     } catch(e) {
         console.error("Quiz parsing error:", e);
@@ -987,14 +1030,17 @@ function handleNavClick(e) {
 
 function handleSearch() {
     const searchTerm = searchInput.value;
-    if (searchTerm.length > 1) {
+    const activeLink = document.querySelector('.nav-item.active');
+
+    if (searchTerm.length > 0) {
         navLinks.forEach(link => link.classList.remove('active'));
         renderContent(null, searchTerm);
-    } else if (searchTerm.length === 0) {
-        const activeLink = document.querySelector('.nav-item.active') || document.querySelector('.nav-item[data-category="intro"]');
+    } else {
         if(activeLink) {
              activeLink.classList.add('active');
              renderContent(activeLink.dataset.category);
+        } else {
+             renderContent('intro');
         }
     }
 }
@@ -1002,11 +1048,11 @@ function handleSearch() {
 document.querySelector('nav ul').addEventListener('click', handleNavClick);
 searchInput.addEventListener('input', handleSearch);
 
-// Initial render
-renderContent('intro');
+// Use a self-executing function to avoid re-assigning window.onload
+(function() {
+    // Initial render
+    renderContent('intro');
+})();
 </script>
 </body>
 </html>
-
-
-
