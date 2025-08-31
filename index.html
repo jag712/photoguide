@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>이쉐키들아.. 좀 열심히 해보자.. (✨)</title>
+    <title>열심히 해보자.. (✨)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jamo-js"></script>
@@ -572,7 +572,7 @@ const photographyData = {
         { q: "확산광", a: "부드럽고 방향성이 약한 빛. 그림자가 연하게 생김." },
         { q: "화이트카드", a: "약 90% 반사율을 가진 흰색 카드로, 노출 보정을 통해 노출 기준으로 사용 가능." },
         { q: "후막동조", a: "셔터가 닫히기 직전에 플래시가 터지는 방식. 움직임의 궤적을 자연스럽게 표현." },
-        { q: "회절 (Diffraction)", a: "빛이 조리개처럼 좁은 틈을 지날 때 퍼지는 현상. 과도하게 조이면 화질 저하의 원인이 됨." },
+        { q: "회절 (Diffraction)", a: "빛이 조리개처럼 좁은 틈을 지날 때 퍼지는 현상. 과도하게 조이면 화질 저하의 원인." },
         { q: "CC 필터", a: "색 보정용(Color Compensating) 필터." },
         { q: "CPL (Circular Polarizing) Filter", a: "원편광 필터. DSLR/미러리스의 AF, 측광 오류를 방지." },
         { q: "FL 필터", a: "형광등(Fluorescent) 조명 아래서 촬영 시 발생하는 녹색 기운을 보정하는 필터." },
@@ -603,7 +603,8 @@ let currentQuizData = null;
 let currentQuestionIndex = 0;
 let score = 0;
 
-const API_KEY = "AIzaSyC9_Wtjdqdf3Phn3rCUlr0EcDEu2cqsWWk";
+// API 키를 빈 문자열로 설정하여 런타임 환경이 자동으로 키를 주입하도록 합니다.
+const API_KEY = ""; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
 
 async function callGemini(prompt) {
@@ -774,7 +775,9 @@ function renderContent(category, searchTerm = '') {
     if (category === 'intro') {
         html = `
             <div class="content-card p-6 md:p-8 mb-6">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4">9월이다.. 알아서 공부해라.</h2><br><br>
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">9월이다.. 알아서 공부해라.</h2>
+            </div>
+            <div class="content-card p-6 md:p-8 mb-6">
                 <p class="text-lg text-gray-600">아래 차트는 사진 노출의 핵심 요소인 '조리개'와 '셔터 속도'의 '스톱' 개념을 시각화한 것입니다. 각 막대에 마우스를 올려 빛의 양, **심도**와 **움직임 표현**이 어떻게 변하는지 직관적으로 확인해보세요.</p>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
