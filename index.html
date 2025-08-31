@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>이쉐키들아.. 좀 열심히 해보자.. (✨)</title>
+    <title>열심히 해보자.. (✨)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jamo-js"></script>
@@ -614,15 +614,12 @@ async function callGemini(prompt, useSchema = false) {
     try {
         const payload = {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-                responseMimeType: "application/json"
-            }
+            generationConfig: {}
         };
 
-        if (!useSchema) {
-            payload.generationConfig.responseMimeType = "text/plain";
-        } else {
-             payload.generationConfig.responseSchema = {
+        if (useSchema) {
+            payload.generationConfig.responseMimeType = "application/json";
+            payload.generationConfig.responseSchema = {
                 type: "OBJECT",
                 properties: {
                     questions: {
@@ -642,6 +639,8 @@ async function callGemini(prompt, useSchema = false) {
                     }
                 }
             };
+        } else {
+             payload.generationConfig.responseMimeType = "text/plain";
         }
 
         const response = await fetch(API_URL, {
