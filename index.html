@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>열심히 해보자.. (✨)</title>
+    <title>이쉐키들아.. 좀 열심히 해보자.. (✨)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jamo-js"></script>
@@ -607,7 +607,7 @@ let score = 0;
 const API_KEY = ""; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
 
-async function callGemini(prompt) {
+async function callGemini(prompt, useSchema = false) {
     showModal();
     modalBody.innerHTML = `<div class="flex items-center justify-center h-40"><div class="loader"></div></div>`;
     
@@ -615,12 +615,14 @@ async function callGemini(prompt) {
         const payload = {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
-                responseMimeType: "application/json",
+                responseMimeType: "application/json"
             }
         };
 
-        if (prompt.includes("퀴즈를 생성")) {
-            payload.generationConfig.responseSchema = {
+        if (!useSchema) {
+            payload.generationConfig.responseMimeType = "text/plain";
+        } else {
+             payload.generationConfig.responseSchema = {
                 type: "OBJECT",
                 properties: {
                     questions: {
@@ -640,9 +642,6 @@ async function callGemini(prompt) {
                     }
                 }
             };
-        } else {
-             payload.generationConfig.responseMimeType = "text/plain";
-             delete payload.generationConfig.responseSchema;
         }
 
         const response = await fetch(API_URL, {
@@ -894,7 +893,7 @@ function renderContent(category, searchTerm = '') {
             }
             
             if(prompt) {
-                const responseText = await callGemini(prompt);
+                const responseText = await callGemini(prompt, false);
                 modalBody.innerHTML = `<p>${responseText.replace(/\n/g, '<br>')}</p>`;
             }
         });
@@ -997,7 +996,7 @@ async function generateQuiz() {
 
     const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
     
-    const responseText = await callGemini(prompt);
+    const responseText = await callGemini(prompt, true);
     
     try {
         currentQuizData = JSON.parse(responseText);
