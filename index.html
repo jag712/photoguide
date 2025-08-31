@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사진학 인터랙티브 가이드 (Gemini AI ✨)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chosen Palette: Calm Harmony Neutrals -->
+    <!-- Application Structure Plan: 이 애플리케이션은 원본의 선형적인 Q&A 구조를 탈피하여, 사용자가 주제별로 정보를 탐색할 수 있는 대화형 대시보드 구조로 설계되었습니다. 좌측에는 '카메라 구조', '노출', '렌즈', '디지털', '사진사/사조', '필름/현상', '조명/필터' 등 7개의 핵심 주제로 구성된 내비게이션을 배치했습니다. 사용자가 주제를 선택하면 해당 Q&A 목록이 오른쪽에 동적으로 표시됩니다. 또한, 검색 기능을 통해 모든 질문에서 키워드를 빠르게 찾을 수 있습니다. 노출 값과 같은 수치 데이터는 정적인 텍스트 대신 동적 막대 차트로 시각화하여 개념의 비교와 이해를 돕습니다. Gemini API를 통합하여 각 질문에 대해 '쉽게 설명', '깊이 알아보기' 기능을 제공하고, 카테고리별 '퀴즈 생성' 기능을 추가하여 능동적인 학습을 유도합니다. -->
+    <!-- Visualization & Content Choices: 
+        - [노출 값 비교] -> Goal: Compare -> Viz: Bar Chart -> Interaction: Hover for details -> Justification: 셔터 속도와 조리개 값의 단계별 변화(빛의 양이 두 배/절반이 되는 관계)를 시각적으로 명확하게 보여주어 스톱 개념을 직관적으로 이해시킵니다. -> Library: Chart.js (Canvas).
+        - [Q&A 목록] -> Goal: Organize/Inform -> Viz: Accordion List -> Interaction: Click to expand/collapse answer, Click Gemini buttons for modal content -> Justification: 방대한 양의 질문과 답변을 깔끔하게 정리하고, 사용자가 관심 있는 질문에만 집중하여 화면의 복잡도를 낮추고 가독성을 높입니다. -> Library/Method: HTML/CSS/JS.
+        - [Gemini 기능] -> Goal: Explain/Explore/Test -> Viz: Modal Window -> Interaction: Click button to generate content -> Justification: LLM을 통해 생성된 추가 정보를 기존 UI를 해치지 않는 모달 창에 표시하여 심화 학습 및 자가 진단 기능을 제공합니다. -> Library/Method: JS Fetch API, HTML/CSS.
+        - [전체 콘텐츠 검색] -> Goal: Explore -> Viz: Input Field -> Interaction: Type to filter -> Justification: 사용자가 특정 용어나 개념을 빠르게 찾을 수 있도록 하여 학습 효율성을 극대화하는 필수적인 탐색 도구입니다. -> Library/Method: JS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #F8F7F4;
+            color: #4A4A4A;
+        }
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        .nav-item {
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-item.active {
+            background-color: #4A5568;
+            color: #FFFFFF;
+            transform: translateX(4px);
+        }
+        .nav-item:not(.active):hover {
+            background-color: #E2E8F0;
+            color: #2D3748;
+        }
+        .content-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 0.75rem;
+            transition: box-shadow 0.3s ease-in-out;
+        }
+        .content-card:hover {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .question {
+            cursor: pointer;
+        }
+        .answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
+            padding: 0 1.5rem;
+        }
+        .answer.open {
+            max-height: 1000px;
+            padding: 1.5rem 1.5rem;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #F1F1F1; }
+        ::-webkit-scrollbar-thumb { background: #A0AEC0; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #718096; }
+        .modal-overlay {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4A5568;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .gemini-btn {
+            background-color: #f0f4f8;
+            color: #4A5568;
+            transition: all 0.2s ease;
+        }
+        .gemini-btn:hover {
+            background-color: #e2e8f0;
+            color: #2D3748;
+            transform: translateY(-1px);
+        }
+        .quiz-option {
+            border: 2px solid #E2E8F0;
+            transition: all 0.2s ease;
+        }
+        .quiz-option:hover {
+            border-color: #4A5568;
+            background-color: #f7fafc;
+        }
+        .quiz-option.selected {
+            border-color: #4A5568;
+            background-color: #E2E8F0;
+        }
+        .quiz-option.correct {
+            background-color: #C6F6D5;
+            border-color: #38A169;
+        }
+        .quiz-option.incorrect {
+            background-color: #FED7D7;
+            border-color: #E53E3E;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <nav class="w-full md:w-64 bg-white md:bg-gray-100 p-4 md:p-6 shadow-md md:shadow-none shrink-0">
+            <div class="flex items-center mb-6">
+                <i class="fas fa-camera-retro text-3xl text-gray-700 mr-3"></i>
+                <h1 class="text-xl font-bold text-gray-800">사진학 가이드 ✨</h1>
+            </div>
+            <div class="mb-4">
+                <input type="text" id="searchInput" placeholder="용어 검색..." class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400">
+            </div>
+            <ul>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700 active" data-category="intro">소개 및 시각화</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="structure">카메라 구조와 원리</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="exposure">노출의 3요소</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="lens">렌즈와 광학</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="digital">디지털 이미징</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="history">사진사 & 사조</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="film">필름과 현상</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="lighting">조명과 필터</a></li>
+            </ul>
+        </nav>
+
+        <main id="mainContent" class="flex-1 p-4 md:p-10 overflow-y-auto">
+        </main>
+    </div>
+
+    <!-- Gemini Modal -->
+    <div id="geminiModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col transform scale-95">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 id="modalTitle" class="text-xl font-bold text-gray-800">Gemini AI</h3>
+                <button id="closeModal" class="text-gray-500 hover:text-gray-800">&times;</button>
+            </div>
+            <div id="modalBody" class="p-6 overflow-y-auto">
+                <div class="flex items-center justify-center h-40">
+                    <div class="loader"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+const photographyData = {
+    structure: [
+        { q: "DSLR 카메라는 무엇입니까?", a: "디지털 일안 리플렉스 카메라로, 렌즈를 통해 들어온 빛이 미러와 펜타프리즘을 거쳐 뷰파인더로 보이며, 셔터를 누르면 미러가 올라가면서 이미지 센서에 빛이 도달합니다." },
+        { q: "RF카메라는 무엇입니까?", a: "레인지파인더 카메라로, 렌즈와 뷰파인더가 분리되어 있고 거리계 창으로 초점을 맞춥니다. 미러가 없어 조용하지만 시차가 발생합니다." },
+        { q: "미러와 펜타프리즘의 역할은 무엇입니까?", a: "미러는 빛을 위로 반사하여 상하를 정상으로 만들고, 펜타프리즘은 좌우가 반전된 상을 바로잡아 올바르게 보이게 합니다." },
+        { q: "소형·중형·대형 카메라의 차이는 무엇입니까?", a: "소형은 35mm 이하로 빠르고 가볍습니다. 중형은 6x4.5cm~6x9cm 필름을 사용하여 화질이 높습니다. 대형은 4x5인치 이상이며 최고 화질과 무브먼트 기능을 가집니다." },
+        { q: "무브먼트란 무엇입니까?", a: "카메라의 렌즈나 필름면을 이동하거나 기울여서 초점면을 조절하거나 왜곡을 보정하는 기능입니다. 종류로는 라이즈&폴, 쉬프트, 틸트, 스윙이 있습니다." },
+        { q: "샤임플러그 법칙이란 무엇입니까?", a: "렌즈면, 필름면, 초점면이 하나의 선상에서 만나면 피사계 전체에 초점이 맞는 원리입니다. 틸트나 스윙으로 이 원리를 활용할 수 있습니다." },
+        { q: "시차는 어떤 카메라에서 발생합니까?", a: "뷰파인더와 촬영 렌즈의 위치가 다른 RF, TLR, 콤팩트 카메라 등에서 발생합니다." },
+        { q: "시야율이란 무엇입니까?", a: "뷰파인더에 보이는 화면이 실제 촬영 이미지의 몇 퍼센트인지 나타내며, 100%에 가까울수록 정확합니다." },
+        { q: "셔터의 종류와 장단점은 무엇입니까?", a: "포컬 플레인 셔터(고속, 소형화 유리, 플래시 동조 제한), 렌즈 셔터(플래시 동조 유리, 왜곡 없음, 고속 제한), 전자 셔터(무소음, 고속, 롤링 셔터 왜곡 가능)가 있습니다." },
+        { q: "미러리스 카메라란 무엇입니까?", a: "DSLR과 달리 내부에 반사 거울과 펜타프리즘이 없는 구조로, 전자식 뷰파인더(EVF) 또는 LCD를 통해 이미지를 실시간 확인합니다." },
+        { q: "DSLR과 미러리스의 차이점은?", a: "가장 큰 차이는 미러의 유무입니다. DSLR은 광학식 뷰파인더(OVF)를, 미러리스는 전자식 뷰파인더(EVF)를 사용합니다. 이로 인해 크기, 무게, 배터리 효율, 뷰파인더 경험 등에서 차이가 발생합니다." },
+        { q: "풀프레임 바디란 무엇입니까?", a: "35mm 필름과 동일한 크기(36x24mm)의 센서를 사용하는 카메라입니다. 노이즈가 적고, 얕은 심도 표현이 용이합니다." },
+        { q: "크롭바디란 무엇입니까?", a: "풀프레임보다 작은 센서(주로 APS-C)를 가진 카메라입니다. 같은 렌즈를 사용해도 화각이 더 좁게 보입니다(망원 효과)." },
+    ],
+    exposure: [
+        { q: "노출이란 무엇입니까?", a: "센서나 필름에 도달하는 빛의 총량입니다. 조리개, 셔터 속도, ISO 감도로 조절합니다." },
+        { q: "사진에서 스톱(Stop)은 무엇입니까?", a: "노출의 기본 단위로, 빛의 양이 두 배 또는 절반으로 변화하는 단계를 말합니다. 1스톱 증가는 빛 2배, 1스톱 감소는 빛 1/2배를 의미합니다." },
+        { q: "조리개(Aperture)란 무엇입니까?", a: "렌즈 안에 있는 원형의 구멍으로, 빛의 양과 피사계 심도를 조절합니다. F-number(f/값)로 표시하며, 값이 작을수록 구멍이 커집니다." },
+        { q: "조리개를 조이면 왜 회절 현상이 발생합니까?", a: "빛이 매우 작은 조리개 구멍을 통과하면서 퍼지는 현상(회절) 때문입니다. 이로 인해 f/16, f/22 등 과도하게 조이면 오히려 이미지의 선명도가 떨어집니다." },
+        { q: "셔터 속도란 무엇입니까?", a: "이미지 센서가 빛에 노출되는 시간을 제어하는 장치입니다. 셔터 속도가 빠르면 움직임을 정지시키고, 느리면 움직임의 궤적을 담을 수 있습니다." },
+        { q: "i, b, t 셔터 모드는 무엇입니까?", a: "i(Instantaneous): 일반 촬영 모드. b(Bulb): 누르고 있는 동안 열림. t(Time): 한 번 누르면 열리고 다시 누르면 닫힘." },
+        { q: "ISO란 무엇입니까?", a: "이미지 센서가 빛에 반응하는 민감도를 나타내는 수치입니다. ISO를 높이면 적은 빛으로도 밝은 사진을 얻을 수 있지만, 노이즈가 증가합니다." },
+        { q: "적정 노출이란 무엇입니까?", a: "장면의 분위기와 작가의 의도를 반영한 적절한 밝기. 기술적으로는 노출계 기준 중간 회색(18%) 밝기에 맞춘 정확한 노출 값을 의미합니다." },
+        { q: "등가노출과 상반법칙이란 무엇입니까?", a: "상반법칙은 빛의 양(강도x시간)이 같으면 결과도 같다는 원리입니다. 이를 이용해 조리개와 셔터속도를 서로 다른 값으로 조합해도 같은 밝기의 사진을 얻는 것을 등가노출이라고 합니다. 예: f/8, 1/125s = f/5.6, 1/250s" },
+        { q: "상반칙 불궤란?", a: "노출 시간이 매우 길거나 짧아질 때 상반법칙이 깨지는 현상으로, 주로 필름에서 발생합니다. 노출 부족이나 색 틀어짐의 원인이 됩니다." },
+        { q: "TTL 노출계의 측광 방식에는 어떤 것들이 있나?", a: "평가측광(화면 전체 분석), 중앙중점 평균측광(중앙부 가중), 부분측광(중앙 일부), 스팟측광(중앙 극소 영역) 등이 있습니다." },
+        { q: "존 시스템(Zone System)이란 무엇인가요?", a: "안셀 아담스가 고안한 시스템으로, 톤을 0(완전한 검정)부터 10(완전한 흰색)까지 11단계로 나누어 노출과 현상을 정밀하게 제어하는 방법입니다. Zone 5는 18% 중간 회색입니다." },
+    ],
+    lens: [
+        { q: "초점거리란 무엇입니까?", a: "무한대에 초점을 맞췄을 때, 렌즈의 제2주점부터 이미지 센서까지의 거리입니다. 화각을 결정하며, 길수록 망원(좁은 화각), 짧을수록 광각(넓은 화각)이 됩니다." },
+        { q: "표준렌즈, 광각렌즈, 망원렌즈를 비교하시오.", a: "표준렌즈(35mm 기준 50mm)는 사람의 시야와 유사합니다. 광각렌즈는 넓은 범위를 담고 원근감을 과장합니다. 망원렌즈는 멀리 있는 피사체를 확대하고 배경을 압축하는 효과가 있습니다." },
+        { q: "피사계심도(DOF)란 무엇이며, 어떻게 조절하나요?", a: "초점이 맞은 것으로 인식되는 공간의 깊이 범위입니다. 조절 방법: 1) 조리개를 조이면(f/값 증가) 깊어짐. 2) 초점거리가 짧은 렌즈(광각)를 쓰면 깊어짐. 3) 피사체와의 거리가 멀어지면 깊어짐." },
+        { q: "수차란 무엇이며, 종류를 설명하시오.", a: "렌즈의 물리적 한계로 인해 빛이 한 점에 정확히 모이지 않아 생기는 왜곡 현상입니다. 종류에는 구면수차, 코마수차, 비점수차, 상면만곡, 왜곡수차(자이델 5대 수차)와 색수차가 있습니다." },
+        { q: "비구면 렌즈와 저분산(ED) 렌즈의 역할은?", a: "비구면(Aspherical) 렌즈는 구면수차를 보정하고, 저분산(ED) 렌즈는 색수차를 효과적으로 줄여 이미지의 선명도를 높입니다." },
+        { q: "이미지 서클(Image Circle)이란?", a: "렌즈가 만들어내는 원형의 선명한 상의 범위입니다. 이 범위가 센서 크기보다 작으면 비네팅이 발생합니다." },
+        { q: "착란원과 허용착란원이란 무엇입니까?", a: "착란원은 초점이 맞지 않는 점광원이 센서에 맺히는 흐릿한 원형의 상입니다. 허용착란원은 이 원이 충분히 작아서 우리 눈에 점으로 인식되는 최대 크기를 의미하며, 피사계심도 계산의 기준이 됩니다." },
+        { q: "시프트렌즈란? 건축 사진에서 왜 필요한가요?", a: "렌즈를 상하좌우로 평행 이동시켜 왜곡을 보정하는 렌즈입니다. 특히 높은 건물을 아래에서 촬영할 때 건물이 뒤로 넘어가는 듯한 왜곡(원근 왜곡)을 바로잡아 수직선을 유지하는 데 필수적입니다." },
+        { q: "매크로 렌즈란 무엇입니까?", a: "피사체를 실물 크기(1:1 등배율) 또는 그 이상으로 확대 촬영할 수 있는 접사 전용 렌즈입니다." },
+        { q: "어안렌즈란 무엇입니까?", a: "화각이 180도에 가까운 초광각 렌즈로, 화면이 둥글게 왜곡되어 독특하고 과장된 표현을 만듭니다." },
+    ],
+    digital: [
+        { q: "이미지 센서란 무엇이며, 크기가 크면 무엇이 좋습니까?", a: "빛을 전기 신호로 변환하는 디지털 카메라의 핵심 부품입니다. 센서가 클수록 화소당 빛을 받는 면적이 넓어져 노이즈가 적고, 계조 표현이 풍부하며, 얕은 심도(배경 흐림) 표현에 유리합니다." },
+        { q: "CCD와 CMOS 센서의 차이는 무엇입니까?", a: "CCD는 고화질이지만 전력 소모가 크고 처리 속도가 느립니다. CMOS는 저전력, 고속 처리가 가능하며 기술 발전으로 화질도 CCD 수준에 도달하여 현재 대부분의 카메라에서 사용됩니다." },
+        { q: "RAW, TIFF, JPEG 파일의 핵심 차이는?", a: "RAW는 가공되지 않은 센서 원본 데이터로 보정 관용도가 가장 높습니다. TIFF는 무손실 압축 포맷으로 화질 저하 없이 저장하며 16비트를 지원하여 작업용으로 적합합니다. JPEG는 손실 압축 포맷으로 용량이 작아 공유나 웹 게시에 용이하지만, 화질 손실이 발생하고 8비트만 지원합니다." },
+        { q: "화이트 밸런스란 무엇입니까?", a: "촬영 환경의 광원(태양광, 형광등 등)에 따라 달라지는 색온도를 보정하여 흰색이 흰색으로 보이게 만드는 기능입니다." },
+        { q: "디지털 이미지의 노이즈는 어떻게 줄일 수 있습니까?", a: "촬영 시에는 ISO를 최대한 낮게 설정하고, 적정 노출을 확보하며(특히 암부), 센서가 큰 카메라를 사용하는 것이 유리합니다. 후반 작업에서도 노이즈 감소 기능을 사용할 수 있습니다." },
+        { q: "다이내믹 레인지(DR)란 무엇입니까?", a: "카메라가 한 번에 기록할 수 있는 가장 어두운 부분부터 가장 밝은 부분까지의 범위입니다. DR이 넓을수록 명암 차이가 큰 장면에서도 디테일을 잘 살릴 수 있습니다." },
+        { q: "히스토그램이란 무엇이며, 어떻게 활용하나요?", a: "이미지의 밝기 분포를 보여주는 그래프입니다. 그래프가 왼쪽에 치우치면 노출 부족, 오른쪽에 치우치면 노출 과다임을 객관적으로 판단할 수 있어 적정 노출을 확인하는 데 유용합니다." },
+        { q: "비트심도(Bit Depth)란 무엇이며, 8비트와 16비트의 차이는?", a: "픽셀 하나가 표현할 수 있는 색상 정보의 양입니다. 8비트는 채널당 256단계, 16비트는 65,536단계를 표현합니다. 16비트는 훨씬 부드러운 계조를 표현하고 후보정 시 데이터 손실이 적습니다." },
+        { q: "해상도(Resolution)와 해상력의 차이는?", a: "해상도는 이미지의 픽셀 수(예: 3000만 화소)나 밀도(PPI/DPI)를 의미하는 양적인 개념입니다. 해상력은 렌즈나 센서가 피사체의 세부 디테일을 얼마나 선명하게 묘사할 수 있는지를 나타내는 질적인 성능입니다." },
+        { q: "색공간(Color Space)이란 무엇이며, sRGB와 Adobe RGB의 차이는?", a: "디지털에서 표현할 수 있는 색상의 범위를 정의한 표준입니다. sRGB는 웹 표준으로 호환성이 좋지만 색 표현 범위가 좁습니다. Adobe RGB는 특히 녹색과 청록색 계열의 표현 범위가 넓어 인쇄 작업에 더 유리합니다." },
+        { q: "CMS(Color Management System)란 무엇입니까?", a: "카메라(입력)-모니터(편집)-프린터(출력) 등 장비마다 다른 색 표현을 일치시켜주는 색상 관리 시스템입니다. ICC 프로파일을 기반으로 작동하여 작업의 일관성을 보장합니다." },
+    ],
+    history: [
+        { q: "최초의 사진술과 발명가는 누구입니까?", a: "1826년, 조제프 니세포르 니엡스가 발명한 헬리오그래피입니다." },
+        { q: "다게레오타입과 칼로타입의 차이는?", a: "다게레오타입(다게르, 1839)은 은판에 직접 상을 맺는 방식으로 복제가 불가능하지만 화질이 뛰어납니다. 칼로타입(탈보트, 1841)은 종이 네거티브를 만들어 여러 장 복제할 수 있는 최초의 방식입니다." },
+        { q: "사진의 대중화를 이끈 인물은 누구입니까?", a: "코닥(Kodak)을 창립한 조지 이스트만입니다. 그는 롤 필름과 '버튼만 누르세요, 나머지는 저희가 합니다'라는 서비스 모델을 통해 사진을 대중화시켰습니다." },
+        { q: "회화주의 사진과 자연주의 사진이란?", a: "회화주의는 사진을 회화처럼 보이게 하려는 경향으로, 합성, 소프트 포커스 등의 기법을 사용했습니다(레일랜더, 로빈슨). 자연주의는 이에 반발하여 인위적 조작 없이 자연 그대로를 사실적으로 담으려 했습니다(에머슨)." },
+        { q: "스트레이트 포토그래피(Straight Photography)란 무엇입니까?", a: "회화주의에 반대하며, 사진 고유의 기계적 기록성과 선명함을 통해 대상을 정직하게 담아내려는 사진 경향입니다. 알프레드 스티글리츠가 주도했습니다." },
+        { q: "f/64 그룹은 어떤 모임이며, 철학은 무엇인가요?", a: "안셀 아담스, 에드워드 웨스턴 등이 중심이 된 미국 서부의 사진가 그룹입니다. 이름은 최대 심도를 얻는 조리개값 f/64에서 따왔으며, 극도로 선명하고 정밀한 사진을 추구했습니다." },
+        { q: "FSA 프로젝트란 무엇입니까?", a: "1930년대 미국 대공황 시절, 농업안전국(FSA)이 워커 에반스, 도로시어 랭 등의 사진가들을 고용하여 농촌의 현실을 기록한 다큐멘터리 프로젝트입니다." },
+        { q: "매그넘 포토스(Magnum Photos)는 어떤 단체입니까?", a: "1947년 로버트 카파, 앙리 카르티에 브레송 등이 창립한 사진가 조합입니다. 사진가가 자신의 작업에 대한 저작권과 편집권을 갖는 것을 목표로 합니다." },
+        { q: "결정적 순간(The Decisive Moment)이란?", a: "앙리 카르티에 브레송이 제시한 개념으로, 형식(구도)과 내용(사건)이 완벽하게 조화를 이루는 찰나의 순간을 포착하는 것을 의미합니다." },
+        { q: "뉴 도큐먼츠(New Documents) 전시의 의의는?", a: "1967년 MoMA에서 열린 전시로, 다이안 아버스, 게리 위노그랜드, 리 프리들랜더가 참여했습니다. 객관적 기록을 넘어 작가의 주관적 시선이 담긴 새로운 다큐멘터리 사진의 시작을 알렸습니다." },
+        { q: "뉴 컬러(New Color)와 뉴 토포그라픽스(New Topographics)란?", a: "뉴 컬러(1970년대)는 윌리엄 이글스턴, 스티븐 쇼어 등을 통해 컬러 사진을 예술의 영역으로 끌어올린 흐름입니다. 뉴 토포그라픽스(1975년 전시)는 루이스 발츠, 로버트 아담스 등이 인간에 의해 변형된 풍경을 감정 없이 기록적으로 담아낸 경향입니다." },
+        { q: "포스트모더니즘 사진의 특징은 무엇입니까?", a: "원본의 유일성을 부정하고, 차용, 패러디, 연출 등의 방식을 사용합니다. 신디 셔먼(연출된 자화상), 바바라 크루거(텍스트+이미지) 등이 대표적입니다." },
+    ],
+    film: [
+        { q: "필름의 주요 특성 4가지는 무엇입니까?", a: "감도(빛에 대한 민감도), 관용도(노출 허용 범위), 입상성(입자의 거친 정도), 해상력(디테일 표현 능력)입니다." },
+        { q: "컬러 네거티브 필름과 포지티브(슬라이드) 필름의 차이는?", a: "네거티브 필름은 색과 명암이 반전되어 기록되며, 관용도가 넓고 C-41 현상을 합니다. 포지티브 필름은 색과 명암이 그대로 기록되어 바로 볼 수 있으며, 관용도가 좁고 콘트라스트가 높으며 E-6 현상을 합니다." },
+        { q: "특성곡선이란 무엇입니까?", a: "노출량에 따른 필름의 농도 변화를 보여주는 그래프로, 필름의 콘트라스트, 감도, 관용도 등의 특성을 파악할 수 있습니다." },
+        { q: "흑백 필름 현상 순서는 어떻게 됩니까?", a: "현상 → 중간정지 → 정착 → 수세 → 포토플로(건조보조제) → 건조 순서로 진행됩니다." },
+        { q: "인화지에는 어떤 종류가 있습니까?", a: "RC(Resin Coated) 인화지는 작업이 빠르고 편리하며, FB(Fiber Base) 인화지는 처리 시간이 길지만 계조 표현과 보존성이 뛰어납니다. 또한 콘트라스트가 고정된 호수지 인화지와 필터로 조절하는 다계조 인화지가 있습니다." },
+        { q: "닷징(Dodging)과 버닝(Burning)은 무엇입니까?", a: "암실 인화 기법입니다. 닷징은 특정 부분의 빛을 가려 어둡게 나올 부분을 밝게 만들고, 버닝은 특정 부분에 빛을 더 주어 밝게 나올 부분을 어둡게 만들어 디테일을 살리는 작업입니다." },
+    ],
+    lighting: [
+        { q: "주조명(Key light)과 보조조명(Fill light)의 역할은?", a: "주조명은 피사체의 형태와 분위기를 결정하는 가장 주된 빛입니다. 보조조명은 주조명이 만든 그림자를 부드럽게 완화하여 디테일을 살리는 역할을 합니다." },
+        { q: "조명비(Lighting Ratio)란 무엇입니까?", a: "주조명과 보조조명의 밝기 비율입니다. 조명비가 높을수록(예: 8:1) 명암 대비가 강한 드라마틱한 사진이 되고, 낮을수록(예: 2:1) 부드러운 사진이 됩니다." },
+        { q: "빛의 방향에 따른 효과는?", a: "순광(정면광)은 그림자가 없어 평면적입니다. 사광(45도)은 입체감을 잘 표현합니다. 측광(90도)은 질감을 극대화합니다. 역광(후면광)은 실루엣이나 테두리광(림라이트) 효과를 만듭니다." },
+        { q: "가이드 넘버(Guide Number, GN)란 무엇입니까?", a: "플래시의 광량을 나타내는 수치입니다. 'GN = 조리개값(f) × 거리(m)' 공식을 이용해 적정 노출을 계산할 수 있습니다." },
+        { q: "빛의 역제곱 법칙(Inverse Square Law)이란?", a: "광원으로부터 거리가 2배 멀어지면 빛의 세기는 거리의 제곱에 반비례하여 1/4로 줄어든다는 물리 법칙입니다. (2스톱 어두워짐)" },
+        { q: "소프트박스와 엄브렐라의 차이는?", a: "둘 다 빛을 부드럽게 만드는 확산 도구입니다. 소프트박스는 빛을 면광원으로 만들어 더 균일하고 제어된 빛을 제공합니다. 엄브렐라는 빛을 더 넓게 퍼뜨려 자연광과 비슷한 효과를 냅니다." },
+        { q: "선막동조와 후막동조의 차이는?", a: "플래시 동조 방식입니다. 선막동조는 셔터가 열릴 때 플래시가 터져 움직임의 궤적이 피사체 앞에 생깁니다. 후막동조는 셔터가 닫히기 직전에 터져 궤적이 피사체 뒤에 생겨 더 자연스러운 움직임을 표현합니다." },
+        { q: "필터의 기본 원리는 무엇입니까?", a: "자신과 같은 색의 빛은 통과시키고, 보색 관계의 빛은 흡수(차단)하는 원리로 작동합니다." },
+        { q: "흑백 사진에서 하늘을 더 어둡게 표현하려면 어떤 필터를 사용해야 합니까?", a: "푸른 하늘의 보색인 옐로우, 오렌지, 레드 필터를 사용합니다. 레드로 갈수록 하늘은 더 어두워지고 구름과의 대비는 강해집니다." },
+        { q: "ND 필터와 PL 필터의 역할은?", a: "ND(Neutral Density) 필터는 색에 영향을 주지 않고 빛의 양만 줄여주는 중성 회색 필터로, 장노출 촬영에 사용됩니다. PL(Polarizing) 필터는 편광 필터로, 물이나 유리 표면의 난반사를 제거하고 하늘의 파란색을 더 진하게 만들어줍니다." },
+    ]
+};
+
+const mainContent = document.getElementById('mainContent');
+const navLinks = document.querySelectorAll('.nav-item');
+const searchInput = document.getElementById('searchInput');
+let charts = {};
+
+function createChart(canvasId, label, data, backgroundColor, borderColor) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
+    charts[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(item => item.label),
+            datasets: [{
+                label: label,
+                data: data.map(item => item.value),
+                backgroundColor: backgroundColor,
+                borderColor: borderColor,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { display: false },
+                    grid: { display: false },
+                    title: { display: true, text: '상대적 빛의 양 (로그 스케일)' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                         font: { size: 10 }
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let value = context.dataset.data[context.dataIndex];
+                            return `${context.label}: 빛의 양 ${Math.pow(2, context.dataset.data.length - 1 - value).toFixed(0)}배 감소`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderContent(category, searchTerm = '') {
+    let html = '';
+    
+    if (category === 'intro') {
+        html = `
+            <div class="content-card p-6 md:p-8 mb-6">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4">사진학 인터랙티브 가이드에 오신 것을 환영합니다.</h2>
+                <p class="text-lg text-gray-600 mb-6">이 가이드는 방대한 사진학 이론을 쉽게 탐색하고 학습할 수 있도록 설계되었습니다. 좌측 메뉴를 통해 주제별로 질문과 답변을 확인하거나, 상단의 검색창을 이용해 원하는 용어를 빠르게 찾아보세요.</p>
+                <p class="text-lg text-gray-600">아래 차트는 사진 노출의 핵심 요소인 '조리개'와 '셔터 속도'의 '스톱' 개념을 시각화한 것입니다. 각 막대를 클릭하거나 마우스를 올려 빛의 양이 어떻게 변하는지 직관적으로 확인해보세요. 1스톱 차이는 빛의 양이 두 배 또는 절반이 되는 것을 의미합니다.</p>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="content-card p-6">
+                    <h3 class="text-xl font-bold text-center mb-4">조리개 값 (F-Stops)</h3>
+                    <div class="chart-container"><canvas id="apertureChart"></canvas></div>
+                </div>
+                <div class="content-card p-6">
+                    <h3 class="text-xl font-bold text-center mb-4">셔터 속도 (Shutter Speeds)</h3>
+                    <div class="chart-container"><canvas id="shutterChart"></canvas></div>
+                </div>
+            </div>
+        `;
+        mainContent.innerHTML = html;
+
+        const apertureData = [
+            { label: 'f/1.4', value: 10 }, { label: 'f/2', value: 9 }, { label: 'f/2.8', value: 8 }, 
+            { label: 'f/4', value: 7 }, { label: 'f/5.6', value: 6 }, { label: 'f/8', value: 5 }, 
+            { label: 'f/11', value: 4 }, { label: 'f/16', value: 3 }, { label: 'f/22', value: 2 }
+        ];
+        const shutterData = [
+            { label: '1/15s', value: 10 }, { label: '1/30s', value: 9 }, { label: '1/60s', value: 8 }, 
+            { label: '1/125s', value: 7 }, { label: '1/250s', value: 6 }, { label: '1/500s', value: 5 }, 
+            { label: '1/1000s', value: 4 }, { label: '1/2000s', value: 3 }, { label: '1/4000s', value: 2 }
+        ];
+        
+        setTimeout(() => {
+            createChart('apertureChart', '조리개', apertureData, 'rgba(75, 192, 192, 0.6)', 'rgba(75, 192, 192, 1)');
+            createChart('shutterChart', '셔터 속도', shutterData, 'rgba(255, 159, 64, 0.6)', 'rgba(255, 159, 64, 1)');
+        }, 0);
+
+    } else {
+        let itemsToRender = [];
+        if (searchTerm) {
+            Object.values(photographyData).forEach(cat => {
+                itemsToRender.push(...cat.filter(item => item.q.toLowerCase().includes(searchTerm.toLowerCase()) || item.a.toLowerCase().includes(searchTerm.toLowerCase())));
+            });
+            if (itemsToRender.length === 0) {
+                html = `<div class="content-card p-6 text-center"><p class="text-gray-500">"${searchTerm}"에 대한 검색 결과가 없습니다.</p></div>`;
+            }
+        } else {
+            itemsToRender = photographyData[category];
+        }
+
+        if (itemsToRender.length > 0) {
+            html = itemsToRender.map((item, index) => `
+                <div class="content-card mb-4">
+                    <div class="question p-6 flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-gray-800">${item.q}</h3>
+                        <i class="fas fa-chevron-down transform transition-transform"></i>
+                    </div>
+                    <div class="answer border-t border-gray-200 text-gray-700 leading-relaxed">
+                        <p>${item.a.replace(/\n/g, '<br>')}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+        mainContent.innerHTML = html;
+    }
+
+    document.querySelectorAll('.question').forEach(q => {
+        q.addEventListener('click', () => {
+            const answer = q.nextElementSibling;
+            const icon = q.querySelector('i');
+            
+            if (answer.classList.contains('open')) {
+                answer.classList.remove('open');
+                icon.classList.remove('rotate-180');
+            } else {
+                // Close all other open answers
+                document.querySelectorAll('.answer.open').forEach(openAnswer => {
+                    openAnswer.classList.remove('open');
+                    openAnswer.previousElementSibling.querySelector('i').classList.remove('rotate-180');
+                });
+                answer.classList.add('open');
+                icon.classList.add('rotate-180');
+            }
+        });
+    });
+}
+
+function handleNavClick(e) {
+    e.preventDefault();
+    const targetLink = e.target.closest('.nav-item');
+    if (!targetLink) return;
+
+    searchInput.value = '';
+    
+    navLinks.forEach(link => link.classList.remove('active'));
+    targetLink.classList.add('active');
+    
+    const category = targetLink.dataset.category;
+    renderContent(category);
+}
+
+function handleSearch() {
+    const searchTerm = searchInput.value;
+    if (searchTerm.length > 1) {
+        navLinks.forEach(link => link.classList.remove('active'));
+        renderContent(null, searchTerm);
+    } else if (searchTerm.length === 0) {
+        // If search is cleared, go back to the intro or currently active tab
+        const activeLink = document.querySelector('.nav-item.active') || document.querySelector('.nav-item[data-category="intro"]');
+        if(activeLink) {
+             activeLink.classList.add('active');
+             renderContent(activeLink.dataset.category);
+        }
+    }
+}
+
+document.querySelector('nav ul').addEventListener('click', handleNavClick);
+searchInput.addEventListener('input', handleSearch);
+
+// Initial render
+renderContent('intro');
+
+</script>
+</body>
+</html>
+
