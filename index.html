@@ -998,30 +998,29 @@ async function generateQuiz() {
         contentForQuiz = photographyData[category];
     }
     
-    // Shuffle and select up to 15 terms
     const shuffledTerms = contentForQuiz.sort(() => 0.5 - Math.random());
     const topics = shuffledTerms.slice(0, 15).map(item => item.q).join(', ');
 
-    const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
+    // 난이도별 퀴즈 생성을 명시적으로 요청하는 프롬프트
+    const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
     
-    // 이 부분에서 JSON 스키마를 사용하여 명확하게 응답을 요청합니다.
     const responseText = await callGemini(prompt, true);
     
     try {
-        currentQuizData = JSON.parse(responseText);
-        // JSON 파싱 후, 데이터 구조의 유효성을 한 번 더 검증합니다.
-        if (currentQuizData && currentQuizData.questions && Array.isArray(currentQuizData.questions) && currentQuizData.questions.length > 0) {
+        let parsedData = JSON.parse(responseText);
+        
+        // JSON 파싱 후, 데이터 구조와 questions 배열의 유효성을 한 번 더 검증합니다.
+        if (parsedData && Array.isArray(parsedData.questions) && parsedData.questions.length === 5) {
+            currentQuizData = parsedData;
             currentQuestionIndex = 0;
             score = 0;
             displayQuizQuestion();
         } else {
-            // JSON은 맞지만, 예상한 퀴즈 형식이 아닐 경우
-            throw new Error("Invalid quiz format or empty questions array received.");
+            throw new Error("Invalid quiz format or incorrect number of questions received.");
         }
     } catch(e) {
         console.error("Quiz parsing error:", e);
-        // 사용자에게 오류 메시지를 직접 보여줍니다.
-        modalBody.innerHTML = `<p class="text-red-500">퀴즈를 생성하는 데 실패했습니다. 서버에서 유효한 퀴즈 형식을 받지 못했습니다. 잠시 후 다시 시도해주세요.</p>`;
+        modalBody.innerHTML = `<p class="text-red-500">퀴즈를 생성하는 데 실패했습니다. AI가 유효한 퀴즈 형식을 반환하지 못했습니다. 잠시 후 다시 시도해주세요.</p>`;
     }
 }
 
@@ -1062,7 +1061,6 @@ function handleSearch() {
 document.querySelector('nav ul').addEventListener('click', handleNavClick);
 searchInput.addEventListener('input', handleSearch);
 
-// Use a self-executing function to avoid re-assigning window.onload
 (function() {
     // Initial render
     renderContent('intro');
@@ -1070,4 +1068,3 @@ searchInput.addEventListener('input', handleSearch);
 </script>
 </body>
 </html>
-
