@@ -17,12 +17,12 @@
     -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         body {
             font-family: 'Pretendard', sans-serif;
             background-color: #F8F7F4;
             color: #4A4A4A;
         }
-        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         .nav-item {
             transition: all 0.2s ease-in-out;
         }
@@ -604,7 +604,17 @@ let score = 0;
 const API_KEY = "";
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
 
+// 간이 가드: API 키가 없는 경우 모달을 띄워 사용자에게 알립니다.
+if (!API_KEY) {
+    showModal();
+    modalBody.innerHTML = `<p class="text-red-500">API 키가 설정되어 있지 않습니다. 서버 프록시를 구성하세요.</p>`;
+}
+
 async function callGemini(prompt, isQuiz = false) {
+    // API 키가 없는 경우 함수 실행을 중단합니다.
+    if (!API_KEY) {
+        return;
+    }
     showModal();
     modalBody.innerHTML = `<div class="flex items-center justify-center h-40"><div class="loader"></div></div>`;
     
@@ -691,7 +701,7 @@ geminiModal.addEventListener('click', (e) => {
 });
 
 
-function createChart(canvasId, label, data, backgroundColor, borderColor) {
+function createChart(canvasId, label, data) {
     const ctx = document.getElementById(canvasId).getContext('2d');
     if (charts[canvasId]) {
         charts[canvasId].destroy();
@@ -699,12 +709,12 @@ function createChart(canvasId, label, data, backgroundColor, borderColor) {
     charts[canvasId] = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.map(item => item.label),
+            labels: data.map(d => d.label),
             datasets: [{
-                label: label,
-                data: data.map(item => item.value),
-                backgroundColor: backgroundColor,
-                borderColor: borderColor,
+                label,
+                data: data.map(d => d.value),
+                backgroundColor: label.includes('조리개') ? 'rgba(75, 192, 192, 0.6)' : 'rgba(255, 159, 64, 0.6)',
+                borderColor: label.includes('조리개') ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 159, 64, 1)',
                 borderWidth: 1
             }]
         },
@@ -712,10 +722,11 @@ function createChart(canvasId, label, data, backgroundColor, borderColor) {
             maintainAspectRatio: false,
             scales: {
                 y: {
-                    beginAtZero: true,
-                    ticks: { display: false },
-                    grid: { display: false },
-                    title: { display: true, text: '상대적 빛의 양 (로그 스케일)' }
+                    type: 'logarithmic',
+                    min: 1/1024,
+                    ticks: { callback: (v) => `×${(v>=1)?v:('1/'+(1/v))}` },
+                    title: { display: true, text: '상대적 빛의 양 (로그 스케일)' },
+                    grid: { display: false }
                 },
                 x: {
                     grid: { display: false },
@@ -726,9 +737,10 @@ function createChart(canvasId, label, data, backgroundColor, borderColor) {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
-                            let value = context.dataset.data[context.dataIndex];
-                            return `${context.label}: 빛의 양 ${Math.pow(2, context.dataset.data.length - 1 - value).toFixed(0)}배 감소`;
+                        label: function(ctx) {
+                            const val = ctx.parsed.y;
+                            const text = val >= 1 ? `×${val}` : `1/${(1/val)}`;
+                            return `${ctx.label}: 빛의 양 ${text}`;
                         }
                     }
                 }
@@ -761,20 +773,20 @@ function renderContent(category, searchTerm = '') {
         mainContent.innerHTML = html;
 
         const apertureData = [
-            { label: 'f/1.4', value: 10 }, { label: 'f/2', value: 9 }, { label: 'f/2.8', value: 8 }, 
-            { label: 'f/4', value: 7 }, { label: 'f/5.6', value: 6 }, { label: 'f/8', value: 5 }, 
-            { label: 'f/11', value: 4 }, { label: 'f/16', value: 3 }, { label: 'f/22', value: 2 }
+            { label:'f/1.4', value:1 }, { label:'f/2', value:1/2 }, { label:'f/2.8', value:1/4 },
+            { label:'f/4', value:1/8 }, { label:'f/5.6', value:1/16 }, { label:'f/8', value:1/32 },
+            { label:'f/11', value:1/64 }, { label:'f/16', value:1/128 }, { label:'f/22', value:1/256 }
         ];
         const shutterData = [
-            { label: '1/15s', value: 10 }, { label: '1/30s', value: 9 }, { label: '1/60s', value: 8 }, 
-            { label: '1/125s', value: 7 }, { label: '1/250s', value: 6 }, { label: '1/500s', value: 5 }, 
-            { label: '1/1000s', value: 4 }, { label: '1/2000s', value: 3 }, { label: '1/4000s', value: 2 }
+            { label:'1/15s', value:1/15 }, { label:'1/30s', value:1/30 }, { label:'1/60s', value:1/60 },
+            { label:'1/125s', value:1/125 }, { label:'1/250s', value:1/250 }, { label:'1/500s', value:1/500 },
+            { label:'1/1000s', value:1/1000 }, { label:'1/2000s', value:1/2000 }, { label:'1/4000s', value:1/4000 }
         ];
         
         setTimeout(() => {
             if (document.getElementById('apertureChart') && document.getElementById('shutterChart')) {
-                createChart('apertureChart', '조리개', apertureData, 'rgba(75, 192, 192, 0.6)', 'rgba(75, 192, 192, 1)');
-                createChart('shutterChart', '셔터 속도', shutterData, 'rgba(255, 159, 64, 0.6)', 'rgba(255, 159, 64, 1)');
+                createChart('apertureChart', '조리개', apertureData);
+                createChart('shutterChart', '셔터 속도', shutterData);
             }
         }, 0);
 
@@ -801,8 +813,8 @@ function renderContent(category, searchTerm = '') {
                     <div class="answer border-t border-gray-200 text-gray-700 leading-relaxed">
                         <p>${item.a.replace(/\n/g, '<br>')}</p>
                         <div class="mt-4 pt-4 border-t border-dashed flex flex-wrap gap-2">
-                            <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${item.q}" data-a="${item.a}">✨ 쉽게 설명</button>
-                            <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${item.q}" data-a="${item.a}">✨ 깊이 알아보기</button>
+                            <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="explain">✨ 쉽게 설명</button>
+                            <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="deepen">✨ 깊이 알아보기</button>
                         </div>
                     </div>
                 </div>
@@ -832,9 +844,10 @@ function renderContent(category, searchTerm = '') {
 
     document.querySelectorAll('.gemini-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
+            const card = e.target.closest('.content-card');
+            const question = card.querySelector('.question h3').textContent.trim();
+            const answer = card.querySelector('.answer p').textContent.trim();
             const action = e.target.dataset.action;
-            const question = e.target.dataset.q;
-            const answer = e.target.dataset.a;
             let prompt = '';
 
             if (action === 'explain') {
@@ -855,9 +868,11 @@ function renderContent(category, searchTerm = '') {
 
 function displayQuizQuestion() {
     const q = currentQuizData.questions[currentQuestionIndex];
-    const optionsHtml = q.options.map(option => `
-        <div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option}">
-            ${option}
+    const correctIndex = q.options.findIndex(o => o === q.answer);
+
+    const optionsHtml = q.options.map((opt, i) => `
+        <div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-index="${i}">
+            ${opt}
         </div>
     `).join('');
     modalBody.innerHTML = `
@@ -873,11 +888,25 @@ function displayQuizQuestion() {
     `;
     
     const options = modalBody.querySelectorAll('.quiz-option');
-    options.forEach(option => {
-        option.addEventListener('click', (e) => {
-            options.forEach(opt => opt.classList.remove('selected'));
-            e.currentTarget.classList.add('selected');
-            checkQuizAnswer();
+    options.forEach(opt => {
+        opt.addEventListener('click', () => {
+            options.forEach(o => o.classList.remove('selected'));
+            opt.classList.add('selected');
+
+            const chosen = Number(opt.dataset.index);
+            options.forEach((o, i) => {
+                o.style.pointerEvents = 'none';
+                if (i === correctIndex) o.classList.add('correct');
+                else if (o.classList.contains('selected')) o.classList.add('incorrect');
+            });
+
+            if (chosen === correctIndex) {
+                score++;
+                modalBody.querySelector('#quizResult').innerHTML = `<p class="text-green-600 font-semibold">정답입니다!</p>`;
+            } else {
+                modalBody.querySelector('#quizResult').innerHTML = `<p class="text-red-600 font-semibold">오답입니다. 정답은 "${q.answer}" 입니다.</p>`;
+            }
+            document.getElementById('nextQuestionBtn').classList.remove('hidden');
         });
     });
     
@@ -918,6 +947,26 @@ function checkQuizAnswer() {
     document.getElementById('nextQuestionBtn').classList.remove('hidden');
 }
 
+function displayQuizFinalScore() {
+    modalBody.innerHTML = `
+        <div class="text-center">
+            <h2 class="text-2xl font-bold mb-4">퀴즈 완료!</h2>
+            <p class="text-lg">총 ${currentQuizData.questions.length}문제 중 <span class="font-bold text-xl text-gray-800">${score}</span>문제를 맞혔습니다.</p>
+            <button id="restartQuizBtn" class="mt-6 bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-800">다시 풀기</button>
+        </div>
+    `;
+    document.getElementById('restartQuizBtn').addEventListener('click', generateQuiz);
+}
+
+function safeParseJSON(s) {
+    const trimmed = s.trim()
+        .replace(/^```json/i, '')
+        .replace(/^```/, '')
+        .replace(/```$/, '')
+        .trim();
+    return JSON.parse(trimmed);
+}
+
 async function generateQuiz() {
     const activeLink = document.querySelector('.nav-item.active');
     const category = activeLink ? activeLink.dataset.category : 'all';
@@ -938,14 +987,13 @@ async function generateQuiz() {
     
     const responseText = await callGemini(prompt, true);
 
-    // API 응답이 유효한 JSON 문자열인지 확인
     if (responseText && responseText.startsWith('<p')) {
         modalBody.innerHTML = responseText;
         return;
     }
     
     try {
-        currentQuizData = JSON.parse(responseText);
+        currentQuizData = safeParseJSON(responseText);
         currentQuestionIndex = 0;
         score = 0;
         if (currentQuizData.questions && currentQuizData.questions.length > 0) {
