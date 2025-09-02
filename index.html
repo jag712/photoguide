@@ -141,7 +141,6 @@
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="exposure">노출</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="lens">렌즈와 광학</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="digital">디지털</a></li>
-                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="cms">CMS 가이드</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="film">필름과 현상</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="lighting">조명과 필터</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="history">사진사 & 사조</a></li>
@@ -958,96 +957,7 @@ function renderContent(category, searchTerm = '') {
 
         mainContent.innerHTML = html;
         return;
-} else if (category === 'cms') {
-        html = `
-             <div class="max-w-4xl mx-auto">
-                <header class="text-center mb-8">
-                    <h1 class="text-3xl md:text-4xl font-bold text-gray-800">디지털 색 관리 시스템(CMS) 이해하기</h1>
-                    <p class="text-gray-600 mt-2">카메라부터 모니터, 프린터까지 모든 장비에서 일관된 색상을 유지하는 방법</p>
-                </header>
 
-                <div class="content-card mb-4">
-                    <div class="question p-6 flex justify-between items-center">
-                        <h3 class="text-lg font-bold text-gray-800">1. 색 관리 시스템(CMS)이란?</h3>
-                        <i class="fas fa-chevron-down transform transition-transform"></i>
-                    </div>
-                    <div class="answer border-t border-gray-200">
-                        <div class="p-6">
-                            <div class="text-center text-sm text-gray-600 mb-6">카메라, 모니터, 프린터 등 서로 다른 장비들이 각자의 방식으로 색을 표현하기 때문에 발생하는 색상 차이를 최소화하고, 원본의 색을 모든 장비에서 일관되게 보이도록 관리하는 과정입니다.</div>
-                            <div class="flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0 md:space-x-4 text-center">
-                                <div class="diagram-item"><div class="w-24 h-24 bg-gradient-to-br from-red-500 to-yellow-400 rounded-full flex items-center justify-center text-white font-bold mb-2 shadow-lg">현실</div><p class="text-sm font-semibold">원본 색상</p><p class="text-xs text-gray-500">실제 세상의 색</p></div>
-                                <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
-                                <div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-camera text-4xl text-blue-600"></i><div class="profile-tag bg-blue-100 text-blue-800">입력 프로파일</div></div><p class="text-sm font-semibold">촬영 (색상 정의)</p><p class="text-xs text-gray-500">(sRGB, AdobeRGB)</p></div>
-                                <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
-                                <div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-desktop text-4xl text-green-600"></i><div class="profile-tag bg-green-100 text-green-800">작업/모니터 프로파일</div></div><p class="text-sm font-semibold">편집 (색상 확인)</p><p class="text-xs text-gray-500">(모니터 프로파일)</p></div>
-                                <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
-                                <div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-print text-4xl text-purple-600"></i><div class="profile-tag bg-purple-100 text-purple-800">출력 프로파일</div></div><p class="text-sm font-semibold">출력 (색상 재현)</p><p class="text-xs text-gray-500">(프린터/용지 프로파일)</p></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="content-card mb-4">
-                    <div class="question p-6 flex justify-between items-center">
-                        <h3 class="text-lg font-bold text-gray-800">2. 색 공간(Color Space)의 종류</h3>
-                        <i class="fas fa-chevron-down transform transition-transform"></i>
-                    </div>
-                    <div class="answer border-t border-gray-200">
-                        <div class="p-6 space-y-6">
-                            <p class="text-sm text-gray-600">색 공간은 색상을 수학적으로 표현하는 모델입니다. CMS에서는 이들을 크게 '장치 독립적인 공간'과 '장치 의존적인 공간'으로 나눕니다.</p>
-                            <div class="grid md:grid-cols-2 gap-6">
-                                <div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-globe mr-2 text-sky-500"></i>장치 독립 색 공간 (PCS)</h4><p class="text-sm text-gray-600 mt-2">특정 장비에 구애받지 않는 절대적인 기준 색 공간입니다. 모든 색상 변환의 '중간 다리' 또는 '번역기' 역할을 합니다. 대표적으로 CIELAB, CIEXYZ가 있습니다.</p></div>
-                                <div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-cogs mr-2 text-amber-500"></i>장치 의존 색 공간 (ICC Profile)</h4><p class="text-sm text-gray-600 mt-2">카메라, 모니터, 프린터 등 특정 장비가 표현할 수 있는 색상의 범위(Gamut)와 특징을 정의한 데이터 파일입니다.</p></div>
-                            </div>
-                            <div>
-                                <h5 class="font-semibold text-md text-gray-800 mb-2">ICC 프로파일의 세부 종류</h5>
-                                <div class="space-y-3">
-                                    <div class="bg-blue-50 p-3 rounded-md border border-blue-200"><p class="font-semibold text-blue-800">범용 (Standard)</p><p class="text-xs text-blue-700">sRGB, Adobe RGB (1998) 처럼 국제 표준으로 널리 사용되는 프로파일입니다. 웹, 일반 사진 등 대부분의 작업에서 기준으로 사용됩니다.<br><span class="font-medium text-gray-600">예: sRGB IEC61966-2.1, AdobeRGB1998.icc</span></p></div>
-                                    <div class="bg-green-50 p-3 rounded-md border border-green-200"><p class="font-semibold text-green-800">제네릭 (Generic)</p><p class="text-xs text-green-700">모니터나 프린터 제조사에서 특정 모델을 위해 제공하는 기본 프로파일입니다. 어느 정도 정확하지만, 개별 장비의 미세한 차이나 노후화는 반영하지 못합니다.<br><span class="font-medium text-gray-600">예: DELL U2723QE.icc, EPSON Stylus Pro 7900 Premium Luster.icc</span></p></div>
-                                    <div class="bg-yellow-50 p-3 rounded-md border border-yellow-200"><p class="font-semibold text-yellow-800">커스텀 (Custom)</p><p class="text-xs text-yellow-700">캘리브레이션 장비(계측기)를 사용하여 현재 내가 사용하는 장비의 상태를 직접 측정하여 생성한, 가장 정확한 맞춤형 프로파일입니다.<br><span class="font-medium text-gray-600">예: My_U2723QE_D65_120cd_231026.icc</span></p></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="content-card mb-4">
-                    <div class="question p-6 flex justify-between items-center">
-                        <h3 class="text-lg font-bold text-gray-800">3. 주요 작업별 색 공간(Color Space) 예시</h3>
-                        <i class="fas fa-chevron-down transform transition-transform"></i>
-                    </div>
-                    <div class="answer border-t border-gray-200">
-                        <div class="p-6 space-y-4">
-                            <p class="text-sm text-gray-600">작업 목적(웹, 인쇄, 영상 등)에 따라 각기 다른 표준 색 공간이 사용되며, 이들은 모두 아래의 장치 독립 색 공간을 기준으로 변환됩니다.</p>
-                            <div class="grid md:grid-cols-2 gap-4">
-                                <div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center mb-2"><i class="fas fa-image mr-2 text-rose-500"></i>RGB (사진/웹/디스플레이)</h4><ul class="space-y-2 text-xs text-gray-600"><li><strong class="font-semibold text-gray-800">sRGB:</strong> 웹 표준. 대부분의 모니터, 스마트폰, 일반 디지털 카메라의 기본 색 공간으로 가장 범용성이 높습니다.</li><li><strong class="font-semibold text-gray-800">Adobe RGB (1998):</strong> sRGB보다 녹색, 청록색 표현 범위가 넓어 인쇄를 염두에 둔 사진 작업에 유리합니다.</li><li><strong class="font-semibold text-gray-800">Display P3:</strong> Apple 기기(아이폰, 맥북 등)에서 표준으로 사용하며, sRGB보다 넓은 색역을 가집니다. 디지털 시네마 표준(DCI-P3)에 기반합니다.</li><li><strong class="font-semibold text-gray-800">ProPhoto RGB:</strong> 매우 넓은 색역을 가져 디지털 카메라가 기록하는 대부분의 색을 포함합니다. 후보정 시 색 손실을 최소화하기 위해 전문가들이 16비트 환경에서 사용합니다.</li></ul></div>
-                                <div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center mb-2"><i class="fas fa-print mr-2 text-cyan-500"></i>CMYK (인쇄)</h4><ul class="space-y-2 text-xs text-gray-600"><li><strong class="font-semibold text-gray-800">U.S. Web Coated (SWOP) v2:</strong> 북미 지역의 잡지, 카탈로그 등 코팅 용지 웹 오프셋 인쇄 표준입니다.</li><li><strong class="font-semibold text-gray-800">ISO Coated v2 (ECI):</strong> 유럽 지역의 코팅 용지 인쇄 표준으로 널리 사용됩니다.</li><li><strong class="font-semibold text-gray-800">Japan Color 2001 Coated:</strong> 일본의 인쇄 표준 색 공간입니다.</li></ul></div>
-                                <div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center mb-2"><i class="fas fa-film mr-2 text-indigo-500"></i>영상 (Video)</h4><ul class="space-y-2 text-xs text-gray-600"><li><strong class="font-semibold text-gray-800">Rec. 709:</strong> HDTV 방송의 표준 색 공간입니다. 색역 크기는 sRGB와 거의 동일합니다.</li><li><strong class="font-semibold text-gray-800">Rec. 2020:</strong> UHDTV(4K, 8K)를 위한 표준으로, Rec. 709보다 훨씬 넓은 색역을 가집니다.</li></ul></div>
-                                <div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center mb-2"><i class="fas fa-adjust mr-2 text-gray-500"></i>흑백 (Grayscale)</h4><ul class="space-y-2 text-xs text-gray-600"><li><strong class="font-semibold text-gray-800">Gray Gamma 2.2:</strong> 감마 2.2를 기준으로 하는 일반적인 흑백 표준입니다.</li><li><strong class="font-semibold text-gray-800">Dot Gain (망점 이득):</strong> 인쇄 시 잉크가 종이에 번지는 현상을 미리 계산에 넣은 프로파일입니다. (예: Dot Gain 15%)</li></ul></div>
-                                <div class="bg-gray-50 p-4 rounded-lg border md:col-span-2"><h4 class="font-bold text-gray-700 flex items-center mb-2"><i class="fas fa-globe mr-2 text-sky-500"></i>기준: 장치 독립 색 공간 (PCS)</h4><ul class="space-y-2 text-xs text-gray-600"><li><strong class="font-semibold text-gray-800">CIELAB (L*a*b*):</strong> 인간의 시각 체계와 가장 유사하게 색을 표현하는 공간입니다. L*(명도), a*(빨강-초록), b*(노랑-파랑)의 3가지 요소로 색을 정의하며, CMS에서 색상 변환의 핵심 기준점으로 사용됩니다.</li><li><strong class="font-semibold text-gray-800">CIEXYZ:</strong> 인간이 지각할 수 있는 모든 색상을 3개의 가상 원색(X, Y, Z) 값으로 표현하는 최초의 수학적 색 공간입니다. 다른 모든 색 공간을 정의하고 비교하는 근간이 됩니다.</li></ul></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="content-card mb-4">
-                    <div class="question p-6 flex justify-between items-center">
-                        <h3 class="text-lg font-bold text-gray-800">4. 캘리브레이션 vs. 프로파일링</h3>
-                        <i class="fas fa-chevron-down transform transition-transform"></i>
-                    </div>
-                    <div class="answer border-t border-gray-200">
-                        <div class="p-6 space-y-4">
-                            <p class="text-sm text-gray-600">두 용어는 자주 혼용되지만 의미가 다릅니다. 캘리브레이션이 선행되어야 정확한 프로파일링이 가능합니다.</p>
-                            <div class="flex flex-col md:flex-row items-stretch justify-center gap-6">
-                                <div class="w-full md:w-1/2 bg-indigo-50 p-4 rounded-lg border border-indigo-200 text-center"><i class="fas fa-sliders-h text-3xl text-indigo-500 mb-2"></i><h4 class="font-bold text-indigo-800">캘리브레이션 (Calibration)</h4><p class="text-sm text-indigo-700 mt-2">장비를 미리 정해진 <span class="font-semibold">표준 상태(밝기, 색온도, 감마 등)로 조정</span>하는 과정입니다. 일관된 결과물을 얻기 위한 사전 준비 작업입니다.</p></div>
-                                <div class="w-full md:w-1/2 bg-teal-50 p-4 rounded-lg border border-teal-200 text-center"><i class="fas fa-ruler-combined text-3xl text-teal-500 mb-2"></i><h4 class="font-bold text-teal-800">프로파일링 (Profiling)</h4><p class="text-sm text-teal-700 mt-2">캘리브레이션 된 장비가 색상을 어떻게 표현하는지 <span class="font-semibold">정확히 측정하여 그 특성을 파일(ICC Profile)로 기록</span>하는 과정입니다.</p></div>
-                            </div>
-                            <div class="mt-4 pt-4 border-t"><h5 class="font-semibold text-md text-gray-800 mb-2">각 장비의 캘리브레이션 & 프로파일링</h5><p class="text-sm text-gray-600 mb-2"><span class="font-semibold text-gray-700">모니터:</span> 전용 센서(계측기)를 모니터에 부착하여 목표한 밝기(Luminance), 백색점(White Point), 감마(Gamma) 값에 맞도록 조정한 후, 측정된 색상 표현 특성을 모니터 프로파일로 저장합니다.</p><p class="text-sm text-gray-600"><span class="font-semibold text-gray-700">프린터:</span> 특정 프린터, 잉크, 용지 조합으로 정해진 색상 패치를 인쇄하고, 분광측색계(Spectrophotometer)로 각 패치의 색상을 정밀하게 측정하여 해당 조합에 맞는 프린터 프로파일을 생성합니다.</p></div>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-    } else {
     } else if (category === 'visualization') {
         html = `
             <div class="content-card p-6 md:p-8 mb-6">
@@ -1095,6 +1005,78 @@ function renderContent(category, searchTerm = '') {
                 </div>
             </div>
 
+            <div class="content-card mb-4">
+                <div class="question p-6 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-800">색 관리 시스템 (CMS)과 프로파일</h3>
+                    <i class="fas fa-chevron-down transform transition-transform"></i>
+                </div>
+                <div class="answer border-t border-gray-200 p-6"><br><br>
+                    <div class="text-center text-sm text-gray-600 mb-4">카메라부터 모니터, 프린터까지 모든 장비에서 일관된 색상을 유지하는 과정입니다.</div>
+                    <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4 text-center">
+                        <div class="flex flex-col items-center">
+                           <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white font-bold mb-2">현실</div>
+                           <p class="text-sm font-semibold">원본 색상</p>
+                        </div>
+                        <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
+                        <div class="flex flex-col items-center">
+                           <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
+                                <i class="fas fa-camera text-3xl text-gray-600"></i>
+                                <div class="text-xs mt-1 p-1 bg-blue-100 rounded">입력 프로파일<br>(sRGB, AdobeRGB)</div>
+                           </div>
+                           <p class="text-sm font-semibold">촬영 (색상 정의)</p>
+                        </div>
+                        <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
+                        <div class="flex flex-col items-center">
+                            <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
+                                <i class="fas fa-desktop text-3xl text-gray-600"></i>
+                                <div class="text-xs mt-1 p-1 bg-green-100 rounded">출력 프로파일<br>(모니터 프로파일)</div>
+                           </div>
+                           <p class="text-sm font-semibold">편집 (색상 확인)</p>
+                        </div>
+                        <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
+                         <div class="flex flex-col items-center">
+                            <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
+                                <i class="fas fa-print text-3xl text-gray-600"></i>
+                                <div class="text-xs mt-1 p-1 bg-purple-100 rounded">출력 프로파일<br>(프린터/용지 프로파일)</div>
+                           </div>
+                           <p class="text-sm font-semibold">출력 (색상 재현)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card mb-4">
+                <div class="question p-6 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-800">필름 특성곡선 (Characteristic Curve)</h3>
+                    <i class="fas fa-chevron-down transform transition-transform"></i>
+                </div>
+                <div class="answer border-t border-gray-200 p-6">
+                    <div class="relative w-full max-w-lg mx-auto" style="height: 300px;">
+                        <svg class="absolute w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <!-- Axes -->
+                            <line x1="10" y1="90" x2="95" y2="90" stroke="black" stroke-width="0.5"></line>
+                            <line x1="10" y1="5" x2="10" y2="90" stroke="black" stroke-width="0.5"></line>
+                            <!-- Curve -->
+                            <path d="M 15,85 C 30,85 40,20 80,10" stroke="#4A5568" stroke-width="1.5" fill="none"></path><br><br>
+                        </svg>
+                        <!-- Labels -->
+                        <div class="absolute bottom-0 right-0 text-sm">노광량 (Log Exposure) →</div>
+                        <div class="absolute top-0 left-0 text-sm -rotate-90 origin-top-left" style="transform-origin: 0 0; transform: rotate(-90deg) translateX(-100%) translateY(1em);">농도 (Density) →</div>
+                        <div class="absolute text-xs" style="left: 18%; bottom: 18%;">① Base+Fog</div>
+                        <div class="absolute text-xs" style="left: 28%; bottom: 40%;">② 발가락 부분 (Toe)</div>
+                        <div class="absolute text-xs" style="left: 45%; bottom: 65%;">③ 직선 부분 (Straight-line)</div>
+                        <div class="absolute text-xs" style="left: 70%; top: 25%;">④ 어깨 부분 (Shoulder)</div>
+                        <div class="absolute text-xs" style="left: 75%; top: 8%;">⑤ 최대 농도 (D-Max)</div>
+                    </div>
+                     <div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md">
+                        <p>• <strong>① Base+Fog:</strong> 빛을 전혀 받지 않아도 필름 베이스와 현상 과정에서 생기는 최소 농도</p>
+                        <p>• <strong>② 발가락 부분 (Toe):</strong> 어두운 영역(Shadow). 노출이 약간 증가해도 농도 변화가 적어 콘트라스트가 낮다.</p>
+                        <p>• <strong>③ 직선 부분 (Straight-line):</strong> 중간 회조 영역(Mid-tone). 노출량과 농도가 비례하여 증가하며 계조 표현이 가장 좋다. 이 기울기를 감마(γ)라고 한다.</p>
+                        <p>• <strong>④ 어깨 부분 (Shoulder):</strong> 밝은 영역(Highlight). 노출이 증가해도 농도 변화가 적어 콘트라스트가 낮아진다.</p>
+                        <p>• <strong>⑤ 최대 농도 (D-Max):</strong> 필름이 표현할 수 있는 가장 높은 농도값.</p>
+                    </div>
+                </div>
+            </div>
         `;
 
         mainContent.innerHTML = html;
@@ -1371,8 +1353,6 @@ searchInput.addEventListener('input', handleSearch);
 </script>
 </body>
 </html>
-
-
 
 
 
