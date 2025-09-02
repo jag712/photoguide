@@ -111,6 +111,54 @@
             transform: translateY(-4px);
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
+        .modal-overlay {
+            transition: opacity 0.3s ease;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4A5568;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .gemini-btn {
+            background-color: #f0f4f8;
+            color: #4A5568;
+            transition: all 0.2s ease;
+        }
+        .gemini-btn:hover {
+            background-color: #e2e8f0;
+            transform: translateY(-1px);
+        }
+        .quiz-option {
+            border: 2px solid #E2E8F0;
+            transition: all 0.2s ease;
+        }
+        .quiz-option:hover {
+            border-color: #4A5568;
+            background-color: #f7fafc;
+        }
+        .quiz-option.selected {
+            border-color: #4A5568;
+            background-color: #E2E8F0;
+        }
+        .quiz-option.correct {
+            background-color: #C6F6D5;
+            border-color: #38A169;
+        }
+        .quiz-option.incorrect {
+            background-color: #FED7D7;
+            border-color: #E53E3E;
+        }
     </style>
 </head>
 <body class="antialiased bg-gray-50">
@@ -142,6 +190,17 @@
 
         <main id="mainContent" class="flex-1 p-4 md:p-10 overflow-y-auto">
         </main>
+    </div>
+
+    <div id="geminiModal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4 z-50 hidden opacity-0">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col transform scale-95">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 id="modalTitle" class="text-xl font-bold text-gray-800">Gemini AI</h3>
+                <button id="closeModal" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+            <div id="modalBody" class="p-6 overflow-y-auto">
+            </div>
+        </div>
     </div>
 
 <script>
@@ -577,7 +636,16 @@ const visualizationData = {
 const mainContent = document.getElementById('mainContent');
 const navLinks = document.querySelectorAll('.nav-item, #homeLink');
 const searchInput = document.getElementById('searchInput');
+const quizBtn = document.getElementById('quizBtn');
+const geminiModal = document.getElementById('geminiModal');
+const modalTitle = document.getElementById('modalTitle');
+const modalBody = document.getElementById('modalBody');
+const closeModal = document.getElementById('closeModal');
+
 let charts = {};
+let currentQuizData = null;
+let currentQuestionIndex = 0;
+let score = 0;
 
 // --- 함수 영역 ---
 function createCalendar(year, month, events = {}) {
@@ -599,6 +667,167 @@ function createCalendar(year, month, events = {}) {
     }
     html += `</div></div>`;
     return html;
+}
+
+/**
+ * =================================================================
+ * Gemini AI API 호출 및 모달 제어 공통 함수
+ * =================================================================
+ */
+const PROXY_URL = '/.netlify/functions/gemini-proxy'; // 실제 환경에 맞게 수정 필요
+
+function showModal() {
+    modalBody.innerHTML = `<div class="flex items-center justify-center h-40"><div class="loader"></div></div>`;
+    geminiModal.classList.remove('hidden');
+    setTimeout(() => {
+        geminiModal.classList.remove('opacity-0');
+        geminiModal.querySelector('.modal-content').classList.remove('scale-95');
+    }, 10);
+}
+
+function hideModal() {
+    geminiModal.classList.add('opacity-0');
+    geminiModal.querySelector('.modal-content').classList.add('scale-95');
+    setTimeout(() => {
+        geminiModal.classList.add('hidden');
+    }, 300);
+}
+
+async function callGemini(prompt, useSchema = false) {
+    showModal();
+    try {
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {}
+        };
+        if (useSchema) {
+            payload.generationConfig.responseMimeType = "application/json";
+            payload.generationConfig.responseSchema = { type: "OBJECT", properties: { questions: { type: "ARRAY", items: { type: "OBJECT", properties: { question: { type: "STRING" }, options: { type: "ARRAY", items: { type: "STRING" } }, answer: { type: "STRING" } }, required: ["question", "options", "answer"] } } } };
+        } else {
+            payload.generationConfig.responseMimeType = "text/plain";
+        }
+        const response = await fetch(PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (!response.ok) throw new Error(`Proxy call failed. Status: ${response.status}`);
+        const result = await response.json();
+        let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error("No content received from API.");
+        text = text.trim();
+        if (text.startsWith('```json') && text.endsWith('```')) {
+            text = text.substring(7, text.length - 3).trim();
+        }
+        return text;
+    } catch (error) {
+        console.error("Gemini proxy call error:", error);
+        return `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>`;
+    }
+}
+
+/**
+ * =================================================================
+ * 기능 1: AI 퀴즈 생성
+ * =================================================================
+ */
+async function generateQuiz() {
+    const activeLink = document.querySelector('.nav-item.active');
+    const category = activeLink ? activeLink.dataset.category : 'all';
+    const categoryName = activeLink ? activeLink.textContent : '전체';
+    modalTitle.textContent = `${categoryName} 퀴즈`;
+    let contentForQuiz = [];
+    if (['home', 'visualization', 'all', 'cms'].includes(category) || !photographyData[category]) {
+        Object.values(photographyData).forEach(cat => contentForQuiz.push(...cat));
+    } else {
+        contentForQuiz = photographyData[category];
+    }
+    const shuffledTerms = contentForQuiz.sort(() => 0.5 - Math.random());
+    const topics = shuffledTerms.slice(0, 15).map(item => item.q).join(', ');
+    const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
+    const responseText = await callGemini(prompt, true);
+    try {
+        let parsedData = JSON.parse(responseText);
+        if (parsedData && Array.isArray(parsedData.questions) && parsedData.questions.length > 0) {
+            currentQuizData = parsedData;
+            currentQuestionIndex = 0;
+            score = 0;
+            displayQuizQuestion();
+        } else {
+            throw new Error("Invalid quiz format received.");
+        }
+    } catch (e) {
+        console.error("Quiz parsing error:", e);
+        modalBody.innerHTML = `<p class="text-red-500">퀴즈를 생성하는 데 실패했습니다. AI가 유효한 퀴즈 형식을 반환하지 못했습니다.</p>`;
+    }
+}
+
+function displayQuizQuestion() {
+    const q = currentQuizData.questions[currentQuestionIndex];
+    const optionsHtml = q.options.map(option => `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option.replace(/"/g, '&quot;')}">${option}</div>`).join('');
+    modalBody.innerHTML = `<div class="mb-4"><p class="text-sm text-gray-500">문제 ${currentQuestionIndex + 1} / ${currentQuizData.questions.length}</p><p class="text-lg font-semibold mt-1">${q.question}</p></div><div id="quizOptions">${optionsHtml}</div><div id="quizResult" class="mt-4"></div><div class="flex justify-end mt-4"><button id="nextQuestionBtn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 hidden">다음 문제</button></div>`;
+    modalBody.querySelectorAll('.quiz-option').forEach(option => {
+        option.addEventListener('click', e => {
+            modalBody.querySelectorAll('.quiz-option').forEach(opt => opt.classList.remove('selected'));
+            e.currentTarget.classList.add('selected');
+            checkQuizAnswer();
+        });
+    });
+    document.getElementById('nextQuestionBtn').addEventListener('click', () => {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < currentQuizData.questions.length) {
+            displayQuizQuestion();
+        } else {
+            displayQuizFinalScore();
+        }
+    });
+}
+
+function checkQuizAnswer() {
+    const selectedOptionEl = modalBody.querySelector('.quiz-option.selected');
+    if (!selectedOptionEl) return;
+    const selectedAnswer = selectedOptionEl.dataset.option;
+    const correctAnswer = currentQuizData.questions[currentQuestionIndex].answer;
+    modalBody.querySelectorAll('.quiz-option').forEach(opt => {
+        opt.style.pointerEvents = 'none';
+        if (opt.dataset.option === correctAnswer) opt.classList.add('correct');
+        else if (opt.classList.contains('selected')) opt.classList.add('incorrect');
+    });
+    if (selectedAnswer === correctAnswer) {
+        score++;
+        modalBody.querySelector('#quizResult').innerHTML = `<p class="text-green-600 font-semibold">정답입니다!</p>`;
+    } else {
+        modalBody.querySelector('#quizResult').innerHTML = `<p class="text-red-600 font-semibold">오답입니다. 정답은 "${correctAnswer}" 입니다.</p>`;
+    }
+    document.getElementById('nextQuestionBtn').classList.remove('hidden');
+}
+
+function displayQuizFinalScore() {
+    modalBody.innerHTML = `<div class="text-center"><h2 class="text-2xl font-bold mb-4">퀴즈 완료!</h2><p class="text-lg">총 ${currentQuizData.questions.length}문제 중 <span class="font-bold text-xl text-gray-800">${score}</span>문제를 맞혔습니다.</p><button id="restartQuizBtn" class="mt-6 bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-800">다시 풀기</button></div>`;
+    document.getElementById('restartQuizBtn').addEventListener('click', generateQuiz);
+}
+
+/**
+ * =================================================================
+ * 기능 2 & 3: 쉽게 설명 / 깊이 알아보기
+ * =================================================================
+ */
+function setupGeminiButtons() {
+    document.querySelectorAll('.gemini-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const action = e.target.dataset.action;
+            const question = e.target.dataset.q;
+            const answer = e.target.dataset.a;
+            let prompt = '';
+            if (action === 'explain') {
+                modalTitle.textContent = `"${question}" 쉽게 이해하기`;
+                prompt = `사진학 용어인 "${question}"에 대해 핵심만 짚어 입시생이 시험장에서 바로 활용할 수 있도록 간결하게 설명해줘. 설명: ${answer}`;
+            } else if (action === 'deepen') {
+                modalTitle.textContent = `"${question}" 깊이 알아보기`;
+                prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 심화 개념, 역사적 배경, 또는 실전 촬영 팁을 포함하여 전문가 수준의 추가 정보를 제공해줘. 설명: ${answer}`;
+            }
+            if (prompt) {
+                const responseText = await callGemini(prompt, false);
+                modalBody.innerHTML = `<p>${responseText.replace(/\n/g, '<br>')}</p>`;
+            }
+        });
+    });
 }
 
 function createChart(canvasId, label, data, backgroundColor, borderColor) {
@@ -690,7 +919,7 @@ function renderContent(category, searchTerm = '') {
                             <text x="195" y="265" font-size="10" text-anchor="middle">-1.0</text><line x1="195" y1="250" x2="195" y2="245" stroke="#9ca3af" stroke-width="1"></line>
                             <text x="270" y="265" font-size="10" text-anchor="middle">0.0</text><line x1="270" y1="250" x2="270" y2="245" stroke="#9ca3af" stroke-width="1"></line>
                             <text x="345" y="265" font-size="10" text-anchor="middle">1.0</text><line x1="345" y1="250" x2="345" y2="245" stroke="#9ca3af" stroke-width="1"></line>
-                            <text x="420" y="290" font-size="10" text-anchor="end">노광량 (Log Exposure) →</text><text x="20" y="50" font-size="10" text-anchor="middle" transform="rotate(-90 20,50)">농도 (Density) →</text>
+                            <text x="420" y="300" font-size="10" text-anchor="end">노광량 (Log Exposure) →</text><text x="20" y="50" font-size="10" text-anchor="middle" transform="rotate(-90 20,50)">농도 (Density) →</text>
                             <path d="M 120 240 Q 150 230, 190 180 T 320 70 L 360 60" stroke="#DB2777" stroke-width="2.5" fill="none"></path>
                             <path d="M 190 240 Q 220 230, 250 150 T 340 55 L 380 50" stroke="#059669" stroke-width="2.5" fill="none"></path>
                         </svg>
@@ -840,19 +1069,31 @@ function renderContent(category, searchTerm = '') {
             itemsToRender = photographyData[category] || [];
         }
         if (itemsToRender.length > 0) {
-            html = itemsToRender.map((item) => `<div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">${item.q}</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6 text-gray-700 leading-relaxed">${item.a.replace(/\n/g, '<br>')}</div></div></div>`).join('');
+            html = itemsToRender.map((item) => `
+                <div class="content-card mb-4">
+                    <div class="question p-6 flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-gray-800">${item.q}</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="answer border-t border-gray-200">
+                        <div class="p-6 text-gray-700 leading-relaxed">
+                            <p>${item.a.replace(/\n/g, '<br>')}</p>
+                            <div class="mt-4 pt-4 border-t border-dashed flex flex-wrap gap-2">
+                                <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${item.q.replace(/"/g, '&quot;')}" data-a="${item.a.replace(/"/g, '&quot;')}">✨ 쉽게 설명</button>
+                                <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${item.q.replace(/"/g, '&quot;')}" data-a="${item.a.replace(/"/g, '&quot;')}">✨ 깊이 알아보기</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
         } else {
-             const categoryTitle = document.querySelector(`[data-category="${category}"]`)?.textContent || "콘텐츠";
-             html = `
-                 <div class="content-card p-8 text-center">
-  <h2 class="text-2xl font-bold text-gray-800 mb-4">검색 결과 없음 😢</h2>
-  <p class="text-gray-600">'<span id="search-term"></span>'에 대한 검색 결과를 찾을 수 없습니다.</p>
-  <p class="mt-4 text-sm text-gray-500">오타를 확인하시거나 다른 검색어로 다시 시도해 보세요.</p>
-</div>`;
+            const categoryTitle = document.querySelector(`[data-category="${category}"]`)?.textContent || "콘텐츠";
+            html = `<div class="content-card p-8 text-center"><h2 class="text-2xl font-bold text-gray-800 mb-4">검색 결과 없음 😢</h2><p class="text-gray-600">'<span id="search-term">${searchTerm}</span>'에 대한 검색 결과를 찾을 수 없습니다.</p><p class="mt-4 text-sm text-gray-500">오타를 확인하시거나 다른 검색어로 다시 시도해 보세요.</p></div>`;
         }
     }
     mainContent.innerHTML = html;
     setupEventListeners();
+    setupGeminiButtons(); // AI 버튼 이벤트 리스너 설정 함수 호출
     if (category === 'visualization') {
         setTimeout(() => {
             const updateChart = (chartName, stopType) => { const data = visualizationData[chartName][stopType]; const color = chartName === 'aperture' ? ['rgba(75, 192, 192, 0.6)', 'rgba(75, 192, 192, 1)'] : ['rgba(255, 159, 64, 0.6)', 'rgba(255, 159, 64, 1)']; createChart(`${chartName}Chart`, chartName, data, color[0], color[1]); };
@@ -884,9 +1125,21 @@ searchInput.addEventListener('input', () => {
         // If search is cleared, click the first nav item (home)
         const activeOrHomeLink = document.querySelector('.nav-item.active') || document.querySelector('[data-category="home"]');
         if (activeOrHomeLink) {
-             activeOrHomeLink.click();
+            activeOrHomeLink.click();
         }
     }
+});
+
+// AI 퀴즈 생성 버튼 이벤트
+quizBtn.addEventListener('click', generateQuiz);
+
+// 모달 닫기 이벤트
+closeModal.addEventListener('click', hideModal);
+geminiModal.addEventListener('click', (e) => {
+    if (e.target === geminiModal) hideModal();
+});
+document.addEventListener('keydown', (e) => {
+    if (e.key === "Escape" && !geminiModal.classList.contains('hidden')) hideModal();
 });
 
 // 초기 화면 로드
