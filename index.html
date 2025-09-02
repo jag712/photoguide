@@ -39,16 +39,19 @@
         .question {
             cursor: pointer;
         }
+        /* --- MODIFIED: Accordion animation style --- */
         .answer {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
-            padding: 0 1.5rem;
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.5s ease-in-out;
         }
         .answer.open {
-            max-height: 2000px; /* Increased max-height for diagrams */
-            padding: 1.5rem 1.5rem;
+            grid-template-rows: 1fr;
         }
+        .answer > .answer-content {
+            overflow: hidden;
+        }
+        /* --- END MODIFICATION --- */
         .chart-container {
             position: relative;
             width: 100%;
@@ -135,7 +138,7 @@
                 <input type="text" id="searchInput" placeholder="용어 검색..." class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400">
             </div>
             <ul>
-                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700 active" data-category="home">소개</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700 active" data-category="home">2025 수시 일정</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="visualization">시각화</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="structure">카메라 구조와 원리</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="exposure">노출</a></li>
@@ -154,7 +157,6 @@
         </main>
     </div>
 
-    <!-- Gemini Modal -->
     <div id="geminiModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
         <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col transform scale-95">
             <div class="flex justify-between items-center p-4 border-b">
@@ -408,7 +410,7 @@ const photographyData = {
         { q: "사진분리파 (Photo-Secession)", a: "1902년 알프레드 스티글리츠가 결성한 미국의 사진 운동. 사진을 단순한 기록이 아닌, 작가의 감정과 사상을 표현하는 예술 매체로 인정받기 위해 노력했다. 회화의 미학을 적극적으로 수용했으며, '카메라 워크' 잡지와 '291 화랑'을 통해 활동했다." },
         { q: "사진 에세이 (Photo Essay)", a: "하나의 주제나 이야기를 여러 장의 사진과 텍스트를 결합하여 심도 있게 전달하는 포토저널리즘 형식. '라이프(LIFE)' 잡지를 통해 대중화되었으며, 유진 스미스의 '시골 의사'가 대표적인 예이다." },
         { q: "샌디 스코글룬드 (Sandy Skoglund)", a: "미국의 연출 사진가이자 설치 미술가. 단색으로 칠해진 방 안에 수많은 동일한 오브제(고양이, 금붕어 등)를 채워 비현실적이고 환상적인 공간을 직접 만든 뒤, 그것을 대형 카메라로 촬영한다." },
-        { q: "샤우덱, 얀 (Jan Saudek)", a: "체코의 사진가. 중세 그림을 연상시키는 자신의 스튜디오에서 에로틱하고 그로테스크한, 연극적인 장면을 연출한다. 흑백으로 촬영한 인화지에 직접 수채 물감으로 채색하는 기법으로 유명하다." },
+        { q: "얀 샤우덱 (Jan Saudek)", a: "체코의 사진가. 중세 그림을 연상시키는 자신의 스튜디오에서 에로틱하고 그로테스크한, 연극적인 장면을 연출한다. 흑백으로 촬영한 인화지에 직접 수채 물감으로 채색하는 기법으로 유명하다." },
         { q: "소냐 노스코비아크 (Sonya Noskowiak)", a: "f/64 그룹의 창립 멤버 중 한 명인 미국 여성 사진가. 식물의 형태미를 담은 클로즈업 사진과 건축 사진으로 알려져 있다." },
         { q: "스티븐 쇼어 (Stephen Shore)", a: "미국의 '뉴 컬러' 사진가. 1970년대 미국 전역을 여행하며 평범하고 일상적인 풍경을 대형 카메라를 이용해 절제되고 객관적인 컬러 사진으로 기록했다. 대표작으로 '보기 드문 장소(Uncommon Places)' 시리즈가 있다." },
         { q: "스트레이트 포토그래피 (Straight Photography)", a: "사진 고유의 기계적 특성을 살려 대상을 선명하고 정직하게 묘사하려는 경향. 회화주의 사진의 인위적인 표현에 반대하며 등장했으며, f/64 그룹이 대표적이다." },
@@ -748,7 +750,7 @@ async function callGemini(prompt, useSchema = false) {
         } else {
             payload.generationConfig.responseMimeType = "text/plain";
         }
-       
+        
         let response;
         // Retry logic with exponential backoff
         for (let i = 0; i < 3; i++) {
@@ -764,7 +766,7 @@ async function callGemini(prompt, useSchema = false) {
                 if (i < 2) await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
             }
         }
-       
+        
         if (!response || !response.ok) {
             const errorText = response ? await response.text() : 'No response from proxy.';
             throw new Error(`Proxy call failed after retries. Status: ${response ? response.status : 'N/A'}. Details: ${errorText}`);
@@ -772,11 +774,11 @@ async function callGemini(prompt, useSchema = false) {
 
         const result = await response.json();
         let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-       
+        
         if (!text) {
              throw new Error("No content received from API via proxy.");
         }
-       
+        
         text = text.trim();
         if (text.startsWith('```json') && text.endsWith('```')) {
             text = text.substring('```json'.length, text.length - '```'.length).trim();
@@ -868,10 +870,10 @@ function createCalendar(year, month, events = {}) {
     const daysInMonth = new Date(year, month, 0).getDate();
 
     let html = `
-        <div class="content-card p-6 w-full max-w-2xl mx-auto mb-8">
+        <div class="content-card p-6 w-full max-w-4xl mx-auto mb-8">
             <h3 class="text-xl font-bold text-center mb-4">${year}년 ${monthNames[month-1]}</h3>
             <div class="grid grid-cols-7 gap-1 text-center text-sm font-semibold text-gray-600">
-                ${days.map(day => `<div>${day}</div>`).join('')}
+                ${days.map(day => `<div class="${day === '일' ? 'text-red-500' : (day === '토' ? 'text-blue-500' : '')}">${day}</div>`).join('')}
             </div>
             <div class="grid grid-cols-7 gap-1 mt-2">
     `;
@@ -883,14 +885,21 @@ function createCalendar(year, month, events = {}) {
 
     // Add day cells
     for (let day = 1; day <= daysInMonth; day++) {
+        const currentDay = new Date(year, month - 1, day).getDay(); // 0 for Sunday, 6 for Saturday
         const dayEvents = events[day] || [];
         let eventHtml = '';
         if (dayEvents.length > 0) {
-            eventHtml = `<div class="text-xs mt-1 text-left">` + dayEvents.map(e => `<div class="text-white p-1 rounded-md ${e.color || 'bg-blue-500'} mb-1 truncate">${e.title}</div>`).join('') + `</div>`;
+            eventHtml = `<div class="text-xs mt-1 text-left">` + dayEvents.map(e => `<div class="text-white p-1 rounded-md ${e.color || 'bg-blue-500'} mb-1 truncate" title="${e.title}">${e.title}</div>`).join('') + `</div>`;
         }
+        
+        let dayClass = '';
+        if (currentDay === 0) dayClass = 'text-red-500'; // Sunday
+        if (currentDay === 6) dayClass = 'text-blue-500'; // Saturday
+        if (dayEvents.some(e => e.isHoliday)) dayClass = 'text-red-500';
+
         html += `<div class="border p-2 h-28 flex flex-col ${dayEvents.length > 0 ? 'bg-gray-50' : ''}">
-                    <span class="font-bold">${day}</span>
-                    ${eventHtml}
+                    <span class="font-bold ${dayClass}">${day}</span>
+                    <div class="overflow-y-auto">${eventHtml}</div>
                  </div>`;
     }
 
@@ -900,10 +909,10 @@ function createCalendar(year, month, events = {}) {
 
 function renderContent(category, searchTerm = '') {
     let html = '';
-   
+    
     if (category === 'home') {
         const calendarEvents = {
-            9: [
+            9: [ // September 2025
                 { day: 17, title: '테스트 프린트', color: 'bg-green-500' },
                 { day: 18, title: '테스트 프린트', color: 'bg-green-500' },
                 { day: 20, title: '경일대 면접', color: 'bg-purple-500' },
@@ -911,25 +920,31 @@ function renderContent(category, searchTerm = '') {
                 { day: 26, title: '경일 실기/면접', color: 'bg-purple-500' },
                 { day: 27, title: '경일 실기/면접', color: 'bg-purple-500' },
             ],
-            10: [
-                 { day: 18, title: '서울예대 실기(예정)', color: 'bg-yellow-500' },
-                 { day: 20, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
-                 { day: 21, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
-                 { day: 22, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
-                 { day: 23, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
+            10: [ // October 2025
+                { day: 3, title: '개천절', color: 'bg-gray-500', isHoliday: true },
+                { day: 5, title: '추석 연휴', color: 'bg-gray-500', isHoliday: true },
+                { day: 6, title: '추석', color: 'bg-gray-500', isHoliday: true },
+                { day: 7, title: '추석 연휴', color: 'bg-gray-500', isHoliday: true },
+                { day: 8, title: '대체공휴일', color: 'bg-gray-500', isHoliday: true },
+                { day: 9, title: '한글날', color: 'bg-gray-500', isHoliday: true },
+                { day: 18, title: '서울예대 실기(예정)', color: 'bg-yellow-500' },
+                { day: 20, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
+                { day: 21, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
+                { day: 22, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
+                { day: 23, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
             ]
         };
 
         const eventsForSept = {};
         calendarEvents[9].forEach(e => {
             if (!eventsForSept[e.day]) eventsForSept[e.day] = [];
-            eventsForSept[e.day].push({ title: e.title, color: e.color });
+            eventsForSept[e.day].push({ title: e.title, color: e.color, isHoliday: e.isHoliday || false });
         });
         
         const eventsForOct = {};
         calendarEvents[10].forEach(e => {
             if (!eventsForOct[e.day]) eventsForOct[e.day] = [];
-            eventsForOct[e.day].push({ title: e.title, color: e.color });
+            eventsForOct[e.day].push({ title: e.title, color: e.color, isHoliday: e.isHoliday || false });
         });
 
         html = `
@@ -957,35 +972,37 @@ function renderContent(category, searchTerm = '') {
                     <i class="fas fa-chevron-down transform transition-transform"></i>
                 </div>
                 <div class="answer border-t border-gray-200">
-                    <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div>
-                            <div class="flex justify-center items-center mb-4">
-                                <h3 class="text-xl font-bold text-center mr-4">조리개 (Aperture)</h3>
-                                <div class="flex rounded-lg bg-gray-200 p-1 text-sm">
-                                    <button class="stop-btn active px-3 py-1 rounded-md" data-chart="aperture" data-stop="fullStop">1 스톱</button>
-                                    <button class="stop-btn px-3 py-1 rounded-md" data-chart="aperture" data-stop="thirdStop">1/3 스톱</button>
+                    <div class="answer-content">
+                        <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div>
+                                <div class="flex justify-center items-center mb-4">
+                                    <h3 class="text-xl font-bold text-center mr-4">조리개 (Aperture)</h3>
+                                    <div class="flex rounded-lg bg-gray-200 p-1 text-sm">
+                                        <button class="stop-btn active px-3 py-1 rounded-md" data-chart="aperture" data-stop="fullStop">1 스톱</button>
+                                        <button class="stop-btn px-3 py-1 rounded-md" data-chart="aperture" data-stop="thirdStop">1/3 스톱</button>
+                                    </div>
+                                </div>
+                                <div class="chart-container"><canvas id="apertureChart"></canvas></div>
+                                <div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md">
+                                    <p>• <strong>심도와 빛의 양:</strong> 조리개 값(f-number)이 낮을수록 배경이 흐려지고(얕은 심도), 빛을 많이 받아들입니다.</p>
+                                    <p>• <strong>회절:</strong> 일반적으로 f/16 이상으로 조이면 심도는 깊어지지만, 빛의 회절 현상으로 이미지의 선명도가 저하될 수 있습니다.</p>
+                                    <p>• <strong>사용 범위:</strong> 소형/중형 카메라는 보통 f/22까지, 대형 카메라는 f/64나 f/128까지 사용하기도 합니다.</p>
                                 </div>
                             </div>
-                            <div class="chart-container"><canvas id="apertureChart"></canvas></div>
-                            <div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md">
-                                <p>• <strong>심도와 빛의 양:</strong> 조리개 값(f-number)이 낮을수록 배경이 흐려지고(얕은 심도), 빛을 많이 받아들입니다.</p>
-                                <p>• <strong>회절:</strong> 일반적으로 f/16 이상으로 조이면 심도는 깊어지지만, 빛의 회절 현상으로 이미지의 선명도가 저하될 수 있습니다.</p>
-                                <p>• <strong>사용 범위:</strong> 소형/중형 카메라는 보통 f/22까지, 대형 카메라는 f/64나 f/128까지 사용하기도 합니다.</p>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-center items-center mb-4">
-                                <h3 class="text-xl font-bold text-center mr-4">셔터 속도 (Shutter Speed)</h3>
-                                <div class="flex rounded-lg bg-gray-200 p-1 text-sm">
-                                    <button class="stop-btn active px-3 py-1 rounded-md" data-chart="shutter" data-stop="fullStop">1 스톱</button>
-                                    <button class="stop-btn px-3 py-1 rounded-md" data-chart="shutter" data-stop="thirdStop">1/3 스톱</button>
+                            <div>
+                                <div class="flex justify-center items-center mb-4">
+                                    <h3 class="text-xl font-bold text-center mr-4">셔터 속도 (Shutter Speed)</h3>
+                                    <div class="flex rounded-lg bg-gray-200 p-1 text-sm">
+                                        <button class="stop-btn active px-3 py-1 rounded-md" data-chart="shutter" data-stop="fullStop">1 스톱</button>
+                                        <button class="stop-btn px-3 py-1 rounded-md" data-chart="shutter" data-stop="thirdStop">1/3 스톱</button>
+                                    </div>
                                 </div>
+                                <div class="chart-container"><canvas id="shutterChart"></canvas></div>
+                                 <div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md">
+                                    <p>• <strong>움직임 표현:</strong> 셔터 속도가 느릴수록 움직임이 흐릿하게(Motion Blur) 표현되고, 빠를수록 움직임이 정지됩니다.</p>
+                                    <p>• <strong>카메라 흔들림:</strong> 일반적으로 '1/초점거리'초 보다 느린 속도에서는 삼각대 없이는 사진이 흔들리기 쉽습니다.</p>
+                                 </div>
                             </div>
-                            <div class="chart-container"><canvas id="shutterChart"></canvas></div>
-                             <div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md">
-                                <p>• <strong>움직임 표현:</strong> 셔터 속도가 느릴수록 움직임이 흐릿하게(Motion Blur) 표현되고, 빠를수록 움직임이 정지됩니다.</p>
-                                <p>• <strong>카메라 흔들림:</strong> 일반적으로 '1/초점거리'초 보다 느린 속도에서는 삼각대 없이는 사진이 흔들리기 쉽습니다.</p>
-                             </div>
                         </div>
                     </div>
                 </div>
@@ -996,36 +1013,38 @@ function renderContent(category, searchTerm = '') {
                     <h3 class="text-lg font-bold text-gray-800">색 관리 시스템 (CMS)과 프로파일</h3>
                     <i class="fas fa-chevron-down transform transition-transform"></i>
                 </div>
-                <div class="answer border-t border-gray-200 p-6">
-                    <div class="text-center text-sm text-gray-600 mb-4">카메라부터 모니터, 프린터까지 모든 장비에서 일관된 색상을 유지하는 과정입니다.</div>
-                    <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4 text-center">
-                        <div class="flex flex-col items-center">
-                           <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white font-bold mb-2">현실</div>
-                           <p class="text-sm font-semibold">원본 색상</p>
-                        </div>
-                        <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
-                        <div class="flex flex-col items-center">
-                           <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
-                                <i class="fas fa-camera text-3xl text-gray-600"></i>
-                                <div class="text-xs mt-1 p-1 bg-blue-100 rounded">입력 프로파일<br>(sRGB, AdobeRGB)</div>
-                           </div>
-                           <p class="text-sm font-semibold">촬영 (색상 정의)</p>
-                        </div>
-                        <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
-                        <div class="flex flex-col items-center">
-                            <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
-                                <i class="fas fa-desktop text-3xl text-gray-600"></i>
-                                <div class="text-xs mt-1 p-1 bg-green-100 rounded">출력 프로파일<br>(모니터 프로파일)</div>
-                           </div>
-                           <p class="text-sm font-semibold">편집 (색상 확인)</p>
-                        </div>
-                        <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
-                         <div class="flex flex-col items-center">
-                            <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
-                                <i class="fas fa-print text-3xl text-gray-600"></i>
-                                <div class="text-xs mt-1 p-1 bg-purple-100 rounded">출력 프로파일<br>(프린터/용지 프로파일)</div>
-                           </div>
-                           <p class="text-sm font-semibold">출력 (색상 재현)</p>
+                <div class="answer border-t border-gray-200">
+                    <div class="answer-content p-6">
+                        <div class="text-center text-sm text-gray-600 mb-4">카메라부터 모니터, 프린터까지 모든 장비에서 일관된 색상을 유지하는 과정입니다.</div>
+                        <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4 text-center">
+                            <div class="flex flex-col items-center">
+                               <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white font-bold mb-2">현실</div>
+                               <p class="text-sm font-semibold">원본 색상</p>
+                            </div>
+                            <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
+                            <div class="flex flex-col items-center">
+                               <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
+                                    <i class="fas fa-camera text-3xl text-gray-600"></i>
+                                    <div class="text-xs mt-1 p-1 bg-blue-100 rounded">입력 프로파일<br>(sRGB, AdobeRGB)</div>
+                               </div>
+                               <p class="text-sm font-semibold">촬영 (색상 정의)</p>
+                            </div>
+                            <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
+                            <div class="flex flex-col items-center">
+                                <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
+                                    <i class="fas fa-desktop text-3xl text-gray-600"></i>
+                                    <div class="text-xs mt-1 p-1 bg-green-100 rounded">출력 프로파일<br>(모니터 프로파일)</div>
+                               </div>
+                               <p class="text-sm font-semibold">편집 (색상 확인)</p>
+                            </div>
+                            <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
+                             <div class="flex flex-col items-center">
+                                <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
+                                    <i class="fas fa-print text-3xl text-gray-600"></i>
+                                    <div class="text-xs mt-1 p-1 bg-purple-100 rounded">출력 프로파일<br>(프린터/용지 프로파일)</div>
+                               </div>
+                               <p class="text-sm font-semibold">출력 (색상 재현)</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1036,30 +1055,29 @@ function renderContent(category, searchTerm = '') {
                     <h3 class="text-lg font-bold text-gray-800">필름 특성곡선 (Characteristic Curve)</h3>
                     <i class="fas fa-chevron-down transform transition-transform"></i>
                 </div>
-                <div class="answer border-t border-gray-200 p-6">
-                    <div class="relative w-full max-w-lg mx-auto" style="height: 300px;">
-                        <svg class="absolute w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <!-- Axes -->
-                            <line x1="10" y1="90" x2="95" y2="90" stroke="black" stroke-width="0.5"></line>
-                            <line x1="10" y1="5" x2="10" y2="90" stroke="black" stroke-width="0.5"></line>
-                            <!-- Curve -->
-                            <path d="M 15,85 C 30,85 40,20 80,10" stroke="#4A5568" stroke-width="1.5" fill="none"></path>
-                        </svg>
-                        <!-- Labels -->
-                        <div class="absolute bottom-0 right-0 text-sm">노광량 (Log Exposure) →</div>
-                        <div class="absolute top-0 left-0 text-sm -rotate-90 origin-top-left" style="transform-origin: 0 0; transform: rotate(-90deg) translateX(-100%) translateY(1em);">농도 (Density) →</div>
-                        <div class="absolute text-xs" style="left: 18%; bottom: 18%;">① Base+Fog</div>
-                        <div class="absolute text-xs" style="left: 28%; bottom: 40%;">② 발가락 부분 (Toe)</div>
-                        <div class="absolute text-xs" style="left: 45%; bottom: 65%;">③ 직선 부분 (Straight-line)</div>
-                        <div class="absolute text-xs" style="left: 70%; top: 25%;">④ 어깨 부분 (Shoulder)</div>
-                        <div class="absolute text-xs" style="left: 75%; top: 8%;">⑤ 최대 농도 (D-Max)</div>
-                    </div>
-                     <div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md">
-                        <p>• <strong>① Base+Fog:</strong> 빛을 전혀 받지 않아도 필름 베이스와 현상 과정에서 생기는 최소 농도</p>
-                        <p>• <strong>② 발가락 부분 (Toe):</strong> 어두운 영역(Shadow). 노출이 약간 증가해도 농도 변화가 적어 콘트라스트가 낮다.</p>
-                        <p>• <strong>③ 직선 부분 (Straight-line):</strong> 중간 회조 영역(Mid-tone). 노출량과 농도가 비례하여 증가하며 계조 표현이 가장 좋다. 이 기울기를 감마(γ)라고 한다.</p>
-                        <p>• <strong>④ 어깨 부분 (Shoulder):</strong> 밝은 영역(Highlight). 노출이 증가해도 농도 변화가 적어 콘트라스트가 낮아진다.</p>
-                        <p>• <strong>⑤ 최대 농도 (D-Max):</strong> 필름이 표현할 수 있는 가장 높은 농도값.</p>
+                <div class="answer border-t border-gray-200">
+                    <div class="answer-content p-6">
+                        <div class="relative w-full max-w-lg mx-auto" style="height: 300px;">
+                            <svg class="absolute w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <line x1="10" y1="90" x2="95" y2="90" stroke="black" stroke-width="0.5"></line>
+                                <line x1="10" y1="5" x2="10" y2="90" stroke="black" stroke-width="0.5"></line>
+                                <path d="M 15,85 C 30,85 40,20 80,10" stroke="#4A5568" stroke-width="1.5" fill="none"></path>
+                            </svg>
+                            <div class="absolute bottom-0 right-0 text-sm">노광량 (Log Exposure) →</div>
+                            <div class="absolute top-0 left-0 text-sm -rotate-90 origin-top-left" style="transform-origin: 0 0; transform: rotate(-90deg) translateX(-100%) translateY(1em);">농도 (Density) →</div>
+                            <div class="absolute text-xs" style="left: 18%; bottom: 18%;">① Base+Fog</div>
+                            <div class="absolute text-xs" style="left: 28%; bottom: 40%;">② 발가락 부분 (Toe)</div>
+                            <div class="absolute text-xs" style="left: 45%; bottom: 65%;">③ 직선 부분 (Straight-line)</div>
+                            <div class="absolute text-xs" style="left: 70%; top: 25%;">④ 어깨 부분 (Shoulder)</div>
+                            <div class="absolute text-xs" style="left: 75%; top: 8%;">⑤ 최대 농도 (D-Max)</div>
+                        </div>
+                         <div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md">
+                            <p>• <strong>① Base+Fog:</strong> 빛을 전혀 받지 않아도 필름 베이스와 현상 과정에서 생기는 최소 농도</p>
+                            <p>• <strong>② 발가락 부분 (Toe):</strong> 어두운 영역(Shadow). 노출이 약간 증가해도 농도 변화가 적어 콘트라스트가 낮다.</p>
+                            <p>• <strong>③ 직선 부분 (Straight-line):</strong> 중간 회조 영역(Mid-tone). 노출량과 농도가 비례하여 증가하며 계조 표현이 가장 좋다. 이 기울기를 감마(γ)라고 한다.</p>
+                            <p>• <strong>④ 어깨 부분 (Shoulder):</strong> 밝은 영역(Highlight). 노출이 증가해도 농도 변화가 적어 콘트라스트가 낮아진다.</p>
+                            <p>• <strong>⑤ 최대 농도 (D-Max):</strong> 필름이 표현할 수 있는 가장 높은 농도값.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1122,11 +1140,13 @@ function renderContent(category, searchTerm = '') {
                         <h3 class="text-lg font-bold text-gray-800">${item.q}</h3>
                         <i class="fas fa-chevron-down transform transition-transform"></i>
                     </div>
-                    <div class="answer border-t border-gray-200 text-gray-700 leading-relaxed">
-                        <p>${item.a.replace(/\n/g, '<br>')}</p>
-                        <div class="mt-4 pt-4 border-t border-dashed flex flex-wrap gap-2">
-                            <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${item.q.replace(/"/g, '&quot;')}" data-a="${item.a.replace(/"/g, '&quot;')}">✨ 쉽게 설명</button>
-                            <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${item.q.replace(/"/g, '&quot;')}" data-a="${item.a.replace(/"/g, '&quot;')}">✨ 깊이 알아보기</button>
+                    <div class="answer border-t border-gray-200">
+                        <div class="answer-content text-gray-700 leading-relaxed p-6">
+                            <p>${item.a.replace(/\n/g, '<br>')}</p>
+                            <div class="mt-4 pt-4 border-t border-dashed flex flex-wrap gap-2">
+                                <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${item.q.replace(/"/g, '&quot;')}" data-a="${item.a.replace(/"/g, '&quot;')}">✨ 쉽게 설명</button>
+                                <button class="gemini-btn text-sm font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${item.q.replace(/"/g, '&quot;')}" data-a="${item.a.replace(/"/g, '&quot;')}">✨ 깊이 알아보기</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1146,15 +1166,15 @@ function renderContent(category, searchTerm = '') {
             const isOpen = answer.classList.contains('open');
             // Close all open answers first
             document.querySelectorAll('.answer.open').forEach(openAnswer => {
-                openAnswer.classList.remove('open');
-                openAnswer.previousElementSibling.querySelector('i').classList.remove('rotate-180');
+                if (openAnswer !== answer) {
+                    openAnswer.classList.remove('open');
+                    openAnswer.previousElementSibling.querySelector('i').classList.remove('rotate-180');
+                }
             });
 
-            // If it wasn't open, open it
-            if (!isOpen) {
-                answer.classList.add('open');
-                icon.classList.add('rotate-180');
-            }
+            // Toggle the clicked one
+            answer.classList.toggle('open');
+            icon.classList.toggle('rotate-180');
         });
     });
 
@@ -1172,7 +1192,7 @@ function renderContent(category, searchTerm = '') {
                 modalTitle.textContent = `"${question}" 깊이 알아보기`;
                 prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 심화 개념, 역사적 배경, 또는 실전 촬영 팁을 포함하여 전문가 수준의 추가 정보를 제공해줘. 설명: ${answer}`;
             }
-           
+            
             if(prompt) {
                 const responseText = await callGemini(prompt, false);
                 modalBody.innerHTML = `<p>${responseText.replace(/\n/g, '<br>')}</p>`;
@@ -1198,7 +1218,7 @@ function displayQuizQuestion() {
             <button id="nextQuestionBtn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 hidden">다음 문제</button>
         </div>
     `;
-   
+    
     const options = modalBody.querySelectorAll('.quiz-option');
     options.forEach(option => {
         option.addEventListener('click', (e) => {
@@ -1207,7 +1227,7 @@ function displayQuizQuestion() {
             checkQuizAnswer();
         });
     });
-   
+    
     document.getElementById('nextQuestionBtn').addEventListener('click', () => {
         currentQuestionIndex++;
         if (currentQuestionIndex < currentQuizData.questions.length) {
@@ -1221,7 +1241,7 @@ function displayQuizQuestion() {
 function checkQuizAnswer() {
     const selectedOptionEl = modalBody.querySelector('.quiz-option.selected');
     if (!selectedOptionEl) return;
-   
+    
     const selectedAnswer = selectedOptionEl.dataset.option;
     const correctAnswer = currentQuizData.questions[currentQuestionIndex].answer;
 
@@ -1241,7 +1261,7 @@ function checkQuizAnswer() {
     } else {
         modalBody.querySelector('#quizResult').innerHTML = `<p class="text-red-600 font-semibold">오답입니다. 정답은 "${correctAnswer}" 입니다.</p>`;
     }
-   
+    
     document.getElementById('nextQuestionBtn').classList.remove('hidden');
 }
 
@@ -1260,23 +1280,23 @@ async function generateQuiz() {
     const activeLink = document.querySelector('.nav-item.active');
     const category = activeLink ? activeLink.dataset.category : 'all';
     const categoryName = activeLink ? activeLink.textContent : '전체';
-   
+    
     modalTitle.textContent = `${categoryName} 퀴즈`;
-   
+    
     let contentForQuiz = [];
     if (['home', 'visualization', 'all'].includes(category) || !photographyData[category]) {
         Object.values(photographyData).forEach(cat => contentForQuiz.push(...cat));
     } else {
         contentForQuiz = photographyData[category];
     }
-   
+    
     const shuffledTerms = contentForQuiz.sort(() => 0.5 - Math.random());
     const topics = shuffledTerms.slice(0, 15).map(item => item.q).join(', ');
 
     const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
-   
+    
     const responseText = await callGemini(prompt, true);
-   
+    
     try {
         let parsedData = JSON.parse(responseText);
         if (parsedData && Array.isArray(parsedData.questions) && parsedData.questions.length > 0) {
@@ -1339,4 +1359,3 @@ searchInput.addEventListener('input', handleSearch);
 </script>
 </body>
 </html>
-
