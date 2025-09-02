@@ -46,7 +46,7 @@
             padding: 0 1.5rem;
         }
         .answer.open {
-            max-height: 1000px;
+            max-height: 2000px; /* Increased max-height for diagrams */
             padding: 1.5rem 1.5rem;
         }
         .chart-container {
@@ -127,15 +127,16 @@
 <body class="antialiased">
     <div class="flex flex-col md:flex-row min-h-screen">
         <nav class="w-full md:w-64 bg-white md:bg-gray-100 p-4 md:p-6 shadow-md md:shadow-none shrink-0">
-            <div class="flex items-center mb-6">
+            <a href="#" id="homeLink" class="flex items-center mb-6 cursor-pointer">
                 <i class="fas fa-camera-retro text-3xl text-gray-700 mr-3"></i>
                 <h1 class="text-xl font-bold text-gray-800">쮸쀼의 비밀교실✨</h1>
-            </div>
+            </a>
             <div class="mb-4">
                 <input type="text" id="searchInput" placeholder="용어 검색..." class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400">
             </div>
             <ul>
-                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700 active" data-category="intro">소개 및 시각화</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700 active" data-category="home">소개</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="visualization">시각화</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="structure">카메라 구조와 원리</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="exposure">노출</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="lens">렌즈와 광학</a></li>
@@ -633,6 +634,9 @@ const visualizationData = {
             { label: 'f/13', value: 8.66, desc: 'f/11과 f/14 사이의 밝기입니다.' },
             { label: 'f/14', value: 8.33, desc: '회절 현상이 시작될 수 있는 조리개 값입니다.' },
             { label: 'f/16', value: 8, desc: '피사계 심도는 매우 깊어지나 회절로 선명도가 저하될 수 있습니다.' },
+            { label: 'f/18', value: 7.66, desc: '매우 깊은 심도를 가지며, 회절 현상에 유의해야 합니다.' },
+            { label: 'f/20', value: 7.33, desc: '대부분의 렌즈에서 선명도 저하가 나타나는 구간입니다.' },
+            { label: 'f/22', value: 7, desc: '소형 카메라의 최소 조리개로, 깊은 심도가 필요할 때 사용합니다.' },
         ]
     },
     shutter: {
@@ -702,6 +706,8 @@ const geminiModal = document.getElementById('geminiModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalBody = document.getElementById('modalBody');
 const closeModal = document.getElementById('closeModal');
+const homeLink = document.getElementById('homeLink');
+
 let charts = {};
 let currentQuizData = null;
 let currentQuestionIndex = 0;
@@ -810,7 +816,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 function createChart(canvasId, label, data, backgroundColor, borderColor) {
-    const ctx = document.getElementById(canvasId).getContext('2d');
+    const ctx = document.getElementById(canvasId)?.getContext('2d');
+    if (!ctx) return;
     if (charts[canvasId]) {
         charts[canvasId].destroy();
     }
@@ -832,7 +839,11 @@ function createChart(canvasId, label, data, backgroundColor, borderColor) {
                 y: { display: false },
                 x: {
                     grid: { display: false },
-                    ticks: { font: { size: 10 } }
+                    ticks: { 
+                        font: { size: 10 },
+                        autoSkip: true,
+                        maxTicksLimit: 15
+                    }
                 }
             },
             plugins: {
@@ -848,78 +859,245 @@ function createChart(canvasId, label, data, backgroundColor, borderColor) {
     });
 }
 
+function createCalendar(year, month, events = {}) {
+    const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    
+    const date = new Date(year, month - 1, 1);
+    const firstDay = date.getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    let html = `
+        <div class="content-card p-6 w-full max-w-2xl mx-auto mb-8">
+            <h3 class="text-xl font-bold text-center mb-4">${year}년 ${monthNames[month-1]}</h3>
+            <div class="grid grid-cols-7 gap-1 text-center text-sm font-semibold text-gray-600">
+                ${days.map(day => `<div>${day}</div>`).join('')}
+            </div>
+            <div class="grid grid-cols-7 gap-1 mt-2">
+    `;
+
+    // Add empty cells for days before the 1st of the month
+    for (let i = 0; i < firstDay; i++) {
+        html += `<div></div>`;
+    }
+
+    // Add day cells
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayEvents = events[day] || [];
+        let eventHtml = '';
+        if (dayEvents.length > 0) {
+            eventHtml = `<div class="text-xs mt-1 text-left">` + dayEvents.map(e => `<div class="text-white p-1 rounded-md ${e.color || 'bg-blue-500'} mb-1 truncate">${e.title}</div>`).join('') + `</div>`;
+        }
+        html += `<div class="border p-2 h-28 flex flex-col ${dayEvents.length > 0 ? 'bg-gray-50' : ''}">
+                    <span class="font-bold">${day}</span>
+                    ${eventHtml}
+                 </div>`;
+    }
+
+    html += `</div></div>`;
+    return html;
+}
+
 function renderContent(category, searchTerm = '') {
     let html = '';
    
-    if (category === 'intro') {
+    if (category === 'home') {
+        const calendarEvents = {
+            9: [
+                { day: 17, title: '테스트 프린트', color: 'bg-green-500' },
+                { day: 18, title: '테스트 프린트', color: 'bg-green-500' },
+                { day: 20, title: '경일대 면접', color: 'bg-purple-500' },
+                { day: 22, title: '1차 프린트(경일)', color: 'bg-red-500' },
+                { day: 26, title: '경일 실기/면접', color: 'bg-purple-500' },
+                { day: 27, title: '경일 실기/면접', color: 'bg-purple-500' },
+            ],
+            10: [
+                 { day: 18, title: '서울예대 실기(예정)', color: 'bg-yellow-500' },
+                 { day: 20, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
+                 { day: 21, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
+                 { day: 22, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
+                 { day: 23, title: '서울예대 면접(예정)', color: 'bg-yellow-500' },
+            ]
+        };
+
+        const eventsForSept = {};
+        calendarEvents[9].forEach(e => {
+            if (!eventsForSept[e.day]) eventsForSept[e.day] = [];
+            eventsForSept[e.day].push({ title: e.title, color: e.color });
+        });
+        
+        const eventsForOct = {};
+        calendarEvents[10].forEach(e => {
+            if (!eventsForOct[e.day]) eventsForOct[e.day] = [];
+            eventsForOct[e.day].push({ title: e.title, color: e.color });
+        });
+
+        html = `
+            <div class="content-card p-6 md:p-8 mb-6 text-center">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2>
+                <p class="text-gray-600">중요한 입시 일정을 확인하세요.</p>
+            </div>
+            ${createCalendar(2025, 9, eventsForSept)}
+            ${createCalendar(2025, 10, eventsForOct)}
+        `;
+
+        mainContent.innerHTML = html;
+        return;
+
+    } else if (category === 'visualization') {
         html = `
             <div class="content-card p-6 md:p-8 mb-6">
-                <h2 class="text-3xl font-bold text-gray-800 mb-2">노출의 이해: 조리개와 셔터 속도</h2>
-                <p class="text-lg text-gray-600">노출의 핵심 요소인 조리개와 셔터 속도의 관계를 시각적으로 탐색해보세요. 막대에 마우스를 올려 각 설정값이 사진에 미치는 영향을 확인할 수 있습니다.</p>
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">사진학 핵심 원리 시각화</h2>
+                <p class="text-lg text-gray-600">복잡한 개념들을 도식화하여 쉽게 이해해보세요.</p>
             </div>
             
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="content-card p-6">
-                    <div class="flex justify-center items-center mb-4">
-                        <h3 class="text-xl font-bold text-center mr-4">조리개 (Aperture)</h3>
-                        <div id="aperture-stop-controls" class="flex rounded-lg bg-gray-200 p-1 text-sm">
-                            <button class="stop-btn active px-3 py-1 rounded-md" data-chart="aperture" data-stop="fullStop">1 스톱</button>
-                            <button class="stop-btn px-3 py-1 rounded-md" data-chart="aperture" data-stop="thirdStop">1/3 스톱</button>
+            <div class="content-card mb-4">
+                <div class="question p-6 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-800">노출의 이해: 조리개와 셔터 속도</h3>
+                    <i class="fas fa-chevron-down transform transition-transform"></i>
+                </div>
+                <div class="answer border-t border-gray-200">
+                    <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                            <div class="flex justify-center items-center mb-4">
+                                <h3 class="text-xl font-bold text-center mr-4">조리개 (Aperture)</h3>
+                                <div class="flex rounded-lg bg-gray-200 p-1 text-sm">
+                                    <button class="stop-btn active px-3 py-1 rounded-md" data-chart="aperture" data-stop="fullStop">1 스톱</button>
+                                    <button class="stop-btn px-3 py-1 rounded-md" data-chart="aperture" data-stop="thirdStop">1/3 스톱</button>
+                                </div>
+                            </div>
+                            <div class="chart-container"><canvas id="apertureChart"></canvas></div>
+                            <div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md">
+                                <p>• <strong>심도와 빛의 양:</strong> 조리개 값(f-number)이 낮을수록 배경이 흐려지고(얕은 심도), 빛을 많이 받아들입니다.</p>
+                                <p>• <strong>회절:</strong> 일반적으로 f/16 이상으로 조이면 심도는 깊어지지만, 빛의 회절 현상으로 이미지의 선명도가 저하될 수 있습니다.</p>
+                                <p>• <strong>사용 범위:</strong> 소형/중형 카메라는 보통 f/22까지, 대형 카메라는 f/64나 f/128까지 사용하기도 합니다.</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="chart-container"><canvas id="apertureChart"></canvas></div>
-                    <div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md">
-                        <p>• <strong>심도와 빛의 양:</strong> 조리개 값(f-number)이 낮을수록 배경이 흐려지고(얕은 심도), 빛을 많이 받아들입니다.</p>
-                        <p>• <strong>회절:</strong> 일반적으로 f/16 이상으로 조이면 심도는 깊어지지만, 빛의 회절 현상으로 이미지의 선명도가 저하될 수 있습니다.</p>
-                        <p>• <strong>사용 범위:</strong> 소형/중형 카메라는 보통 f/22까지, 대형 카메라는 f/64나 f/128까지 사용하기도 합니다.</p>
+                        <div>
+                            <div class="flex justify-center items-center mb-4">
+                                <h3 class="text-xl font-bold text-center mr-4">셔터 속도 (Shutter Speed)</h3>
+                                <div class="flex rounded-lg bg-gray-200 p-1 text-sm">
+                                    <button class="stop-btn active px-3 py-1 rounded-md" data-chart="shutter" data-stop="fullStop">1 스톱</button>
+                                    <button class="stop-btn px-3 py-1 rounded-md" data-chart="shutter" data-stop="thirdStop">1/3 스톱</button>
+                                </div>
+                            </div>
+                            <div class="chart-container"><canvas id="shutterChart"></canvas></div>
+                             <div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md">
+                                <p>• <strong>움직임 표현:</strong> 셔터 속도가 느릴수록 움직임이 흐릿하게(Motion Blur) 표현되고, 빠를수록 움직임이 정지됩니다.</p>
+                                <p>• <strong>카메라 흔들림:</strong> 일반적으로 '1/초점거리'초 보다 느린 속도에서는 삼각대 없이는 사진이 흔들리기 쉽습니다.</p>
+                             </div>
+                        </div>
                     </div>
                 </div>
-                <div class="content-card p-6">
-                    <div class="flex justify-center items-center mb-4">
-                        <h3 class="text-xl font-bold text-center mr-4">셔터 속도 (Shutter Speed)</h3>
-                        <div id="shutter-stop-controls" class="flex rounded-lg bg-gray-200 p-1 text-sm">
-                            <button class="stop-btn active px-3 py-1 rounded-md" data-chart="shutter" data-stop="fullStop">1 스톱</button>
-                            <button class="stop-btn px-3 py-1 rounded-md" data-chart="shutter" data-stop="thirdStop">1/3 스톱</button>
+            </div>
+
+            <div class="content-card mb-4">
+                <div class="question p-6 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-800">색 관리 시스템 (CMS)과 프로파일</h3>
+                    <i class="fas fa-chevron-down transform transition-transform"></i>
+                </div>
+                <div class="answer border-t border-gray-200 p-6">
+                    <div class="text-center text-sm text-gray-600 mb-4">카메라부터 모니터, 프린터까지 모든 장비에서 일관된 색상을 유지하는 과정입니다.</div>
+                    <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4 text-center">
+                        <div class="flex flex-col items-center">
+                           <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white font-bold mb-2">현실</div>
+                           <p class="text-sm font-semibold">원본 색상</p>
+                        </div>
+                        <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
+                        <div class="flex flex-col items-center">
+                           <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
+                                <i class="fas fa-camera text-3xl text-gray-600"></i>
+                                <div class="text-xs mt-1 p-1 bg-blue-100 rounded">입력 프로파일<br>(sRGB, AdobeRGB)</div>
+                           </div>
+                           <p class="text-sm font-semibold">촬영 (색상 정의)</p>
+                        </div>
+                        <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
+                        <div class="flex flex-col items-center">
+                            <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
+                                <i class="fas fa-desktop text-3xl text-gray-600"></i>
+                                <div class="text-xs mt-1 p-1 bg-green-100 rounded">출력 프로파일<br>(모니터 프로파일)</div>
+                           </div>
+                           <p class="text-sm font-semibold">편집 (색상 확인)</p>
+                        </div>
+                        <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
+                         <div class="flex flex-col items-center">
+                            <div class="border-2 border-gray-400 rounded-lg p-2 mb-2">
+                                <i class="fas fa-print text-3xl text-gray-600"></i>
+                                <div class="text-xs mt-1 p-1 bg-purple-100 rounded">출력 프로파일<br>(프린터/용지 프로파일)</div>
+                           </div>
+                           <p class="text-sm font-semibold">출력 (색상 재현)</p>
                         </div>
                     </div>
-                    <div class="chart-container"><canvas id="shutterChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="content-card mb-4">
+                <div class="question p-6 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-800">필름 특성곡선 (Characteristic Curve)</h3>
+                    <i class="fas fa-chevron-down transform transition-transform"></i>
+                </div>
+                <div class="answer border-t border-gray-200 p-6">
+                    <div class="relative w-full max-w-lg mx-auto" style="height: 300px;">
+                        <svg class="absolute w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <!-- Axes -->
+                            <line x1="10" y1="90" x2="95" y2="90" stroke="black" stroke-width="0.5"></line>
+                            <line x1="10" y1="5" x2="10" y2="90" stroke="black" stroke-width="0.5"></line>
+                            <!-- Curve -->
+                            <path d="M 15,85 C 30,85 40,20 80,10" stroke="#4A5568" stroke-width="1.5" fill="none"></path>
+                        </svg>
+                        <!-- Labels -->
+                        <div class="absolute bottom-0 right-0 text-sm">노광량 (Log Exposure) →</div>
+                        <div class="absolute top-0 left-0 text-sm -rotate-90 origin-top-left" style="transform-origin: 0 0; transform: rotate(-90deg) translateX(-100%) translateY(1em);">농도 (Density) →</div>
+                        <div class="absolute text-xs" style="left: 18%; bottom: 18%;">① Base+Fog</div>
+                        <div class="absolute text-xs" style="left: 28%; bottom: 40%;">② 발가락 부분 (Toe)</div>
+                        <div class="absolute text-xs" style="left: 45%; bottom: 65%;">③ 직선 부분 (Straight-line)</div>
+                        <div class="absolute text-xs" style="left: 70%; top: 25%;">④ 어깨 부분 (Shoulder)</div>
+                        <div class="absolute text-xs" style="left: 75%; top: 8%;">⑤ 최대 농도 (D-Max)</div>
+                    </div>
                      <div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md">
-                        <p>• <strong>움직임 표현:</strong> 셔터 속도가 느릴수록 움직임이 흐릿하게(Motion Blur) 표현되고, 빠를수록 움직임이 정지됩니다.</p>
-                        <p>• <strong>카메라 흔들림:</strong> 일반적으로 '1/초점거리'초 보다 느린 속도에서는 삼각대 없이는 사진이 흔들리기 쉽습니다.</p>
-                     </div>
+                        <p>• <strong>① Base+Fog:</strong> 빛을 전혀 받지 않아도 필름 베이스와 현상 과정에서 생기는 최소 농도</p>
+                        <p>• <strong>② 발가락 부분 (Toe):</strong> 어두운 영역(Shadow). 노출이 약간 증가해도 농도 변화가 적어 콘트라스트가 낮다.</p>
+                        <p>• <strong>③ 직선 부분 (Straight-line):</strong> 중간 회조 영역(Mid-tone). 노출량과 농도가 비례하여 증가하며 계조 표현이 가장 좋다. 이 기울기를 감마(γ)라고 한다.</p>
+                        <p>• <strong>④ 어깨 부분 (Shoulder):</strong> 밝은 영역(Highlight). 노출이 증가해도 농도 변화가 적어 콘트라스트가 낮아진다.</p>
+                        <p>• <strong>⑤ 최대 농도 (D-Max):</strong> 필름이 표현할 수 있는 가장 높은 농도값.</p>
+                    </div>
                 </div>
             </div>
         `;
+
         mainContent.innerHTML = html;
+        
+        const setupVisualizationPage = () => {
+            const setupCharts = () => {
+                if (!document.getElementById('apertureChart') || !document.getElementById('shutterChart')) return;
+                
+                const updateChart = (chartName, stopType) => {
+                    const data = visualizationData[chartName][stopType];
+                    const color = chartName === 'aperture' ? ['rgba(75, 192, 192, 0.6)', 'rgba(75, 192, 192, 1)'] : ['rgba(255, 159, 64, 0.6)', 'rgba(255, 159, 64, 1)'];
+                    createChart(`${chartName}Chart`, chartName, data, color[0], color[1]);
+                };
 
-        const setupCharts = () => {
-            if (!document.getElementById('apertureChart') || !document.getElementById('shutterChart')) return;
-            
-            const updateChart = (chartName, stopType) => {
-                const data = visualizationData[chartName][stopType];
-                const color = chartName === 'aperture' ? ['rgba(75, 192, 192, 0.6)', 'rgba(75, 192, 192, 1)'] : ['rgba(255, 159, 64, 0.6)', 'rgba(255, 159, 64, 1)'];
-                createChart(`${chartName}Chart`, chartName, data, color[0], color[1]);
-            };
-
-            // Initial chart render
-            updateChart('aperture', 'fullStop');
-            updateChart('shutter', 'fullStop');
-            
-            // Event listeners for stop controls
-            document.querySelectorAll('.stop-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const chart = e.target.dataset.chart;
-                    const stop = e.target.dataset.stop;
-                    
-                    document.querySelectorAll(`[data-chart="${chart}"]`).forEach(btn => btn.classList.remove('active'));
-                    e.target.classList.add('active');
-                    
-                    updateChart(chart, stop);
+                // Initial chart render
+                updateChart('aperture', 'fullStop');
+                updateChart('shutter', 'fullStop');
+                
+                // Event listeners for stop controls
+                document.querySelectorAll('.stop-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const chart = e.target.dataset.chart;
+                        const stop = e.target.dataset.stop;
+                        
+                        document.querySelectorAll(`[data-chart="${chart}"]`).forEach(btn => btn.classList.remove('active'));
+                        e.target.classList.add('active');
+                        
+                        updateChart(chart, stop);
+                    });
                 });
-            });
+            };
+            setTimeout(setupCharts, 0);
         };
         
-        setTimeout(setupCharts, 0);
+        setupVisualizationPage();
 
     } else {
         // This part handles the rendering of dictionary terms
@@ -966,11 +1144,13 @@ function renderContent(category, searchTerm = '') {
             const icon = q.querySelector('i');
             
             const isOpen = answer.classList.contains('open');
+            // Close all open answers first
             document.querySelectorAll('.answer.open').forEach(openAnswer => {
                 openAnswer.classList.remove('open');
                 openAnswer.previousElementSibling.querySelector('i').classList.remove('rotate-180');
             });
 
+            // If it wasn't open, open it
             if (!isOpen) {
                 answer.classList.add('open');
                 icon.classList.add('rotate-180');
@@ -1084,7 +1264,7 @@ async function generateQuiz() {
     modalTitle.textContent = `${categoryName} 퀴즈`;
    
     let contentForQuiz = [];
-    if (category === 'intro' || category === 'all' || !photographyData[category]) {
+    if (['home', 'visualization', 'all'].includes(category) || !photographyData[category]) {
         Object.values(photographyData).forEach(cat => contentForQuiz.push(...cat));
     } else {
         contentForQuiz = photographyData[category];
@@ -1118,42 +1298,43 @@ quizBtn.addEventListener('click', generateQuiz);
 // Event Handlers for Navigation and Search
 function handleNavClick(e) {
     e.preventDefault();
-    const targetLink = e.target.closest('.nav-item');
+    const targetLink = e.target.closest('a');
     if (!targetLink) return;
+
+    const category = targetLink.classList.contains('nav-item') ? targetLink.dataset.category : 'home';
 
     searchInput.value = '';
     navLinks.forEach(link => link.classList.remove('active'));
-    targetLink.classList.add('active');
-    renderContent(targetLink.dataset.category);
+    
+    const activeLink = document.querySelector(`.nav-item[data-category="${category}"]`);
+    if(activeLink) activeLink.classList.add('active');
+    
+    renderContent(category);
 }
 
 function handleSearch() {
     const searchTerm = searchInput.value;
-    const activeLink = document.querySelector('.nav-item.active');
-
+    
     if (searchTerm.length > 0) {
         navLinks.forEach(link => link.classList.remove('active'));
         renderContent(null, searchTerm);
     } else {
-        if(activeLink) {
-             renderContent(activeLink.dataset.category);
-        } else {
-            // Default to intro if no link is active
-            const introLink = document.querySelector('.nav-item[data-category="intro"]');
-            if (introLink) {
-                 introLink.classList.add('active');
-                 renderContent('intro');
-            }
+        const homeLink = document.querySelector('.nav-item[data-category="home"]');
+        if (homeLink) {
+             navLinks.forEach(link => link.classList.remove('active'));
+             homeLink.classList.add('active');
+             renderContent('home');
         }
     }
 }
 
 document.querySelector('nav ul').addEventListener('click', handleNavClick);
+homeLink.addEventListener('click', handleNavClick);
 searchInput.addEventListener('input', handleSearch);
 
 // Initial page load
 (function() {
-    renderContent('intro');
+    renderContent('home');
 })();
 </script>
 </body>
