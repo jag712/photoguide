@@ -283,7 +283,7 @@ const photographyData = {
         { q: "원색", a: "다른 색을 섞어 만들 수 없는 기본 색 (빛: RGB, 색료: CMY)." },
         { q: "유효 화소", a: "이미지 센서에서 실제로 이미지를 형성하는 데 사용되는 화소의 수." },
         { q: "잉크젯 프린터", a: "미세한 잉크 방울을 용지에 분사하여 이미지를 만드는 프린터." },
-        { q: "저역통과필터 (AA 필터)", a:  "또는 로우패스필터. 모아레 현상을 줄이기 위해 센서 앞에 장착하는 필터." },
+        { q: "저역통과필터 (AA 필터)", a: "또는 로우패스필터. 모아레 현상을 줄이기 위해 센서 앞에 장착하는 필터." },
         { q: "전자 셔터", a: "기계적 움직임 없이 전자적으로 센서 노출을 제어하는 셔터. 롤링셔터 왜곡이 발생할 수 있음." },
         { q: "조도 (Lux)", a: "특정 면에 도달하는 빛의 양." },
         { q: "채널 (Channel)", a: "이미지를 구성하는 색상 정보의 단위 (예: RGB 채널, CMYK 채널)." },
@@ -603,9 +603,8 @@ let currentQuizData = null;
 let currentQuestionIndex = 0;
 let score = 0;
 
-// API 키를 빈 문자열로 설정하여 런타임 환경이 자동으로 키를 주입하도록 합니다.
-const API_KEY = "AIzaSyC9_Wtjdqdf3Phn3rCUlr0EcDEu2cqsWWk";
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+// API 키를 코드에서 완전히 제거하고, 대신 Netlify 프록시 함수를 호출합니다.
+const PROXY_URL = '/.netlify/functions/gemini-proxy';
 
 async function callGemini(prompt, useSchema = false) {
     showModal();
@@ -642,14 +641,14 @@ async function callGemini(prompt, useSchema = false) {
         } else {
              payload.generationConfig.responseMimeType = "text/plain";
         }
-        
+       
         let response;
         for (let i = 0; i < 3; i++) { // 3번까지 재시도
             try {
-                response = await fetch(API_URL, {
+                response = await fetch(PROXY_URL, { // API URL 대신 프록시 URL로 요청
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload) // payload를 그대로 전송
                 });
                 if (response.ok) break;
             } catch (networkError) {
@@ -657,18 +656,19 @@ async function callGemini(prompt, useSchema = false) {
                 if (i < 2) await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000)); // 지수 백오프
             }
         }
-        
+       
         if (!response || !response.ok) {
-            throw new Error(`API call failed after multiple retries with status: ${response ? response.status : 'No response'}`);
+            const errorText = response ? await response.text() : 'No response from proxy.';
+            throw new Error(`Proxy call failed after retries. Status: ${response ? response.status : 'N/A'}. Details: ${errorText}`);
         }
 
         const result = await response.json();
         let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        
+       
         if (!text) {
-             throw new Error("No content received from API.");
+             throw new Error("No content received from API via proxy.");
         }
-        
+       
         // Remove markdown code block fences if they exist
         text = text.trim();
         if (text.startsWith('```json') && text.endsWith('```')) {
@@ -678,11 +678,8 @@ async function callGemini(prompt, useSchema = false) {
         return text;
 
     } catch (error) {
-        console.error("Gemini API call error:", error);
-        if (error.message && error.message.includes("403")) {
-             return `<p class="text-red-500">AI 기능에 대한 접근 권한이 없습니다 (오류 코드: 403). API 키 설정이나 서버 권한 문제일 수 있습니다. 잠시 후 다시 시도해 주세요.</p>`;
-        }
-        return `<p class="text-red-500">오류가 발생했습니다: ${error.message}</p>`;
+        console.error("Gemini proxy call error:", error);
+        return `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>`;
     }
 }
 
@@ -778,7 +775,7 @@ function createChart(canvasId, label, data, backgroundColor, borderColor) {
 
 function renderContent(category, searchTerm = '') {
     let html = '';
-    
+   
     if (category === 'intro') {
         html = `
             <div class="content-card p-6 md:p-8 mb-6">
@@ -812,7 +809,7 @@ function renderContent(category, searchTerm = '') {
             { label: '1/60s', value: 6 }, { label: '1/125s', value: 5 }, { label: '1/250s', value: 4 }, 
             { label: '1/500s', value: 3 }, { label: '1/1000s', value: 2 }
         ];
-        
+       
         // This is where the charts are created.
         const createCharts = () => {
             if (document.getElementById('apertureChart') && document.getElementById('shutterChart')) {
@@ -870,7 +867,7 @@ function renderContent(category, searchTerm = '') {
         q.addEventListener('click', () => {
             const answer = q.nextElementSibling;
             const icon = q.querySelector('i');
-            
+           
             if (answer.classList.contains('open')) {
                 answer.classList.remove('open');
                 icon.classList.remove('rotate-180');
@@ -899,7 +896,7 @@ function renderContent(category, searchTerm = '') {
                 modalTitle.textContent = `"${question}" 깊이 알아보기`;
                 prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 심화 개념, 역사적 배경, 또는 실전 촬영 팁을 포함하여 전문가 수준의 추가 정보를 제공해줘. 설명: ${answer}`;
             }
-            
+           
             if(prompt) {
                 const responseText = await callGemini(prompt, false);
                 modalBody.innerHTML = `<p>${responseText.replace(/\n/g, '<br>')}</p>`;
@@ -926,7 +923,7 @@ function displayQuizQuestion() {
             <button id="nextQuestionBtn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 hidden">다음 문제</button>
         </div>
     `;
-    
+   
     const options = modalBody.querySelectorAll('.quiz-option');
     options.forEach(option => {
         option.addEventListener('click', (e) => {
@@ -935,7 +932,7 @@ function displayQuizQuestion() {
             checkQuizAnswer();
         });
     });
-    
+   
     document.getElementById('nextQuestionBtn').addEventListener('click', () => {
         currentQuestionIndex++;
         if (currentQuestionIndex < currentQuizData.questions.length) {
@@ -949,7 +946,7 @@ function displayQuizQuestion() {
 function checkQuizAnswer() {
     const selectedOptionEl = modalBody.querySelector('.quiz-option.selected');
     if (!selectedOptionEl) return;
-    
+   
     const selectedAnswer = selectedOptionEl.dataset.option;
     const correctAnswer = currentQuizData.questions[currentQuestionIndex].answer;
 
@@ -969,7 +966,7 @@ function checkQuizAnswer() {
     } else {
         modalBody.querySelector('#quizResult').innerHTML = `<p class="text-red-600 font-semibold">오답입니다. 정답은 "${correctAnswer}" 입니다.</p>`;
     }
-    
+   
     document.getElementById('nextQuestionBtn').classList.remove('hidden');
 }
 
@@ -988,27 +985,27 @@ async function generateQuiz() {
     const activeLink = document.querySelector('.nav-item.active');
     const category = activeLink ? activeLink.dataset.category : 'all';
     const categoryName = activeLink ? activeLink.textContent : '전체';
-    
+   
     modalTitle.textContent = `${categoryName} 퀴즈`;
-    
+   
     let contentForQuiz = [];
     if (category === 'intro' || category === 'all' || !photographyData[category]) {
         Object.values(photographyData).forEach(cat => contentForQuiz.push(...cat));
     } else {
         contentForQuiz = photographyData[category];
     }
-    
+   
     const shuffledTerms = contentForQuiz.sort(() => 0.5 - Math.random());
     const topics = shuffledTerms.slice(0, 15).map(item => item.q).join(', ');
 
     // 난이도별 퀴즈 생성을 명시적으로 요청하는 프롬프트
     const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
-    
+   
     const responseText = await callGemini(prompt, true);
-    
+   
     try {
         let parsedData = JSON.parse(responseText);
-        
+       
         // JSON 파싱 후, 데이터 구조와 questions 배열의 유효성을 한 번 더 검증합니다.
         if (parsedData && Array.isArray(parsedData.questions) && parsedData.questions.length === 5) {
             currentQuizData = parsedData;
@@ -1033,10 +1030,10 @@ function handleNavClick(e) {
     if (!targetLink) return;
 
     searchInput.value = '';
-    
+   
     navLinks.forEach(link => link.classList.remove('active'));
     targetLink.classList.add('active');
-    
+   
     const category = targetLink.dataset.category;
     renderContent(category);
 }
@@ -1068,5 +1065,3 @@ searchInput.addEventListener('input', handleSearch);
 </script>
 </body>
 </html>
-
-
