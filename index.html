@@ -687,6 +687,42 @@ function renderContent(category, searchTerm = '') {
                             </div>
                         </div>
                     </div>
+                </div>             
+                <div class="content-card mb-4">
+                <div class="question p-6 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-800">존 시스템 (Zone System)</h3>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="answer border-t border-gray-200">
+                    <div class="p-6">
+                         <p class="text-sm text-gray-600 mb-6">안셀 아담스가 창시한 톤 재현 이론으로, 장면의 밝기를 순수한 검정(Zone 0)부터 순수한 흰색(Zone X)까지 11단계로 나누어 예측하고 제어하는 시스템입니다. 이를 통해 촬영자는 최종 결과물을 미리 상상하고 정확한 노출을 결정할 수 있습니다.</p>
+                        <div class="zone-bar-container">
+                            <div class="zone-bar" style="background-color: #000000;">0</div>
+                            <div class="zone-bar" style="background-color: #1a1a1a;">I</div>
+                            <div class="zone-bar" style="background-color: #333333;">II</div>
+                            <div class="zone-bar" style="background-color: #4d4d4d;">III</div>
+                            <div class="zone-bar" style="background-color: #666666;">IV</div>
+                            <div class="zone-bar" style="background-color: #808080;">V</div>
+                            <div class="zone-bar" style="background-color: #999999;">VI</div>
+                            <div class="zone-bar" style="background-color: #b3b3b3;">VII</div>
+                            <div class="zone-bar" style="background-color: #cccccc;">VIII</div>
+                            <div class="zone-bar" style="background-color: #e6e6e6; color: #333;">IX</div>
+                            <div class="zone-bar" style="background-color: #ffffff; color: #333;">X</div>
+                        </div>
+                         <div class="grid grid-cols-3 md:grid-cols-11 gap-4 mt-2">
+                            <div class="zone-bar-info"><b>Zone 0</b><p>순수한 검정</p></div>
+                            <div class="zone-bar-info"><b>Zone I</b><p>검정에 가까운 톤</p></div>
+                            <div class="zone-bar-info"><b>Zone II</b><p>어두운 섀도우 디테일 시작</p></div>
+                            <div class="zone-bar-info"><b>Zone III</b><p>평균적인 어두운 톤</p></div>
+                            <div class="zone-bar-info"><b>Zone IV</b><p>어두운 피부톤</p></div>
+                            <div class="zone-bar-info"><b>Zone V</b><p>18% 중간 회색</p></div>
+                            <div class="zone-bar-info"><b>Zone VI</b><p>평균적인 밝은 피부톤</p></div>
+                            <div class="zone-bar-info"><b>Zone VII</b><p>밝은 톤, 질감 표현 한계</p></div>
+                            <div class="zone-bar-info"><b>Zone VIII</b><p>흰색에 가까운 톤</p></div>
+                            <div class="zone-bar-info"><b>Zone IX</b><p>순백색, 디테일 없음</p></div>
+                            <div class="zone-bar-info"><b>Zone X</b><p>순수한 흰색</p></div>
+                        </div>
+                    </div>
                 </div>
             </div>
                </div>`;
@@ -841,5 +877,6 @@ renderContent('home');
 </script>
 </body>
 </html>
+
 
 
