@@ -1203,6 +1203,7 @@ function checkQuizAnswer(isTimeUp = false) {
         quizResultEl.innerHTML = `<p class="text-red-600 font-semibold">시간 초과! 😔 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
     } else {
         const selectedAnswer = selectedOptionEl.dataset.option;
+        const cleanedAnswer = correctAnswer.replace(/^[A-Z]\.\s/, "");
         if (selectedAnswer === correctAnswer) {
             score++;
             isCorrect = true;
@@ -1212,6 +1213,9 @@ function checkQuizAnswer(isTimeUp = false) {
             // 오답 시 설명 추가 로직 (여기서 photographyData에서 설명을 찾아 표시)
             const allData = Object.values(photographyData).flat();
             const explanation = allData.find(item => item.q.includes(correctAnswer))?.a || "관련된 설명을 찾을 수 없습니다.";
+
+
+
 
             quizResultEl.innerHTML = `
                 <p class="text-red-600 font-semibold">오답입니다. 😔</p>
@@ -1622,6 +1626,7 @@ renderContent('home');
 </script>
 </body>
 </html>
+
 
 
 
