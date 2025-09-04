@@ -960,35 +960,12 @@ async function generateQuiz() {
         modalBody.innerHTML = `<p class="text-red-500">퀴즈를 생성하는 데 실패했습니다. AI가 유효한 퀴즈 형식을 반환하지 못했습니다.</p>`;
     }
 }
-
+// displayQuizQuestion 함수를 아래의 단일 코드로 대체하세요.
 function displayQuizQuestion() {
     const q = currentQuizData.questions[currentQuestionIndex];
+    const quizTimeLimit = (currentQuestionIndex >= 3) ? 20 : 15;
     const optionsHtml = q.options.map(option => `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option.replace(/"/g, '&quot;')}">${option}</div>`).join('');
     
-    modalBody.innerHTML = `
-        <div class="mb-4">
-            <p class="text-sm text-gray-500">문제 ${currentQuestionIndex + 1} / ${currentQuizData.questions.length}</p>
-            <p class="text-lg font-semibold mt-1">${q.question}</p>
-        </div>
-        <div id="quizOptions">${optionsHtml}</div>
-        <div id="quizResult" class="mt-4"></div>
-        <div class="flex justify-end mt-4">
-            <button id="nextQuestionBtn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 hidden">다음 문제</button>
-        </div>`;
-
-    modalBody.querySelectorAll('.quiz-option').forEach(option => {
-        option.addEventListener('click', e => {
-            // 다른 옵션의 'selected' 클래스 제거
-            modalBody.querySelectorAll('.quiz-option').forEach(opt => opt.classList.remove('selected'));
-            // 현재 클릭한 옵션에 'selected' 클래스 추가
-            e.currentTarget.classList.add('selected');
-            checkQuizAnswer();
-        });
-    });
-    const q = currentQuizData.questions[currentQuestionIndex];
-    const quizTimeLimit = (currentQuestionIndex >= 3) ? 20 : 15; // 난이도에 따라 시간 설정
-    let timeLeft = quizTimeLimit;
-
     modalBody.innerHTML = `
         <div class="mb-4">
             <p class="text-sm text-gray-500">문제 ${currentQuestionIndex + 1} / ${currentQuizData.questions.length}</p>
@@ -1018,9 +995,7 @@ function displayQuizQuestion() {
     modalBody.querySelectorAll('.quiz-option').forEach(option => {
         option.addEventListener('click', e => {
             clearTimeout(quizTimer); // 사용자 응답 시 타이머 중지
-            // 다른 옵션의 'selected' 클래스 제거
             modalBody.querySelectorAll('.quiz-option').forEach(opt => opt.classList.remove('selected'));
-            // 현재 클릭한 옵션에 'selected' 클래스 추가
             e.currentTarget.classList.add('selected');
             checkQuizAnswer(false); // 일반적인 정답/오답 확인
         });
@@ -1531,4 +1506,5 @@ renderContent('home');
 </script>
 </body>
 </html>
+
 
