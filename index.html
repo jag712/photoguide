@@ -1092,10 +1092,24 @@ function displayQuizQuestion() {
         </div>`;
 
     // JavaScript 코드를 HTML 할당 뒤에 작성합니다.
-    timeRemaining = quizTimeLimit * 1000;
+    // 퀴즈 시간이 시작될 때 타이머 관련 변수를 초기화합니다.
+    timeRemaining = quizTimeLimit * 2000;
     timerStartTime = Date.now();
     isTimerPaused = false;
-    startTimer();
+    
+    // 이 부분이 가장 중요합니다.
+    // DOM이 완전히 로드된 후 애니메이션이 시작되도록 setTimeout을 사용합니다.
+    setTimeout(() => {
+        const timerBar = document.getElementById('quizTimerBar');
+        timerBar.style.transition = `width linear ${quizTimeLimit}s`;
+        timerBar.style.width = '0%';
+    }, 100);
+
+    // 퀴즈 시간 초과를 처리할 타이머를 시작합니다.
+    clearTimeout(quizTimer);
+    quizTimer = setTimeout(() => {
+        checkQuizAnswer(true);
+    }, quizTimeLimit * 1000);
 
     // 옵션 클릭 이벤트
     modalBody.querySelectorAll('.quiz-option').forEach(option => {
@@ -1151,6 +1165,7 @@ function checkQuizAnswer(isTimeUp = false) {
             quizResultEl.innerHTML = `<p class="text-green-600 font-semibold">정답입니다! 🎉</p>`;
         } else {
             isCorrect = false;
+            // 오답 시 설명 추가 로직 (여기서 photographyData에서 설명을 찾아 표시)
             const allData = Object.values(photographyData).flat();
             const explanation = allData.find(item => item.q === correctAnswer)?.a || "관련된 설명을 찾을 수 없습니다.";
             quizResultEl.innerHTML = `
@@ -1549,3 +1564,4 @@ renderContent('home');
 </script>
 </body>
 </html>
+
