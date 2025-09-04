@@ -1079,7 +1079,7 @@ function displayQuizQuestion() {
         </div>
         <div class="relative pt-1 flex items-center mb-4">
             <div class="overflow-hidden h-2 text-xs flex rounded bg-blue-200 flex-1">
-                <div id="quizTimerBar" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"></div>
+                <div id="quizTimerBar" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500" style="width: 100%;"></div>
             </div>
             <button id="timerToggleBtn" class="ml-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300">
                 <i class="fas fa-pause" id="timerIcon"></i>
@@ -1092,12 +1092,10 @@ function displayQuizQuestion() {
         </div>`;
 
     // JavaScript 코드를 HTML 할당 뒤에 작성합니다.
-    // 퀴즈 시간이 시작될 때 타이머 관련 변수를 초기화합니다.
-    timeRemaining = quizTimeLimit * 2000;
+    timeRemaining = quizTimeLimit * 1000;
     timerStartTime = Date.now();
     isTimerPaused = false;
     
-    // 이 부분이 가장 중요합니다.
     // DOM이 완전히 로드된 후 애니메이션이 시작되도록 setTimeout을 사용합니다.
     setTimeout(() => {
         const timerBar = document.getElementById('quizTimerBar');
@@ -1135,6 +1133,52 @@ function displayQuizQuestion() {
     document.getElementById('timerToggleBtn').addEventListener('click', toggleTimer);
 }
 
+// 타이머 일시정지/재생 함수 (수정된 startTimer 함수)
+function startTimer() {
+    // timeRemaining 변수가 올바르게 설정된 경우에만 타이머 시작
+    if (isTimerPaused || !timeRemaining) return;
+
+    quizTimer = setTimeout(() => {
+        checkQuizAnswer(true);
+    }, timeRemaining);
+
+    const timerBar = document.getElementById('quizTimerBar');
+    // 애니메이션 시작
+    timerBar.style.transition = `width linear ${timeRemaining / 1000}s`;
+    timerBar.style.width = '0%';
+}
+
+function toggleTimer() {
+    const timerIcon = document.getElementById('timerIcon');
+    const timerBar = document.getElementById('quizTimerBar');
+
+    if (isTimerPaused) {
+        isTimerPaused = false;
+        timerIcon.classList.remove('fa-play');
+        timerIcon.classList.add('fa-pause');
+        
+        timerStartTime = Date.now();
+        // 타이머 애니메이션 재시작
+        timerBar.style.transition = `width linear ${timeRemaining / 1000}s`;
+        timerBar.style.width = '0%';
+
+        quizTimer = setTimeout(() => {
+            checkQuizAnswer(true);
+        }, timeRemaining);
+    } else {
+        isTimerPaused = true;
+        timerIcon.classList.remove('fa-pause');
+        timerIcon.classList.add('fa-play');
+        
+        clearTimeout(quizTimer);
+        const elapsed = Date.now() - timerStartTime;
+        timeRemaining = timeRemaining - elapsed;
+        
+        // 애니메이션 일시 정지
+        timerBar.style.transition = 'none';
+        timerBar.style.width = `${(timeRemaining / quizTimeLimit / 10)}%`; // 진행도 유지
+    }
+}
 function checkQuizAnswer(isTimeUp = false) {
     const selectedOptionEl = modalBody.querySelector('.quiz-option.selected');
     const q = currentQuizData.questions[currentQuestionIndex];
@@ -1511,7 +1555,20 @@ searchInput.addEventListener('input', () => {
         }
     }
 });
+function displayQuizFinalScore() {
+    modalBody.innerHTML = `
+        <div class="p-6 text-center">
+            <h2 class="text-2xl font-bold mb-4">🎉 퀴즈 완료! 🎉</h2>
+            <p class="text-xl">당신의 점수는 <span class="text-blue-600 font-bold">${score}</span>/${currentQuizData.questions.length}점 입니다!</p>
+            ${score === currentQuizData.questions.length ? '<p class="text-lg font-semibold mt-4 text-green-600">축하합니다! 모든 문제를 맞히셨어요! 🏆</p>' : ''}
+            <button id="closeModalBtn" class="mt-8 bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-800">닫기</button>
+        </div>
+    `;
 
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+        closeModal();
+    });
+}
 function setupGeminiButtons() {
     document.querySelectorAll('.gemini-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -1564,4 +1621,5 @@ renderContent('home');
 </script>
 </body>
 </html>
+
 
