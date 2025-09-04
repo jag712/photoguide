@@ -148,8 +148,12 @@
         /* --- 모바일 모달 창 텍스트 크기 조정 --- */
         @media (max-width: 768px) {
             #modalBody p {
-                font-size: 4vw;
-            }
+    white-space: pre-wrap;   /* 공백과 줄바꿈을 유지하면서 자동 줄바꿈 */
+    text-align: justify;     /* 양쪽 정렬 */
+    word-break: keep-all;    /* 단어 단위로 줄바꿈 */
+    line-height: 1.6;        /* 줄간격 추가 */
+    margin-bottom: 1rem;     /* 문단 아래 여백 */
+}
         }
 
         .chart-container {
@@ -1460,4 +1464,5 @@ renderContent('home');
 </script>
 </body>
 </html>
+
 
