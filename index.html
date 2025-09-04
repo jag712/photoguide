@@ -105,14 +105,36 @@
             font-size: 1.1rem;
         }
         .quiz-card-answer-text {
-            font-size: 0.85rem;
-            line-height: 1.5;
-            flex-grow: 1;
-            overflow-y: auto;
-            width: 100%;
-            -ms-overflow-style: none; /* IE and Edge */
-            scrollbar-width: none; /* Firefox */
-        }
+        font-size: 1vw; /* 뷰포트 너비의 1.2%로 설정 */
+        line-height: 1.5;
+        flex-grow: 1;
+        overflow-y: auto;
+        width: 100%;
+        max-height: 150px; /* 카드의 최대 높이를 설정합니다. 이 값을 조정하여 카드의 크기를 바꿀 수 있습니다. */
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
+}
+/* 스크롤바 디자인 (webkit-based browsers) */
+.quiz-card-answer-text::-webkit-scrollbar {
+    width: 8px;
+}
+.quiz-card-answer-text::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+.quiz-card-answer-text::-webkit-scrollbar-thumb {
+    background: #a0aec0;
+    border-radius: 10px;
+}
+.quiz-card-answer-text::-webkit-scrollbar-thumb:hover {
+    background: #718096;
+}
+}
+@media (max-width: 768px) {
+    .quiz-card-answer-text {
+        font-size: 3vw; /* 모바일 화면에서는 더 크게 */
+    }
+}
         .quiz-card-answer-text::-webkit-scrollbar {
             display: none; /* Chrome, Safari, and Opera */
         }
@@ -201,6 +223,11 @@
         .gemini-btn:hover {
             background-color: rgba(255, 255, 255, 0.3);
             transform: translateY(-1px);
+        }
+        .today {
+    background-color: #e3f2fd; /* 배경색을 연한 파란색으로 */
+    border: 2px solid #2196f3; /* 테두리를 파란색으로 */
+    border-radius: 8px; /* 모서리를 둥글게 */
         }
     </style>
 </head>
@@ -747,21 +774,42 @@ let score = 0;
 
 // --- 함수 영역 ---
 function createCalendar(year, month, events = {}) {
+    const today = new Date();
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
+    const todayDate = isCurrentMonth ? today.getDate() : -1;
+
     const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
     const days = ['일', '월', '화', '수', '목', '금', '토'];
     const date = new Date(year, month - 1, 1);
     const firstDay = date.getDay();
     const daysInMonth = new Date(year, month, 0).getDate();
+    
     let html = `<div class="content-card p-6 w-full max-w-4xl mx-auto mb-8"><h3 class="text-xl font-bold text-center mb-4">${year}년 ${monthNames[month-1]}</h3><div class="grid grid-cols-7 gap-1 text-center text-sm font-semibold text-gray-600">${days.map(day => `<div class="${day === '일' ? 'text-red-500' : (day === '토' ? 'text-blue-500' : '')}">${day}</div>`).join('')}</div><div class="grid grid-cols-7 gap-1 mt-2">`;
-    for (let i = 0; i < firstDay; i++) { html += `<div></div>`; }
+    
+    for (let i = 0; i < firstDay; i++) {
+        html += `<div></div>`;
+    }
+    
     for (let day = 1; day <= daysInMonth; day++) {
         const currentDayOfWeek = new Date(year, month - 1, day).getDay();
         const dayEvents = events[day] || [];
         let eventHtml = dayEvents.map(e => `<div class="text-white p-1 rounded-md ${e.color || 'bg-blue-500'} mb-1 truncate" title="${e.title}">${e.title}</div>`).join('');
         let dayClass = '';
-        if (currentDayOfWeek === 0 || dayEvents.some(e => e.isHoliday)) dayClass = 'text-red-500';
-        else if (currentDayOfWeek === 6) dayClass = 'text-blue-500';
-        html += `<div class="border p-2 h-28 flex flex-col ${dayEvents.length > 0 ? 'bg-gray-50' : ''}"><span class="font-bold ${dayClass}">${day}</span><div class="text-xs mt-1 text-left overflow-y-auto">${eventHtml}</div></div>`;
+        
+        if (currentDayOfWeek === 0 || dayEvents.some(e => e.isHoliday)) {
+            dayClass = 'text-red-500';
+        } else if (currentDayOfWeek === 6) {
+            dayClass = 'text-blue-500';
+        }
+        
+        // 오늘 날짜인지 확인하여 'today' 클래스 추가
+        if (day === todayDate) {
+            dayClass += ' today-text'; // 텍스트 색상을 위한 클래스
+            // 셀 자체에 배경색을 주기 위해 부모 div에 'today' 클래스 추가
+            html += `<div class="border p-2 h-28 flex flex-col ${dayEvents.length > 0 ? 'bg-gray-50' : ''} today"><span class="font-bold ${dayClass}">${day}</span><div class="text-xs mt-1 text-left overflow-y-auto">${eventHtml}</div></div>`;
+        } else {
+            html += `<div class="border p-2 h-28 flex flex-col ${dayEvents.length > 0 ? 'bg-gray-50' : ''}"><span class="font-bold ${dayClass}">${day}</span><div class="text-xs mt-1 text-left overflow-y-auto">${eventHtml}</div></div>`;
+        }
     }
     html += `</div></div>`;
     return html;
@@ -1328,4 +1376,5 @@ renderContent('home');
 </script>
 </body>
 </html>
+
 
