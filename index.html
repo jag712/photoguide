@@ -105,7 +105,7 @@
             font-size: 1.5vw;
         }
         .quiz-card-answer-text {
-        font-size: 1vw; /* 뷰포트 너비의 1.2%로 설정 */
+        font-size: 3vw; /* 뷰포트 너비의 1.2%로 설정 */
         line-height: 1.5;
         flex-grow: 1;
         overflow-y: auto;
@@ -113,7 +113,8 @@
         max-height: 150px; /* 카드의 최대 높이를 설정합니다. 이 값을 조정하여 카드의 크기를 바꿀 수 있습니다. */
         -ms-overflow-style: none; /* IE and Edge */
         scrollbar-width: none; /* Firefox */
-}
+        }    
+            
 /* 스크롤바 디자인 (webkit-based browsers) */
 .quiz-card-answer-text::-webkit-scrollbar {
     width: 8px;
@@ -140,6 +141,12 @@
         }
         /* --- 퀴즈 카드 플립 스타일 끝 --- */
 
+        /* --- 모바일 모달 창 텍스트 크기 조정 --- */
+ @media (max-width: 768px) {
+    #modalBody p {
+        font-size: 1rem;
+    }
+ }         
         .chart-container {
             position: relative;
             width: 100%;
@@ -1376,6 +1383,7 @@ renderContent('home');
 </script>
 </body>
 </html>
+
 
 
 
