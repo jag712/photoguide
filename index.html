@@ -290,7 +290,7 @@
 </head>
 <body class="antialiased bg-gray-50">
     <div class="flex flex-col md:flex-row min-h-screen">
-        <nav class="w-full md:w-64 bg-bg-gray-100 p-4 md:p-6 shadow-lg md:shadow-none shrink-0 z-10 md:fixed md:h-screen md:overflow-y-auto">
+        <nav class="w-full md:w-64 bg-gray-100 p-4 md:p-6 shadow-lg md:shadow-none shrink-0 z-10 md:fixed md:h-screen md:overflow-y-auto">
             <a href="#" id="homeLink" data-category="home" class="flex items-center mb-6 cursor-pointer">
                 <i class="fas fa-camera-retro text-3xl text-gray-700 mr-3"></i>
                 <h1 class="text-xl font-bold text-gray-800">쮸쀼의 비밀교실✨</h1>
@@ -813,6 +813,7 @@ const visualizationData = {
     }
 };
 
+// This file contains the main application logic and depends on data.js and style.css.
 
 // --- 전역 변수 ---
 const mainContent = document.getElementById('mainContent');
@@ -828,6 +829,7 @@ let charts = {};
 let currentQuizData = null;
 let currentQuestionIndex = 0;
 let score = 0;
+let quizTimer; // 퀴즈 타이머를 관리할 전역 변수
 
 // --- 함수 영역 ---
 function createCalendar(year, month, events = {}) {
@@ -859,10 +861,8 @@ function createCalendar(year, month, events = {}) {
             dayClass = 'text-blue-500';
         }
         
-        // 오늘 날짜인지 확인하여 'today' 클래스 추가
         if (day === todayDate) {
-            dayClass += ' today-text'; // 텍스트 색상을 위한 클래스
-            // 셀 자체에 배경색을 주기 위해 부모 div에 'today' 클래스 추가
+            dayClass += ' today-text';
             html += `<div class="border p-2 h-28 flex flex-col ${dayEvents.length > 0 ? 'bg-gray-50' : ''} today"><span class="font-bold ${dayClass}">${day}</span><div class="text-xs mt-1 text-left overflow-y-auto">${eventHtml}</div></div>`;
         } else {
             html += `<div class="border p-2 h-28 flex flex-col ${dayEvents.length > 0 ? 'bg-gray-50' : ''}"><span class="font-bold ${dayClass}">${day}</span><div class="text-xs mt-1 text-left overflow-y-auto">${eventHtml}</div></div>`;
@@ -960,7 +960,7 @@ async function generateQuiz() {
         modalBody.innerHTML = `<p class="text-red-500">퀴즈를 생성하는 데 실패했습니다. AI가 유효한 퀴즈 형식을 반환하지 못했습니다.</p>`;
     }
 }
-// displayQuizQuestion 함수를 아래의 단일 코드로 대체하세요.
+
 function displayQuizQuestion() {
     const q = currentQuizData.questions[currentQuestionIndex];
     const quizTimeLimit = (currentQuestionIndex >= 3) ? 20 : 15;
@@ -982,22 +982,20 @@ function displayQuizQuestion() {
             <button id="nextQuestionBtn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 hidden">다음 문제</button>
         </div>`;
 
-    // 타이머 바 애니메이션 시작
     setTimeout(() => {
         document.getElementById('quizTimerBar').style.width = '0%';
     }, 100);
 
-    // 타이머 시작
     quizTimer = setTimeout(() => {
-        checkQuizAnswer(true); // 시간 초과 시 오답 처리
+        checkQuizAnswer(true);
     }, quizTimeLimit * 1000);
 
     modalBody.querySelectorAll('.quiz-option').forEach(option => {
         option.addEventListener('click', e => {
-            clearTimeout(quizTimer); // 사용자 응답 시 타이머 중지
+            clearTimeout(quizTimer);
             modalBody.querySelectorAll('.quiz-option').forEach(opt => opt.classList.remove('selected'));
             e.currentTarget.classList.add('selected');
-            checkQuizAnswer(false); // 일반적인 정답/오답 확인
+            checkQuizAnswer(false);
         });
     });
 
@@ -1017,7 +1015,6 @@ function checkQuizAnswer(isTimeUp = false) {
     const correctAnswer = q.answer;
     let isCorrect = false;
 
-    // 모든 옵션 클릭 비활성화
     modalBody.querySelectorAll('.quiz-option').forEach(opt => {
         opt.style.pointerEvents = 'none';
         if (opt.dataset.option === correctAnswer) {
@@ -1048,23 +1045,10 @@ function checkQuizAnswer(isTimeUp = false) {
             } else {
                 displayQuizFinalScore();
             }
-        }, 4000); // 4초 뒤 다음 문제로 자동 이동
+        }, 4000);
     } else {
-        // 오답일 경우, 다음 문제 버튼 표시
         document.getElementById('nextQuestionBtn').classList.remove('hidden');
     }
-}
-
-    // 정답/오답 텍스트 표시
-    if (selectedAnswer === correctAnswer) {
-        score++;
-        modalBody.querySelector('#quizResult').innerHTML = `<p class="text-green-600 font-semibold">정답입니다! 🎉</p>`;
-    } else {
-        modalBody.querySelector('#quizResult').innerHTML = `<p class="text-red-600 font-semibold">오답입니다. 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다. 😔</p>`;
-    }
-
-    // 다음 문제 버튼 표시
-    document.getElementById('nextQuestionBtn').classList.remove('hidden');
 }
 
 function displayQuizFinalScore() {
@@ -1121,34 +1105,6 @@ function setupCardFlipListeners() {
         });
     });
 }
-function setupEventListeners() {
-    document.querySelectorAll('.question').forEach(q => {
-        q.addEventListener('click', (e) => {
-            const questionDiv = e.currentTarget;
-            const answer = questionDiv.nextElementSibling;
-            
-            const isAlreadyOpen = answer.classList.contains('open');
-
-            // Close all other open answers
-            document.querySelectorAll('.answer.open').forEach(openAnswer => {
-                if (openAnswer !== answer) {
-                    openAnswer.classList.remove('open');
-                    openAnswer.previousElementSibling.classList.remove('open');
-                }
-            });
-            
-            // Toggle the clicked answer
-            if (!isAlreadyOpen) {
-                questionDiv.classList.add('open');
-                answer.classList.add('open');
-            } else {
-                questionDiv.classList.remove('open');
-                answer.classList.remove('open');
-            }
-        });
-    });
-}
-
 
 function renderContent(category, searchTerm = '') {
     let html = '';
@@ -1433,7 +1389,6 @@ searchInput.addEventListener('input', () => {
         document.querySelectorAll('nav a').forEach(link => link.classList.remove('active'));
         renderContent(null, searchTerm);
     } else {
-        // If search is cleared, click the first nav item (home)
         const activeOrHomeLink = document.querySelector('.nav-item.active') || document.querySelector('[data-category="home"]');
         if (activeOrHomeLink) {
             activeOrHomeLink.click();
@@ -1444,50 +1399,37 @@ searchInput.addEventListener('input', () => {
 function setupGeminiButtons() {
     document.querySelectorAll('.gemini-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-            e.stopPropagation(); // 카드가 뒤집히지 않도록 이벤트 전파를 막습니다.
+            e.stopPropagation();
             const action = e.target.dataset.action;
             const question = e.target.dataset.q;
             const answer = e.target.dataset.a;
+
+            const cacheKey = `${action}-${question}`;
+
+            modalTitle.textContent = `"${question}" ${action === 'explain' ? '쉽게 이해하기' : '깊이 알아보기'}`;
+
+            const cachedResponse = localStorage.getItem(cacheKey);
+            if (cachedResponse) {
+                modalBody.innerHTML = `<p>${cachedResponse.replace(/\n/g, '<br>')}</p>`;
+                showModal();
+                return;
+            }
+
             let prompt = '';
             if (action === 'explain') {
-                modalTitle.textContent = `"${question}" 쉽게 이해하기`;
-                prompt = `사진학 용어인 "${question}"에 대해 핵심만 짚어 입시생이 시험장에서 바로 활용할 수 있도록 간결하게 설명해줘. 설명: ${answer}`;
+                prompt = `사진학 용어인 "${question}"에 대해 핵심만 짚어 입시생이 면접 시험에서 바로 활용할 수 있도록 간결하게 설명해줘. 설명: ${answer}`;
             } else if (action === 'deepen') {
-                modalTitle.textContent = `"${question}" 깊이 알아보기`;
-                prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 심화 개념, 역사적 배경, 또는 실전 촬영 팁을 포함하여 전문가 수준의 추가 정보를 제공해줘. 설명: ${answer}`;
+                prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 심화 개념, 역사적 배경, 또는 실전 촬영 팁을 포함하여 전문가 수준의 추가 정보를 제공해줘. 단 800자 내외로. 설명: ${answer}`;
             }
+
             if (prompt) {
                 const responseText = await callGemini(prompt, false);
                 modalBody.innerHTML = `<p>${responseText.replace(/\n/g, '<br>')}</p>`;
+                localStorage.setItem(cacheKey, responseText);
             }
         });
     });
 }
-
-function handleNavClick(e) {
-    e.preventDefault();
-    const targetLink = e.target.closest('a');
-    if (!targetLink) return;
-    const category = targetLink.dataset.category;
-    searchInput.value = '';
-    document.querySelectorAll('nav a').forEach(link => link.classList.remove('active'));
-    targetLink.classList.add('active');
-    renderContent(category);
-}
-
-document.querySelectorAll('nav a').forEach(link => link.addEventListener('click', handleNavClick));
-searchInput.addEventListener('input', () => {
-    const searchTerm = searchInput.value;
-    if (searchTerm.length > 0) {
-        document.querySelectorAll('nav a').forEach(link => link.classList.remove('active'));
-        renderContent(null, searchTerm);
-    } else {
-        const activeOrHomeLink = document.querySelector('.nav-item.active') || document.querySelector('[data-category="home"]');
-        if (activeOrHomeLink) {
-            activeOrHomeLink.click();
-        }
-    }
-});
 
 // AI 퀴즈 생성 버튼 이벤트
 quizBtn.addEventListener('click', generateQuiz);
@@ -1506,5 +1448,3 @@ renderContent('home');
 </script>
 </body>
 </html>
-
-
