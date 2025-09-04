@@ -241,6 +241,47 @@
             border: 2px solid #2196f3; /* 테두리를 파란색으로 */
             border-radius: 8px; /* 모서리를 둥글게 */
         }
+    /* 퀴즈 옵션의 기본 스타일 */
+    .quiz-option {
+        background-color: #f0f8ff; /* 옅은 푸른색 배경 */
+        border: 1px solid #d0e8f8;
+        cursor: pointer;
+        transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+    }
+
+    /* 마우스 오버 시 효과 */
+    .quiz-option:hover {
+        background-color: #e0f2ff;
+        transform: translateY(-2px);
+    }
+
+    /* 정답, 오답에 따른 색상 및 애니메이션 */
+    .quiz-option.correct {
+        background-color: #d4edda; /* 연한 초록색 */
+        border-color: #4CAF50;
+        animation: pulse-correct 0.5s ease-in-out;
+    }
+
+    .quiz-option.incorrect {
+        background-color: #f8d7da; /* 연한 빨간색 */
+        border-color: #dc3545;
+        animation: shake-incorrect 0.4s ease-in-out;
+    }
+
+    /* 정답 시 살짝 커지는 애니메이션 */
+    @keyframes pulse-correct {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.01); }
+        100% { transform: scale(1); }
+    }
+
+    /* 오답 시 좌우로 흔들리는 애니메이션 */
+    @keyframes shake-incorrect {
+        0%, 100% { transform: translateX(0); }
+        20%, 60% { transform: translateX(-5px); }
+        40%, 80% { transform: translateX(5px); }
+    }
+        
     </style>
 </head>
 <body class="antialiased bg-gray-50">
@@ -254,7 +295,7 @@
                 <input type="text" id="searchInput" placeholder="용어 검색..." class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400">
             </div>
             <ul>
-                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700 active" data-category="home">일정</a></li>
+                <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700 active" data-category="home">남은 일정</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="visualization">시각화</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="cms">CMS 가이드</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="structure">카메라 구조와 원리</a></li>
@@ -919,14 +960,28 @@ async function generateQuiz() {
 function displayQuizQuestion() {
     const q = currentQuizData.questions[currentQuestionIndex];
     const optionsHtml = q.options.map(option => `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option.replace(/"/g, '&quot;')}">${option}</div>`).join('');
-    modalBody.innerHTML = `<div class="mb-4"><p class="text-sm text-gray-500">문제 ${currentQuestionIndex + 1} / ${currentQuizData.questions.length}</p><p class="text-lg font-semibold mt-1">${q.question}</p></div><div id="quizOptions">${optionsHtml}</div><div id="quizResult" class="mt-4"></div><div class="flex justify-end mt-4"><button id="nextQuestionBtn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 hidden">다음 문제</button></div>`;
+    
+    modalBody.innerHTML = `
+        <div class="mb-4">
+            <p class="text-sm text-gray-500">문제 ${currentQuestionIndex + 1} / ${currentQuizData.questions.length}</p>
+            <p class="text-lg font-semibold mt-1">${q.question}</p>
+        </div>
+        <div id="quizOptions">${optionsHtml}</div>
+        <div id="quizResult" class="mt-4"></div>
+        <div class="flex justify-end mt-4">
+            <button id="nextQuestionBtn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 hidden">다음 문제</button>
+        </div>`;
+
     modalBody.querySelectorAll('.quiz-option').forEach(option => {
         option.addEventListener('click', e => {
+            // 다른 옵션의 'selected' 클래스 제거
             modalBody.querySelectorAll('.quiz-option').forEach(opt => opt.classList.remove('selected'));
+            // 현재 클릭한 옵션에 'selected' 클래스 추가
             e.currentTarget.classList.add('selected');
             checkQuizAnswer();
         });
     });
+
     document.getElementById('nextQuestionBtn').addEventListener('click', () => {
         currentQuestionIndex++;
         if (currentQuestionIndex < currentQuizData.questions.length) {
@@ -940,19 +995,29 @@ function displayQuizQuestion() {
 function checkQuizAnswer() {
     const selectedOptionEl = modalBody.querySelector('.quiz-option.selected');
     if (!selectedOptionEl) return;
+
     const selectedAnswer = selectedOptionEl.dataset.option;
     const correctAnswer = currentQuizData.questions[currentQuestionIndex].answer;
+    
+    // 모든 옵션 클릭 비활성화
     modalBody.querySelectorAll('.quiz-option').forEach(opt => {
         opt.style.pointerEvents = 'none';
-        if (opt.dataset.option === correctAnswer) opt.classList.add('correct');
-        else if (opt.classList.contains('selected')) opt.classList.add('incorrect');
+        if (opt.dataset.option === correctAnswer) {
+            opt.classList.add('correct');
+        } else if (opt.classList.contains('selected')) {
+            opt.classList.add('incorrect');
+        }
     });
+
+    // 정답/오답 텍스트 표시
     if (selectedAnswer === correctAnswer) {
         score++;
-        modalBody.querySelector('#quizResult').innerHTML = `<p class="text-green-600 font-semibold">정답입니다!</p>`;
+        modalBody.querySelector('#quizResult').innerHTML = `<p class="text-green-600 font-semibold">정답입니다! 🎉</p>`;
     } else {
-        modalBody.querySelector('#quizResult').innerHTML = `<p class="text-red-600 font-semibold">오답입니다. 정답은 "${correctAnswer}" 입니다.</p>`;
+        modalBody.querySelector('#quizResult').innerHTML = `<p class="text-red-600 font-semibold">오답입니다. 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다. 😔</p>`;
     }
+
+    // 다음 문제 버튼 표시
     document.getElementById('nextQuestionBtn').classList.remove('hidden');
 }
 
@@ -1042,11 +1107,18 @@ function setupEventListeners() {
 function renderContent(category, searchTerm = '') {
     let html = '';
     if (category === 'home') {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth() + 1; // getMonth()는 0부터 시작하므로 +1
+
         const eventsForSept = {};
         (calendarEvents[9] || []).forEach(e => { (eventsForSept[e.day] = eventsForSept[e.day] || []).push({ ...e }); });
         const eventsForOct = {};
         (calendarEvents[10] || []).forEach(e => { (eventsForOct[e.day] = eventsForOct[e.day] || []).push({ ...e }); });
-        html = `<div class="content-card p-6 md:p-8 mb-6 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">중요한 입시 일정을 확인하세요.</p></div>${createCalendar(2025, 9, eventsForSept)}${createCalendar(2025, 10, eventsForOct)}`;
+
+        html = `<div class="content-card p-6 md:p-8 mb-6 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">중요한 입시 일정을 확인하세요.</p></div>`;
+        html += createCalendar(currentYear, 9, eventsForSept);
+        html += createCalendar(currentYear, 10, eventsForOct);
     } else if (category === 'visualization') {
         const visualizationContent = [
             {
@@ -1388,5 +1460,4 @@ renderContent('home');
 </script>
 </body>
 </html>
-
 
