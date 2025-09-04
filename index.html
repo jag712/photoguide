@@ -132,7 +132,7 @@
 }
 @media (max-width: 768px) {
     .quiz-card-answer-text {
-        font-size: 3vw; /* 모바일 화면에서는 더 크게 */
+        font-size: div classvw; /* 모바일 화면에서는 더 크게 */
     }
 }
         .quiz-card-answer-text::-webkit-scrollbar {
@@ -1260,7 +1260,7 @@ function renderContent(category, searchTerm = '') {
                     </div>
                 </div>
             `).join('');
-            html = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">${cardsHtml}</div>`;
+            html = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">${cardsHtml}</div>`;
         } else {
              const categoryTitle = document.querySelector(`[data-category="${category}"]`)?.textContent || "콘텐츠";
             html = `<div class="content-card p-8 text-center"><h2 class="text-2xl font-bold text-gray-800 mb-4">검색 결과 없음 😢</h2><p class="text-gray-600">'<span id="search-term">${searchTerm}</span>'에 대한 검색 결과를 찾을 수 없습니다.</p><p class="mt-4 text-sm text-gray-500">오타를 확인하시거나 다른 검색어로 다시 시도해 보세요.</p></div>`;
@@ -1376,5 +1376,6 @@ renderContent('home');
 </script>
 </body>
 </html>
+
 
 
