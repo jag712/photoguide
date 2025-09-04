@@ -1211,7 +1211,8 @@ function checkQuizAnswer(isTimeUp = false) {
             isCorrect = false;
             // 오답 시 설명 추가 로직 (여기서 photographyData에서 설명을 찾아 표시)
             const allData = Object.values(photographyData).flat();
-            const explanation = allData.find(item => item.q === correctAnswer)?.a || "관련된 설명을 찾을 수 없습니다.";
+            const explanation = allData.find(item => item.q.includes(correctAnswer))?.a || "관련된 설명을 찾을 수 없습니다.";
+
             quizResultEl.innerHTML = `
                 <p class="text-red-600 font-semibold">오답입니다. 😔</p>
                 <p class="text-gray-700 mt-2">정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>
@@ -1621,6 +1622,7 @@ renderContent('home');
 </script>
 </body>
 </html>
+
 
 
 
