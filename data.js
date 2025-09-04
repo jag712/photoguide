@@ -1,4 +1,4 @@
-window.photographyData = {
+const photographyData = {
     // 각 카테고리에 맞는 데이터를 이 형식에 맞춰 추가해주세요.
     // 예시: structure: [ { "q": "용어", "a": "설명" }, ... ],
     structure: [{ "q": "거리계 창", "a": "RF(레인지파인더) 카메라에서 이중상 합치식 등의 방식으로 초점을 맞추기 위해 사용하는 창." },
@@ -464,3 +464,4 @@ window.photographyData = {
         { q: "윌리엄 헨리 폭스 탈보트 (William Henry Fox Talbot)", a: "영국의 과학자이자 사진의 선구자. 다게르와 거의 동시대에 '칼로타입'을 발명하여 네거티브-포지티브 방식을 통한 이미지 복제의 길을 열었다. 최초의 사진집 '자연의 연필(The Pencil of Nature)'을 출간했다." }
     ]
 };
+
