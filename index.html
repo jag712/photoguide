@@ -985,6 +985,46 @@ function displayQuizQuestion() {
             checkQuizAnswer();
         });
     });
+    const q = currentQuizData.questions[currentQuestionIndex];
+    const quizTimeLimit = (currentQuestionIndex >= 3) ? 20 : 15; // 난이도에 따라 시간 설정
+    let timeLeft = quizTimeLimit;
+
+    modalBody.innerHTML = `
+        <div class="mb-4">
+            <p class="text-sm text-gray-500">문제 ${currentQuestionIndex + 1} / ${currentQuizData.questions.length}</p>
+            <p class="text-lg font-semibold mt-1">${q.question}</p>
+        </div>
+        <div class="relative pt-1">
+            <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200">
+                <div id="quizTimerBar" style="width: 100%; transition: width linear ${quizTimeLimit}s;" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"></div>
+            </div>
+        </div>
+        <div id="quizOptions">${optionsHtml}</div>
+        <div id="quizResult" class="mt-4"></div>
+        <div class="flex justify-end mt-4">
+            <button id="nextQuestionBtn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 hidden">다음 문제</button>
+        </div>`;
+
+    // 타이머 바 애니메이션 시작
+    setTimeout(() => {
+        document.getElementById('quizTimerBar').style.width = '0%';
+    }, 100);
+
+    // 타이머 시작
+    quizTimer = setTimeout(() => {
+        checkQuizAnswer(true); // 시간 초과 시 오답 처리
+    }, quizTimeLimit * 1000);
+
+    modalBody.querySelectorAll('.quiz-option').forEach(option => {
+        option.addEventListener('click', e => {
+            clearTimeout(quizTimer); // 사용자 응답 시 타이머 중지
+            // 다른 옵션의 'selected' 클래스 제거
+            modalBody.querySelectorAll('.quiz-option').forEach(opt => opt.classList.remove('selected'));
+            // 현재 클릭한 옵션에 'selected' 클래스 추가
+            e.currentTarget.classList.add('selected');
+            checkQuizAnswer(false); // 일반적인 정답/오답 확인
+        });
+    });
 
     document.getElementById('nextQuestionBtn').addEventListener('click', () => {
         currentQuestionIndex++;
@@ -996,13 +1036,12 @@ function displayQuizQuestion() {
     });
 }
 
-function checkQuizAnswer() {
+function checkQuizAnswer(isTimeUp = false) {
     const selectedOptionEl = modalBody.querySelector('.quiz-option.selected');
-    if (!selectedOptionEl) return;
+    const q = currentQuizData.questions[currentQuestionIndex];
+    const correctAnswer = q.answer;
+    let isCorrect = false;
 
-    const selectedAnswer = selectedOptionEl.dataset.option;
-    const correctAnswer = currentQuizData.questions[currentQuestionIndex].answer;
-    
     // 모든 옵션 클릭 비활성화
     modalBody.querySelectorAll('.quiz-option').forEach(opt => {
         opt.style.pointerEvents = 'none';
@@ -1012,6 +1051,34 @@ function checkQuizAnswer() {
             opt.classList.add('incorrect');
         }
     });
+
+    if (isTimeUp) {
+        modalBody.querySelector('#quizResult').innerHTML = `<p class="text-red-600 font-semibold">시간 초과! 😔 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
+    } else {
+        const selectedAnswer = selectedOptionEl.dataset.option;
+        if (selectedAnswer === correctAnswer) {
+            score++;
+            isCorrect = true;
+            modalBody.querySelector('#quizResult').innerHTML = `<p class="text-green-600 font-semibold">정답입니다! 🎉</p>`;
+        } else {
+            modalBody.querySelector('#quizResult').innerHTML = `<p class="text-red-600 font-semibold">오답입니다. 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다. 😔</p>`;
+        }
+    }
+
+    if (isCorrect || isTimeUp) {
+        setTimeout(() => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < currentQuizData.questions.length) {
+                displayQuizQuestion();
+            } else {
+                displayQuizFinalScore();
+            }
+        }, 4000); // 4초 뒤 다음 문제로 자동 이동
+    } else {
+        // 오답일 경우, 다음 문제 버튼 표시
+        document.getElementById('nextQuestionBtn').classList.remove('hidden');
+    }
+}
 
     // 정답/오답 텍스트 표시
     if (selectedAnswer === correctAnswer) {
@@ -1464,3 +1531,4 @@ renderContent('home');
 </script>
 </body>
 </html>
+
