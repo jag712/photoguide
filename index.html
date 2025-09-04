@@ -1,8 +1,53 @@
-<!-- 외부 라이브러리들은 head 쪽에서 로드 -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jamo-js"></script>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>쮸쀼의 비밀교실 (✨)</title>
 
-<!-- body 맨 아래: 데이터 먼저, 로직 나중 -->
-<script src="./data.js"></script>
-<script src="./app.js"></script>
+  <!-- 외부 라이브러리 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jamo-js"></script>
+
+  <style>
+    @keyframes pulse-correct { 0%{transform:scale(1)}50%{transform:scale(1.01)}100%{transform:scale(1)} }
+    @keyframes shake-incorrect { 0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)} }
+  </style>
+</head>
+<body class="antialiased bg-gray-50">
+  <div class="flex min-h-screen">
+    <!-- 좌측 내비 -->
+    <nav class="w-64 bg-gray-100 p-6 hidden md:block">
+      <a href="#" id="homeLink" data-category="home" class="flex items-center mb-6 cursor-pointer">
+        <h1 class="text-xl font-bold text-gray-800">쮸쀼의 비밀교실✨</h1>
+      </a>
+      <ul>
+        <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700 active" data-category="home">남은 일정</a></li>
+        <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="structure">카메라 구조와 원리</a></li>
+      </ul>
+      <button id="quizBtn" class="mt-6 w-full bg-gray-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-800">✨ AI 퀴즈 생성</button>
+    </nav>
+
+    <!-- 메인 컨텐츠 -->
+    <main id="mainContent" class="flex-1 p-6 md:ml-0">
+      <!-- JS가 이 영역을 채웁니다 -->
+    </main>
+  </div>
+
+  <!-- 모달 -->
+  <div id="geminiModal" class="fixed inset-0 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div class="flex justify-between items-center p-4 border-b">
+        <h3 id="modalTitle" class="text-xl font-bold text-gray-800">Gemini AI</h3>
+        <button id="closeModal" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+      </div>
+      <div id="modalBody" class="p-6 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <!-- 데이터 먼저, 로직 나중 -->
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
