@@ -1,6 +1,8 @@
-const photographyData = {
+// --- 데이터 영역 ---
+// 이 곳에 직접 데이터를 채워넣으시면 됩니다.
     // 각 카테고리에 맞는 데이터를 이 형식에 맞춰 추가해주세요.
     // 예시: structure: [ { "q": "용어", "a": "설명" }, ... ],
+const photographyData = {
     structure: [{ "q": "거리계 창", "a": "RF(레인지파인더) 카메라에서 이중상 합치식 등의 방식으로 초점을 맞추기 위해 사용하는 창." },
     { "q": "그라운드 글라스 (Ground Glass)", "a": "대형 카메라나 SLR, TLR 카메라의 뷰파인더에 사용되는 반투명 유리. 렌즈를 통과한 상이 거꾸로 맺히며, 초점과 구도를 정밀하게 확인할 수 있다." },
     { "q": "니콘 (Nikon)", "a": "일본의 카메라 및 광학기기 전문 기업. 캐논과 함께 DSLR 시장을 양분했으며, 뛰어난 신뢰성과 성능으로 알려져 있음." },
@@ -173,7 +175,7 @@ const photographyData = {
         { q: "DPI (Dots Per Inch)", a: "인쇄 해상도 단위. 1인치당 점의 수." },
         { q: "DSLR", a: "디지털 일안 반사식 카메라." },
         { q: "EPS 파일", a: "벡터와 비트맵 정보를 포함하는 그래픽 파일 형식." },
-        { q: "EVF (Electronic Viewfinder)", a: "전자식 뷰파인더. 미러리스 카메라에 사용됨." },
+        { q: "EVF (Electronic Viewfinder)", "a": "전자식 뷰파인더. 미러리스 카메라에 사용됨." },
         { q: "Grayscale", a: "색상 정보 없이 밝기 정보만으로 이미지를 표현하는 흑백 모드." },
         { q: "GPU", a: "그래픽처리장치. 이미지 및 영상 처리를 가속." },
         { q: "HDD", a: "하드디스크 드라이브. 자기 디스크 방식의 저장 장치." },
@@ -248,7 +250,7 @@ const photographyData = {
         { q: "작업액(Working Solution)", a: "원액을 물에 희석하여 실제 작업에 사용하는 용액." },
         { q: "잠상", a: "빛 노출 후, 현상 전까지 눈에 보이지 않는 상." },
         { q: "잠상퇴행", a: "촬영 후 현상하지 않은 필름의 잠상이 시간이 지나며 약해지는 현상." },
-        { q: "정착", a: "빛에 반응하지 않은 은염을 제거하여 상을 고정시키는 과정." },
+        { q: "정착", a": "빛에 반응하지 않은 은염을 제거하여 상을 고정시키는 과정." },
         { q: "정착액(Fixer)", a: "빛에 노출되지 않은 은염을 제거하여 필름이나 인화지의 상을 영구적으로 고정하는 화학 약품." },
         { q: "젤라틴 건판법", a: "건조 젤라틴 유제를 유리판에 사용한 방식으로 사진 대중화에 기여." },
         { q: "조색(Toning)", a: "화학 처리로 흑백 인화물의 색감을 바꾸는 작업. (예: 세피아 톤)" },
@@ -345,7 +347,7 @@ const photographyData = {
         { q: "FL 필터", a: "형광등(Fluorescent) 조명 아래서 촬영 시 발생하는 녹색 기운을 보정하는 필터." },
         { q: "LB 필터", a: "색온도를 미세하게 조정하는(Light Balancing) 필터." },
         { q: "LED 조명", a: "발열이 적고 효율이 높은 지속광 조명." },
-        { q: "LPL (Linear Polarizing) Filter", a: "선편광 필터. DSLR 등에서 측광 오류를 일으킬 수 있음." },
+        { q: "LPL (Linear Polarizing) Filter)", a: "선편광 필터. DSLR 등에서 측광 오류를 일으킬 수 있음." },
         { q: "ND (Neutral Density) Filter", a: "색에 영향을 주지 않고 광량만 줄이는 필터." },
         { q: "PL (Polarizing) Filter", a: "편광 필터. 물이나 유리의 표면 반사를 제거하는 데 사용." },
         { q: "UV (Ultraviolet) Filter", a: "자외선을 차단하는 필터. 현재는 주로 렌즈 보호용으로 사용." }],
@@ -466,6 +468,7 @@ const photographyData = {
 };
 
 const calendarEvents = {9:[{day:17,title:"테스트 프린트",color:"bg-green-500"},{day:18,title:"테스트 프린트",color:"bg-green-500"},{day:20,title:"경일대 면접",color:"bg-purple-500"},{day:22,title:"1차 프린트(경일)",color:"bg-red-500"},{day:26,title:"경일 실기/면접",color:"bg-purple-500"},{day:27,title:"경일 실기/면접",color:"bg-purple-500"}],10:[{day:3,title:"개천절",color:"bg-gray-500",isHoliday:!0},{day:5,title:"추석 연휴",color:"bg-gray-500",isHoliday:!0},{day:6,title:"추석",color:"bg-gray-500",isHoliday:!0},{day:7,title:"추석 연휴",color:"bg-gray-500",isHoliday:!0},{day:8,title:"대체공휴일",color:"bg-gray-500",isHoliday:!0},{day:9,title:"한글날",color:"bg-gray-500",isHoliday:!0},{day:18,title:"서울예대 실기(예정)",color:"bg-yellow-500"},{day:20,title:"서울예대 면접(예정)",color:"bg-yellow-500"},{day:21,title:"서울예대 면접(예정)",color:"bg-yellow-500"},{day:22,title:"서울예대 면접(예정)",color:"bg-yellow-500"},{day:23,title:"서울예대 면접(예정)",color:"bg-yellow-500"}]};
+
 // 시각화 차트 데이터
 const visualizationData = {
     aperture: {
@@ -477,4 +480,3 @@ const visualizationData = {
         thirdStop: [ { label: '1"', value: 13, desc: '삼각대 없이는 사진이 심하게 흔들리며 빛의 궤적을 담습니다.' }, { label: '1/1.3s', value: 12.66, desc: '장노출 패닝샷에서 배경의 흐름을 좀 더 부드럽게 표현합니다.' }, { label: '1/1.6s', value: 12.33, desc: '물의 흐름이나 움직임을 살짝 부드럽게 만들며 역동성을 조절합니다.' }, { label: '1/2s', value: 12, desc: '의도적인 패닝샷으로 역동적인 흔들림을 표현할 수 있습니다.' }, { label: '1/2.5s', value: 11.66, desc: '패닝샷 촬영 시 배경의 흐림 정도를 미세하게 조절합니다.' }, { label: '1/3s', value: 11.33, desc: '손떨림 방지 기능이 있어도 핸드헬드 촬영이 매우 어렵습니다.' }, { label: '1/4s', value: 11, desc: '느리게 움직이는 피사체에 블러 효과를 주기 좋습니다.' }, { label: '1/5s', value: 10.66, desc: '걷는 사람의 움직임을 의도적으로 흐리게 표현하여 속도감을 나타냅니다.' }, { label: '1/6s', value: 10.33, desc: '안정적인 자세와 호흡 조절이 필요합니다.' }, { label: '1/8s', value: 10, desc: '느리게 걷는 사람의 움직임에 약간의 블러가 생깁니다.' }, { label: '1/10s', value: 9.66, desc: '광각 렌즈로 핸드헬드 촬영 시 흔들림을 최소화하며 안정성을 높입니다.' }, { label: '1/13s', value: 9.33, desc: '핸드헬드 촬영 시 안정적인 자세가 필요합니다.' }, { label: '1/15s', value: 9, desc: '여전히 핸드헬드 촬영 시 주의가 필요한 속도입니다.' }, { label: '1/20s', value: 8.66, desc: '정적인 피사체를 핸드헬드로 촬영할 때 흔들림을 방지하는 안정적인 속도입니다.' }, { label: '1/25s', value: 8.33, desc: '광각 렌즈 사용 시 핸드헬드 촬영의 마지노선입니다.' }, { label: '1/30s', value: 8, desc: '표준 렌즈(50mm) 촬영 시 흔들림이 발생할 수 있는 최소 권장 속도입니다.' }, { label: '1/40s', value: 7.66, desc: '표준 렌즈로 정적인 피사체를 안정적으로 촬영할 수 있습니다.' }, { label: '1/50s', value: 7.33, desc: '일상적인 실내 스냅에서 흔들림을 방지하기 위한 실용적인 속도입니다.' }, { label: '1/60s', value: 7, desc: '일상적인 스냅 촬영 시 최소한으로 권장되는 속도입니다.' }, { label: '1/80s', value: 6.66, desc: '조금 더 활동적인 아이들의 움직임을 흔들림 없이 포착하기 시작합니다.' }, { label: '1/100s', value: 6.33, desc: '걷는 사람 정도의 움직임을 선명하고 안정적으로 촬영할 수 있습니다.' }, { label: '1/125s', value: 6, desc: '일반적인 움직임을 선명하게 포착하는 표준 속도입니다.' }, { label: '1/160s', value: 5.66, desc: '가볍게 뛰는 아이나 반려동물 촬영 시 실패 확률을 줄여줍니다.' }, { label: '1/200s', value: 5.33, desc: '움직임이 불규칙한 피사체를 선명하게 포착하기에 좋습니다.' }, { label: '1/250s', value: 5, desc: '대부분의 일상적인 움직임을 정지시킬 수 있습니다.' }, { label: '1/320s', value: 4.66, desc: '자전거 타는 아이 등, 조금 더 빠른 움직임을 선명하게 담아냅니다.' }, { label: '1/400s', value: 4.33, desc: '스포츠 경기 등 빠른 움직임을 선명하게 정지시키기 시작합니다.' }, { label: '1/500s', value: 4, desc: '빠른 움직임을 포착하기에 매우 안정적인 속도입니다.' }, { label: '1/640s', value: 3.66, desc: '달리는 자동차나 빠르게 움직이는 운동선수를 더 확실하게 정지시킵니다.' }, { label: '1/800s', value: 3.33, desc: '테니스나 배드민턴처럼 빠른 공의 움직임을 포착하기 시작합니다.' }, { label: '1/1000s', value: 3, desc: '순간적인 동작을 놓치지 않고 선명하게 담아냅니다.' } ]
     }
 };
-
