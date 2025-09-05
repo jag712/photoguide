@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>쮸쀼의 비밀교실 (✨)</title>
-    <script src="photographyData.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jamo-js"></script>
@@ -116,7 +115,7 @@
             scrollbar-width: none;
     
             /* 새롭게 추가된 부분 */
-            background-color: rgba(0, 0, 0, 0.01); /* 불투명한 파란색 배경 */
+            background-color: rgba(0, 0, 255, 0.05); /* 불투명한 파란색 배경 */
             padding: 1rem; /* 텍스트와 박스 경계 사이에 여백 추가 */
             border-radius: 0.5rem; /* 박스 모서리를 둥글게 */
             
@@ -354,10 +353,7 @@
             </ul>
             <div class="mt-6">
                 <button id="quizBtn" class="w-full bg-gray-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors">✨ AI 퀴즈 생성</button>
-                <button id="practicalExamBtn" class="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-lg mt-2 hover:bg-gray-700 transition-colors">실기 시뮬레이션</button>
-
             </div>
-            
         </nav>
 
         <main id="mainContent" class="flex-1 p-4 md:p-10 md:ml-64 overflow-y-auto">
@@ -1564,30 +1560,6 @@ searchInput.addEventListener('input', () => {
         }
     }
 });
-    function showPracticalExamModal() {
-    const exams = practicalExamData;
-    const randomExam = exams[Math.floor(Math.random() * exams.length)];
-
-    // 감도가 '랜덤'일 경우 1000~3200 사이의 값을 생성
-    const isoValue = randomExam.iso.includes('랜덤') ? 
-                     `ISO ${Math.floor(Math.random() * (3200 - 1000 + 1)) + 1000}` : 
-                     randomExam.iso;
-
-    modalTitle.textContent = "서울예대 실기 시뮬레이션";
-    modalBody.innerHTML = `
-        <div class="text-center p-6">
-            <h3 class="text-2xl font-bold mb-4">${randomExam.topic}</h3>
-            <p class="text-gray-700 mb-2"><strong>컷수:</strong> ${randomExam.cuts}</p>
-            <p class="text-gray-700 mb-2"><strong>감도:</strong> ${isoValue}</p>
-            <p class="text-gray-700 mb-2"><strong>배경:</strong> ${randomExam.background}</p>
-            <p class="text-gray-500 text-sm mt-4">(${randomExam.reference})</p>
-        </div>
-    `;
-    showModal();
-}
-
-// 버튼 클릭 이벤트 리스너 추가
-document.getElementById('practicalExamBtn').addEventListener('click', showPracticalExamModal);
 function displayQuizFinalScore() {
     modalBody.innerHTML = `
         <div class="p-6 text-center">
@@ -1654,9 +1626,6 @@ renderContent('home');
 </script>
 </body>
 </html>
-
-
-
 
 
 
