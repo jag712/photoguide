@@ -1261,7 +1261,7 @@ async function generateSubjectiveQuiz() {
     const topics = shuffledTerms.slice(0, 5).map(item => item.q).join(', ');
 
     // 주관식 질문을 위한 새로운 프롬프트
-    const prompt = `다음 사진학 개념들에 대해 면접관 역할을 맡아 5개의 주관식 질문을 해줘. 질문은 개념을 이해하고 있는지 확인하는 개방형으로, 각 질문에는 면접 답변의 평가 기준을 포함해줘. 예시: {"questions": [{"question": "조리개에 대해 설명해 보세요.", "answer_criteria": "f값, 심도, 빛의 양 조절 등을 포함하는지."}]}`;
+    const prompt = `다음 사진학 개념들에 대해 면접관 역할을 맡아 2개의 주관식 질문을 해줘. 질문은 개념을 이해하고 있는지 확인하는 개방형으로, 각 질문에는 면접 답변의 평가 기준을 포함해줘. 예시: {"questions": [{"question": "조리개에 대해 설명해 보세요.", "answer_criteria": "f값, 심도, 빛의 양 조절 등을 포함하는지."}]}`;
     
     // AI에 JSON 요청 (여기서는 스키마 없이 텍스트로 요청)
     const responseText = await callGemini(prompt, false);
@@ -1749,6 +1749,7 @@ renderContent('home');
 </script>
 </body>
 </html>
+
 
 
 
