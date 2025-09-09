@@ -968,29 +968,23 @@ function hideModal() {
     }, 300);
 }
 
-async function callGemini(prompt, useSchema = false) {
+async function callGemini(prompt, quizType = false) { // 매개변수 이름을 quizType으로 변경
     showModal();
     try {
         const payload = {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {}
         };
-        if (useSchema) {
+        if (quizType === 'objective') {
             payload.generationConfig.responseMimeType = "application/json";
             payload.generationConfig.responseSchema = { type: "OBJECT", properties: { questions: { type: "ARRAY", items: { type: "OBJECT", properties: { question: { type: "STRING" }, options: { type: "ARRAY", items: { type: "STRING" } }, answer: { type: "STRING" } }, required: ["question", "options", "answer"] } } } };
-        } else {
+        } else if (quizType === 'subjective') { // 주관식 퀴즈용 스키마 추가
+            payload.generationConfig.responseMimeType = "application/json";
+            payload.generationConfig.responseSchema = { type: "OBJECT", properties: { questions: { type: "ARRAY", items: { type: "OBJECT", properties: { question: { type: "STRING" }, answer_criteria: { type: "STRING" } }, required: ["question", "answer_criteria"] } } } };
+        } else { // 일반 텍스트 응답
             payload.generationConfig.responseMimeType = "text/plain";
         }
-        const response = await fetch(PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (!response.ok) throw new Error(`Proxy call failed. Status: ${response.status}`);
-        const result = await response.json();
-        let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!text) throw new Error("No content received from API.");
-        text = text.trim();
-        if (text.startsWith('```json') && text.endsWith('```')) {
-            text = text.substring(7, text.length - 3).trim();
-        }
-        return text;
+        // ... (나머지 코드 동일)
     } catch (error) {
         console.error("Gemini proxy call error:", error);
         return `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>`;
@@ -1041,7 +1035,7 @@ function toggleTimer() {
  * 기능 1: AI 퀴즈 생성
  * =================================================================
  */
-async function generateQuiz() {
+async function generateObjectiveQuiz() {
     const activeLink = document.querySelector('.nav-item.active');
     const category = activeLink ? activeLink.dataset.category : 'all';
     const categoryName = activeLink ? activeLink.textContent : '전체';
@@ -1167,7 +1161,6 @@ function toggleTimer() {
         // 타이머 애니메이션 재시작
         timerBar.style.transition = `width linear ${timeRemaining / 1000}s`;
         timerBar.style.width = '0%';
-
         quizTimer = setTimeout(() => {
             checkQuizAnswer(true);
         }, timeRemaining);
@@ -1262,9 +1255,7 @@ async function generateSubjectiveQuiz() {
 
     // 주관식 질문을 위한 새로운 프롬프트
     const prompt = `다음 사진학 개념들에 대해 면접관 역할을 맡아 2개의 주관식 질문을 해줘. 질문은 개념을 이해하고 있는지 확인하는 개방형으로, 각 질문에는 면접 답변의 평가 기준을 포함해줘. 예시: {"questions": [{"question": "조리개에 대해 설명해 보세요.", "answer_criteria": "f값, 심도, 빛의 양 조절 등을 포함하는지."}]}`;
-    
-    // AI에 JSON 요청 (여기서는 스키마 없이 텍스트로 요청)
-    const responseText = await callGemini(prompt, false);
+    const responseText = await callGemini(prompt, 'objective'); // 'objective' 타입 전달
 
     try {
         let parsedData = JSON.parse(responseText.trim());
@@ -1749,6 +1740,7 @@ renderContent('home');
 </script>
 </body>
 </html>
+
 
 
 
