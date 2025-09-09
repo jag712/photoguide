@@ -353,10 +353,9 @@
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="lighting">조명과 필터</a></li>
                 <li><a href="#" class="nav-item block py-3 px-4 mb-2 rounded-lg font-semibold text-gray-700" data-category="history">사진사 & 사조</a></li>
             </ul>
- <div class="mt-6 flex flex-col space-y-2">
-        <button id="objectiveQuizBtn" class="w-full bg-gray-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors">✨ 객관식 퀴즈</button>
-        <button id="subjectiveQuizBtn" class="w-full bg-blue-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-800 transition-colors">✨ 주관식 (면접 대비)</button>
-    </div>
+            <div class="mt-6">
+                <button id="quizBtn" class="w-full bg-gray-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors">✨ AI 퀴즈 생성</button>
+            </div>
         </nav>
 
         <main id="mainContent" class="flex-1 p-4 md:p-10 md:ml-64 overflow-y-auto">
@@ -866,7 +865,6 @@ const geminiModal = document.getElementById('geminiModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalBody = document.getElementById('modalBody');
 const closeModal = document.getElementById('closeModal');
-    
 
 let charts = {};
 let currentQuizData = null;
@@ -877,8 +875,6 @@ let timerStartTime;
 let timeRemaining;
 let isTimerPaused = false;
 let quizTimeLimit;
-let currentQuizType = 'objective';
-
 
 // --- 함수 영역 ---
 function createCalendar(year, month, events = {}) {
@@ -968,27 +964,19 @@ function hideModal() {
     }, 300);
 }
 
-// 기존의 `callGemini` 함수 전체를 아래 코드로 대체하세요.
-async function callGemini(prompt, quizType = false) {
+async function callGemini(prompt, useSchema = false) {
     showModal();
     try {
         const payload = {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {}
         };
-
-        // quizType에 따라 다른 스키마를 적용
-        if (quizType === 'objective') {
+        if (useSchema) {
             payload.generationConfig.responseMimeType = "application/json";
             payload.generationConfig.responseSchema = { type: "OBJECT", properties: { questions: { type: "ARRAY", items: { type: "OBJECT", properties: { question: { type: "STRING" }, options: { type: "ARRAY", items: { type: "STRING" } }, answer: { type: "STRING" } }, required: ["question", "options", "answer"] } } } };
-        } else if (quizType === 'subjective') {
-            // 주관식 퀴즈에 맞게 `options`와 `answer`를 제거하고 `answer_criteria`를 추가
-            payload.generationConfig.responseMimeType = "application/json";
-            payload.generationConfig.responseSchema = { type: "OBJECT", properties: { questions: { type: "ARRAY", items: { type: "OBJECT", properties: { question: { type: "STRING" }, answer_criteria: { type: "STRING" } }, required: ["question", "answer_criteria"] } } } };
         } else {
             payload.generationConfig.responseMimeType = "text/plain";
         }
-
         const response = await fetch(PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         if (!response.ok) throw new Error(`Proxy call failed. Status: ${response.status}`);
         const result = await response.json();
@@ -1252,124 +1240,7 @@ function checkQuizAnswer(isTimeUp = false) {
         document.getElementById('nextQuestionBtn').classList.remove('hidden');
     }
 }
-async function generateObjectiveQuiz() {
-    const activeLink = document.querySelector('.nav-item.active');
-    const category = activeLink ? activeLink.dataset.category : 'all';
-    const categoryName = activeLink ? activeLink.textContent : '전체';
-    modalTitle.textContent = `${categoryName} 퀴즈`;
-    let contentForQuiz = [];
-    if (['home', 'visualization', 'all', 'cms'].includes(category) || !photographyData[category]) {
-        Object.values(photographyData).forEach(cat => contentForQuiz.push(...cat));
-    } else {
-        contentForQuiz = photographyData[category];
-    }
-    const shuffledTerms = contentForQuiz.sort(() => 0.5 - Math.random());
-    const topics = shuffledTerms.slice(0, 15).map(item => item.q).join(', ');
-    const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
-    
-    // `callGemini` 호출 시 'objective' 타입 전달
-    const responseText = await callGemini(prompt, 'objective');
-    
-    try {
-        let parsedData = JSON.parse(responseText);
-        if (parsedData && Array.isArray(parsedData.questions) && parsedData.questions.length > 0) {
-            currentQuizData = parsedData;
-            currentQuestionIndex = 0;
-            score = 0;
-            displayQuizQuestion();
-        } else {
-            throw new Error("Invalid quiz format received.");
-        }
-    } catch (e) {
-        console.error("Quiz parsing error:", e);
-        modalBody.innerHTML = `<p class="text-red-500">퀴즈를 생성하는 데 실패했습니다. AI가 유효한 퀴즈 형식을 반환하지 못했습니다.</p>`;
-    }
-}
 
-function displaySubjectiveQuestion() {
-    const q = currentQuizData.questions[currentQuestionIndex];
-    modalBody.innerHTML = `
-        <div class="p-6">
-            <h3 class="text-lg font-bold mb-2">면접관</h3>
-            <div class="bg-gray-100 p-4 rounded-lg mb-4">
-                <p class="text-gray-800">${q.question}</p>
-            </div>
-            <textarea id="subjectiveAnswer" class="w-full h-32 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="여기에 답변을 입력하세요..."></textarea>
-            <div id="quizResult" class="mt-4"></div>
-            <div class="flex justify-end mt-4">
-                <button id="submitAnswerBtn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">답변 제출</button>
-            </div>
-        </div>
-    `;
-
-    document.getElementById('submitAnswerBtn').addEventListener('click', handleSubmitAnswer);
-}
-
-async function handleSubmitAnswer() {
-    const userAnswer = document.getElementById('subjectiveAnswer').value;
-    const q = currentQuizData.questions[currentQuestionIndex];
-    const quizResultEl = document.getElementById('quizResult');
-
-    if (!userAnswer.trim()) {
-        alert("답변을 입력해 주세요.");
-        return;
-    }
-
-    // AI에게 답변을 채점해달라고 요청하는 프롬프트
-    const evaluationPrompt = `
-        다음은 면접관의 질문과 지원자의 답변입니다. 면접관의 입장에서 답변을 평가하고 점수를 0점에서 10점 사이로 부여해 주세요.
-
-        - 질문: "${q.question}"
-        - 평가 기준: "${q.answer_criteria}"
-        - 지원자의 답변: "${userAnswer}"
-
-        평가 결과는 다음과 같은 양식으로 작성해 주세요.
-        
-        **면접관의 피드백:**
-        <여기에 답변의 좋았던 점과 개선할 점을 구체적으로 설명>
-        
-        **최종 점수:** <점수>/10점
-        
-        **다음 문제로 넘어갈까요?** <동의하거나 독려하는 문구>
-    `;
-
-    modalTitle.textContent = "답변 평가 중...";
-    const evaluationResult = await callGemini(evaluationPrompt); // quizType을 전달하지 않아 일반 텍스트를 받게 됨
-    
-    // 평가 결과 표시
-    quizResultEl.innerHTML = `
-        <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-            <h4 class="font-bold text-green-800 mb-2">면접관의 평가</h4>
-            <div class="text-sm text-gray-700">${evaluationResult.replace(/\n/g, '<br>')}</div>
-        </div>
-        <div class="flex justify-end mt-4">
-            <button id="nextQuestionBtn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800">다음 문제</button>
-        </div>
-    `;
-
-    document.getElementById('submitAnswerBtn').style.display = 'none';
-    document.getElementById('nextQuestionBtn').addEventListener('click', () => {
-        currentQuestionIndex++;
-        if (currentQuestionIndex < currentQuizData.questions.length) {
-            displaySubjectiveQuestion();
-        } else {
-            modalBody.innerHTML = `<div class="p-6 text-center"><h2 class="text-2xl font-bold">면접 종료!</h2><p class="mt-4">모든 질문에 답하셨습니다. 면접관의 피드백을 잘 활용하여 다음 면접에 대비하세요!</p><button id="closeModalBtn" class="mt-8 bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-800">닫기</button></div>`;
-            document.getElementById('closeModalBtn').addEventListener('click', hideModal);
-        }
-    });
-}
-    document.getElementById('submitAnswerBtn').style.display = 'none';
-    document.getElementById('nextQuestionBtn').addEventListener('click', () => {
-        currentQuestionIndex++;
-        if (currentQuestionIndex < currentQuizData.questions.length) {
-            displaySubjectiveQuestion();
-        } else {
-            // 모든 질문 완료 시 최종 평가 페이지 표시 (필요에 따라 구현)
-            modalBody.innerHTML = `<div class="p-6 text-center"><h2 class="text-2xl font-bold">면접 종료!</h2><p class="mt-4">모든 질문에 답하셨습니다. 면접관의 피드백을 잘 활용하여 다음 면접에 대비하세요!</p><button id="closeModalBtn" class="mt-8 bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-800">닫기</button></div>`;
-            document.getElementById('closeModalBtn').addEventListener('click', hideModal);
-        }
-    });
-}
 // 아코디언 UI를 위한 이벤트 리스너 (시각화, CMS 페이지용)
 function setupEventListeners() {
     document.querySelectorAll('.question').forEach(q => {
@@ -1741,15 +1612,7 @@ function setupGeminiButtons() {
 }
 
 // AI 퀴즈 생성 버튼 이벤트
-document.getElementById('objectiveQuizBtn').addEventListener('click', () => {
-    currentQuizType = 'objective';
-    generateObjectiveQuiz();
-});
-
-document.getElementById('subjectiveQuizBtn').addEventListener('click', () => {
-    currentQuizType = 'subjective';
-    generateSubjectiveQuiz();
-});
+quizBtn.addEventListener('click', generateQuiz);
 
 // 모달 닫기 이벤트
 closeModal.addEventListener('click', hideModal);
@@ -1765,8 +1628,6 @@ renderContent('home');
 </script>
 </body>
 </html>
-
-
 
 
 
