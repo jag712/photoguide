@@ -1071,7 +1071,15 @@ async function generateQuiz() {
 function displayQuizQuestion() {
     const q = currentQuizData.questions[currentQuestionIndex];
     quizTimeLimit = (currentQuestionIndex >= 3) ? 20 : 15;
-    const optionsHtml = q.options.map(option => `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option.replace(/"/g, '&quot;')}">${option}</div>`).join('');
+    let optionsHtml = '';
+    if (q.type === 'subjective') {
+        optionsHtml = `
+            <input type="text" id="subjectiveInput" class="w-full p-4 border rounded-lg mb-2" placeholder="정답을 입력하세요" />
+            <button id="submitSubjectiveBtn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg">제출</button>
+        `;
+    } else {
+        optionsHtml = q.options.map(option => `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option.replace(/"/g, '&quot;')}">${option}</div>`).join('');
+    }
     
     // HTML을 문자열로 modalBody에 할당합니다.
     modalBody.innerHTML = `
@@ -1111,15 +1119,30 @@ function displayQuizQuestion() {
         checkQuizAnswer(true);
     }, quizTimeLimit * 1000);
 
-    // 옵션 클릭 이벤트
-    modalBody.querySelectorAll('.quiz-option').forEach(option => {
-        option.addEventListener('click', e => {
+    // 옵션 또는 주관식 입력 이벤트
+    if (q.type === 'subjective') {
+        const submitBtn = document.getElementById('submitSubjectiveBtn');
+        const inputEl = document.getElementById('subjectiveInput');
+        submitBtn.addEventListener('click', () => {
             clearTimeout(quizTimer);
-            modalBody.querySelectorAll('.quiz-option').forEach(opt => opt.classList.remove('selected'));
-            e.currentTarget.classList.add('selected');
             checkQuizAnswer(false);
         });
-    });
+        inputEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                clearTimeout(quizTimer);
+                checkQuizAnswer(false);
+            }
+        });
+    } else {
+        modalBody.querySelectorAll('.quiz-option').forEach(option => {
+            option.addEventListener('click', e => {
+                clearTimeout(quizTimer);
+                modalBody.querySelectorAll('.quiz-option').forEach(opt => opt.classList.remove('selected'));
+                e.currentTarget.classList.add('selected');
+                checkQuizAnswer(false);
+            });
+        });
+    }
 
     // 다음 문제 버튼 이벤트
     document.getElementById('nextQuestionBtn').addEventListener('click', () => {
@@ -1181,44 +1204,72 @@ function toggleTimer() {
         timerBar.style.width = `${(timeRemaining / quizTimeLimit / 10)}%`; // 진행도 유지
     }
 }
-function checkQuizAnswer(isTimeUp = false) {
-    const selectedOptionEl = modalBody.querySelector('.quiz-option.selected');
+async function checkQuizAnswer(isTimeUp = false) {
     const q = currentQuizData.questions[currentQuestionIndex];
     const correctAnswer = q.answer;
     let isCorrect = false;
 
     clearTimeout(quizTimer); // 정답/오답을 선택하면 타이머를 멈춥니다.
 
-    // 모든 선택지 비활성화 및 정답/오답 표시
-    modalBody.querySelectorAll('.quiz-option').forEach(opt => {
-        opt.style.pointerEvents = 'none';
-        if (opt.dataset.option === correctAnswer) {
-            opt.classList.add('correct');
-        } else if (opt.classList.contains('selected')) {
-            opt.classList.add('incorrect');
-        }
-    });
-
     const quizResultEl = modalBody.querySelector('#quizResult');
 
-    if (isTimeUp) {
-        quizResultEl.innerHTML = `<p class="text-red-600 font-semibold">시간 초과! 😔 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
+    if (q.type === 'subjective') {
+        const inputEl = document.getElementById('subjectiveInput');
+        const submitBtn = document.getElementById('submitSubjectiveBtn');
+        if (inputEl) inputEl.disabled = true;
+        if (submitBtn) submitBtn.disabled = true;
+
+        if (isTimeUp) {
+            quizResultEl.innerHTML = `<p class="text-red-600 font-semibold">시간 초과! 😔 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
+        } else {
+            const userAnswerRaw = inputEl ? inputEl.value : '';
+            const normalize = str => str.replace(/\s+/g, '').toLowerCase();
+            if (normalize(userAnswerRaw) === normalize(correctAnswer)) {
+                score++;
+                isCorrect = true;
+                quizResultEl.innerHTML = `<p class="text-green-600 font-semibold">정답입니다! 🎉</p>`;
+            } else {
+                const prompt = `다음 사용자의 답변이 정답과 의미상 같은지 판단해줘. "정답" 또는 "오답"으로만 대답해.\n사용자 답변: "${userAnswerRaw}"\n정답: "${correctAnswer}"`;
+                const aiResponse = await callGemini(prompt, false);
+                if (typeof aiResponse === 'string' && aiResponse.trim().includes('정답')) {
+                    score++;
+                    isCorrect = true;
+                    quizResultEl.innerHTML = `<p class="text-green-600 font-semibold">정답으로 인정합니다! 🎉</p>`;
+                } else {
+                    isCorrect = false;
+                    const allData = Object.values(photographyData).flat();
+                    const explanation = allData.find(item => item.q.includes(correctAnswer))?.a || "관련된 설명을 찾을 수 없습니다.";
+                    quizResultEl.innerHTML = `
+                        <p class="text-red-600 font-semibold">오답입니다. 😔</p>
+                        <p class="text-gray-700 mt-2">정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>
+                        <p class="text-sm text-gray-500 mt-1">**설명:** ${explanation.replace(/\n/g, '<br>')}</p>
+                    `;
+                }
+            }
+        }
     } else {
-        const selectedAnswer = selectedOptionEl.dataset.option;
-        const cleanedAnswer = correctAnswer.replace(/^[A-Z]\.\s/, "");
-        if (selectedAnswer === correctAnswer) {
+        const selectedOptionEl = modalBody.querySelector('.quiz-option.selected');
+
+        // 모든 선택지 비활성화 및 정답/오답 표시
+        modalBody.querySelectorAll('.quiz-option').forEach(opt => {
+            opt.style.pointerEvents = 'none';
+            if (opt.dataset.option === correctAnswer) {
+                opt.classList.add('correct');
+            } else if (opt.classList.contains('selected')) {
+                opt.classList.add('incorrect');
+            }
+        });
+
+        if (isTimeUp) {
+            quizResultEl.innerHTML = `<p class="text-red-600 font-semibold">시간 초과! 😔 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
+        } else if (selectedOptionEl && selectedOptionEl.dataset.option === correctAnswer) {
             score++;
             isCorrect = true;
             quizResultEl.innerHTML = `<p class="text-green-600 font-semibold">정답입니다! 🎉</p>`;
         } else {
             isCorrect = false;
-            // 오답 시 설명 추가 로직 (여기서 photographyData에서 설명을 찾아 표시)
             const allData = Object.values(photographyData).flat();
             const explanation = allData.find(item => item.q.includes(correctAnswer))?.a || "관련된 설명을 찾을 수 없습니다.";
-
-
-
-
             quizResultEl.innerHTML = `
                 <p class="text-red-600 font-semibold">오답입니다. 😔</p>
                 <p class="text-gray-700 mt-2">정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>
