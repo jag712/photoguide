@@ -597,6 +597,7 @@ const PROXY_URL = "/.netlify/functions/gemini-proxy";
 let iconChangeInterval;
 let controller;
 let abortedByUser = false;
+
 function showModal() {
   const icons = ["❓", "🤔", "💡", "😊"];
   const loadingContainer = document.createElement("div");
@@ -614,6 +615,9 @@ function showModal() {
     controller.abort();
     hideModal();
   });
+
+  const modalBody = document.querySelector("#geminiModal .modal-body");
+  const geminiModal = document.getElementById("geminiModal");
 
   modalBody.innerHTML = "";
   modalBody.appendChild(loadingContainer);
@@ -636,6 +640,9 @@ function showModal() {
 function hideModal() {
   clearInterval(iconChangeInterval);
 
+  const geminiModal = document.getElementById("geminiModal");
+  const modalBody = document.querySelector("#geminiModal .modal-body");
+
   geminiModal.classList.add("opacity-0");
   geminiModal.querySelector(".modal-content").classList.add("scale-95");
 
@@ -648,6 +655,7 @@ function hideModal() {
 async function callGemini(prompt, useSchema = false) {
   controller = new AbortController();
   abortedByUser = false;
+
   showModal();
   try {
     const payload = {
@@ -684,30 +692,36 @@ async function callGemini(prompt, useSchema = false) {
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
-    if (!response.ok)
+    if (!response.ok) {
       throw new Error(`Proxy call failed. Status: ${response.status}`);
+    }
+
     const result = await response.json();
     let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error("No content received from API.");
+    if (!text) {
+      throw new Error("No content received from API.");
+    }
     text = text.trim();
     if (text.startsWith("```json") && text.endsWith("```")) {
       text = text.substring(7, text.length - 3).trim();
     }
-    clearInterval(iconChangeInterval);
     return text;
   } catch (error) {
-    clearInterval(iconChangeInterval);
-    if (error.name === "AbortError") {
-      if (abortedByUser) return "";
-      modalBody.innerHTML = `<p class=\"text-red-500\">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
-      return `<p class=\"text-red-500\">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
+    if (error.name === "AbortError" && abortedByUser) {
+      return "";
     }
+    const modalBody = document.querySelector("#geminiModal .modal-body");
+    const errorMessage =
+      error.name === "AbortError"
+        ? "요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요."
+        : "AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
     console.error("Gemini proxy call error:", error);
-    modalBody.innerHTML = `<p class=\"text-red-500\">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>`;
-    return `<p class=\"text-red-500\">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>`;
+    modalBody.innerHTML = `<p class="text-red-500">${errorMessage}</p>`;
+    return `<p class="text-red-500">${errorMessage}</p>`;
+  } finally {
+    hideModal();
   }
 }
-
 /**
  * =================================================================
  * 기능 1: AI 퀴즈 생성
