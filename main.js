@@ -813,15 +813,37 @@ function generatePractice() {
   });
 }
 
-function createPracticeQuestions(count = 5) {
+function createPracticeQuestions(count = 4) {
+  const mechanismCategories = ["structure", "exposure", "lens", "digital", "film", "lighting"];
   const flattened = Object.entries(photographyData).flatMap(([category, arr]) =>
     arr.map((item) => ({ ...item, category })),
   );
-  const selected = [...flattened].sort(() => 0.5 - Math.random()).slice(0, count);
+  const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, Math.min(n, arr.length));
+  const hasTag = (item, regex) => Array.isArray(item.tags) && item.tags.some((t) => regex.test(t));
+  const mechanisms = pickRandom(flattened.filter((item) => mechanismCategories.includes(item.category)), 2);
+  const photographers = pickRandom(
+    flattened.filter((item) => ["history", "tags"].includes(item.category) && hasTag(item, /(person|photographer|인물|인명)/i)),
+    1,
+  );
+  const oral = pickRandom(
+    flattened.filter((item) =>
+      (!mechanismCategories.includes(item.category) && item.category !== "history") ||
+      (item.category === "history" && hasTag(item, /(concept|개념)/i)),
+    ),
+    1,
+  );
+  let selected = [...mechanisms, ...photographers, ...oral];
+  if (selected.length < count) {
+    selected = selected.concat(
+      pickRandom(flattened.filter((item) => !selected.includes(item)), count - selected.length),
+    );
+  } else if (selected.length > count) {
+    selected = pickRandom(selected, count);
+  }
   const levels = ["easy", "medium", "hard"];
   return selected.map((item) => ({
     question: `${item.q}의 정의는?`,
-    answer: (item.answer_short || item.a).trim(),
+    answer: (item.answer_short || item.a || "").trim(),
     difficulty: levels[Math.floor(Math.random() * levels.length)],
     tags: item.tags || [item.category],
     ...(item.era ? { era: item.era } : {}),
