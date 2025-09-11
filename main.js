@@ -659,7 +659,7 @@ async function callGemini(prompt, useSchema = false) {
   showModal();
   try {
     const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {},
     };
     if (useSchema) {

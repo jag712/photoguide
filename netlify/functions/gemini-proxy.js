@@ -21,8 +21,13 @@ exports.handler = async function (event) {
 
     const { contents, generationConfig } = JSON.parse(event.body);
 
+    const normalizedContents = contents.map((item) => ({
+      role: item.role || "user",
+      parts: item.parts,
+    }));
+
     const request = {
-      contents,
+      contents: normalizedContents,
       ...(generationConfig && { generationConfig }),
     };
 
