@@ -596,18 +596,32 @@ const PROXY_URL = "/.netlify/functions/gemini-proxy";
 // 로딩 화면을 위한 변수 및 함수
 let iconChangeInterval;
 let controller;
+let abortedByUser = false;
 
 function showModal() {
   const icons = ["❓", "🤔", "💡", "😊"];
   const loadingContainer = document.createElement("div");
-  loadingContainer.className = "loading-container";
+  loadingContainer.className = "loading-container flex flex-col items-center";
 
   const rotatingIcon = document.createElement("div");
   rotatingIcon.className = "rotating-icon-loader";
   loadingContainer.appendChild(rotatingIcon);
-  loadingContainer.appendChild(cancelButton);
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.textContent = "취소";
+  cancelBtn.className = "mt-4 bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800";
+  cancelBtn.addEventListener("click", () => {
+    abortedByUser = true;
+    controller.abort();
+    hideModal();
+  });
+
+  const modalBody = document.querySelector("#geminiModal .modal-body");
+  const geminiModal = document.getElementById("geminiModal");
+
   modalBody.innerHTML = "";
   modalBody.appendChild(loadingContainer);
+  modalBody.appendChild(cancelBtn);
 
   rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
 
@@ -626,6 +640,9 @@ function showModal() {
 function hideModal() {
   clearInterval(iconChangeInterval);
 
+  const geminiModal = document.getElementById("geminiModal");
+  const modalBody = document.querySelector("#geminiModal .modal-body");
+
   geminiModal.classList.add("opacity-0");
   geminiModal.querySelector(".modal-content").classList.add("scale-95");
 
@@ -637,6 +654,7 @@ function hideModal() {
 
 async function callGemini(prompt, useSchema = false) {
   controller = new AbortController();
+  abortedByUser = false;
 
   showModal();
   try {
@@ -674,28 +692,36 @@ async function callGemini(prompt, useSchema = false) {
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
-    if (!response.ok)
+    if (!response.ok) {
       throw new Error(`Proxy call failed. Status: ${response.status}`);
+    }
+
     const result = await response.json();
     let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error("No content received from API.");
+    if (!text) {
+      throw new Error("No content received from API.");
+    }
     text = text.trim();
     if (text.startsWith("```json") && text.endsWith("```")) {
       text = text.substring(7, text.length - 3).trim();
     }
     return text;
   } catch (error) {
-    if (error.name === "AbortError") {
-      if (userAborted) return "";
-      clearInterval(iconChangeInterval);
-      modalBody.innerHTML = `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
-      return `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
+    if (error.name === "AbortError" && abortedByUser) {
+      return "";
     }
+    const modalBody = document.querySelector("#geminiModal .modal-body");
+    const errorMessage =
+      error.name === "AbortError"
+        ? "요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요."
+        : "AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
     console.error("Gemini proxy call error:", error);
-    return `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>`;
+    modalBody.innerHTML = `<p class="text-red-500">${errorMessage}</p>`;
+    return `<p class="text-red-500">${errorMessage}</p>`;
+  } finally {
+    hideModal();
   }
 }
-
 /**
  * =================================================================
  * 기능 1: AI 퀴즈 생성
@@ -778,7 +804,12 @@ function generatePractice() {
     geminiModal.querySelector(".modal-content").classList.remove("scale-95");
   }, 10);
 
-  document.getElementById("gradePractice").addEventListener("click", () => {
+  const gradeBtn = document.getElementById("gradePractice");
+  gradeBtn.addEventListener("click", () => {
+    if (gradeBtn.dataset.state === "graded") {
+      hideModal();
+      return;
+    }
     modalBody.querySelectorAll(".practice-input").forEach((input) => {
       const userAnswer = input.value.trim().toLowerCase();
       const correctAnswer = input.dataset.answer.toLowerCase();
@@ -815,6 +846,8 @@ function generatePractice() {
       input.classList.toggle("border-green-400", highScore);
       input.classList.toggle("border-red-400", !highScore);
     });
+    gradeBtn.textContent = "닫기";
+    gradeBtn.dataset.state = "graded";
   });
 }
 
