@@ -595,17 +595,29 @@ const PROXY_URL = "/.netlify/functions/gemini-proxy";
 
 // 로딩 화면을 위한 변수 및 함수
 let iconChangeInterval;
+let controller;
+let abortedByUser = false;
 function showModal() {
   const icons = ["❓", "🤔", "💡", "😊"];
   const loadingContainer = document.createElement("div");
-  loadingContainer.className = "loading-container";
+  loadingContainer.className = "loading-container flex flex-col items-center";
 
   const rotatingIcon = document.createElement("div");
   rotatingIcon.className = "rotating-icon-loader";
-
   loadingContainer.appendChild(rotatingIcon);
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.textContent = "취소";
+  cancelBtn.className = "mt-4 bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800";
+  cancelBtn.addEventListener("click", () => {
+    abortedByUser = true;
+    controller.abort();
+    hideModal();
+  });
+
   modalBody.innerHTML = "";
   modalBody.appendChild(loadingContainer);
+  modalBody.appendChild(cancelBtn);
 
   rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
 
@@ -634,6 +646,8 @@ function hideModal() {
 }
 
 async function callGemini(prompt, useSchema = false) {
+  controller = new AbortController();
+  abortedByUser = false;
   showModal();
   try {
     const payload = {
@@ -662,7 +676,6 @@ async function callGemini(prompt, useSchema = false) {
     } else {
       payload.generationConfig.responseMimeType = "text/plain";
     }
-    const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     const response = await fetch(PROXY_URL, {
       method: "POST",
@@ -680,15 +693,19 @@ async function callGemini(prompt, useSchema = false) {
     if (text.startsWith("```json") && text.endsWith("```")) {
       text = text.substring(7, text.length - 3).trim();
     }
+    clearInterval(iconChangeInterval);
+    if (abortedByUser) return "";
     return text;
   } catch (error) {
+    clearInterval(iconChangeInterval);
+    if (abortedByUser) return "";
     if (error.name === "AbortError") {
-      clearInterval(iconChangeInterval);
-      modalBody.innerHTML = `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
-      return `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
+      modalBody.innerHTML = `<p class=\"text-red-500\">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
+      return `<p class=\"text-red-500\">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
     }
     console.error("Gemini proxy call error:", error);
-    return `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>`;
+    modalBody.innerHTML = `<p class=\"text-red-500\">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>`;
+    return `<p class=\"text-red-500\">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>`;
   }
 }
 
@@ -720,6 +737,7 @@ async function generateQuiz() {
     .join(", ");
   const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
   const responseText = await callGemini(prompt, true);
+  if (!responseText) return;
   try {
     let parsedData = JSON.parse(responseText);
     if (
@@ -773,7 +791,12 @@ function generatePractice() {
     geminiModal.querySelector(".modal-content").classList.remove("scale-95");
   }, 10);
 
-  document.getElementById("gradePractice").addEventListener("click", () => {
+  const gradeBtn = document.getElementById("gradePractice");
+  gradeBtn.addEventListener("click", () => {
+    if (gradeBtn.dataset.state === "graded") {
+      hideModal();
+      return;
+    }
     modalBody.querySelectorAll(".practice-input").forEach((input) => {
       const userAnswer = input.value.trim().toLowerCase();
       const correctAnswer = input.dataset.answer.toLowerCase();
@@ -799,14 +822,19 @@ function generatePractice() {
           : 1;
 
       const resultEl = input.parentElement.querySelector(".result");
-      resultEl.innerHTML = `점수: ${score}/5<br>모범답안: ${input.dataset.answer}`;
-      resultEl.classList.remove("hidden");
+      resultEl.classList.remove("text-green-600", "text-red-600");
       const highScore = score >= 4;
-      resultEl.classList.toggle("text-green-600", highScore);
-      resultEl.classList.toggle("text-red-600", !highScore);
+      resultEl.innerHTML = `점수: <span class="${
+        highScore ? "text-green-600" : "text-red-600"
+      }">${score}/5</span><br>모범답안: <span class="text-green-600">${
+        input.dataset.answer
+      }</span>`;
+      resultEl.classList.remove("hidden");
       input.classList.toggle("border-green-400", highScore);
       input.classList.toggle("border-red-400", !highScore);
     });
+    gradeBtn.textContent = "닫기";
+    gradeBtn.dataset.state = "graded";
   });
 }
 
@@ -838,8 +866,9 @@ function createPracticeQuestions(count = 4) {
     selected = pickRandom(selected, count);
   }
   const levels = ["easy", "medium", "hard"];
+  const endings = ["에 대해 설명하세요.", "에 대해 말해보세요."];
   return selected.map((item) => ({
-    question: `${item.q}의 정의는?`,
+    question: `${item.q}${endings[Math.floor(Math.random() * endings.length)]}`,
     answer: (item.answer_short || item.a || "").trim(),
     difficulty: levels[Math.floor(Math.random() * levels.length)],
     tags: item.tags || [item.category],
@@ -1465,7 +1494,11 @@ function setupGeminiButtons() {
       const cachedResponse = localStorage.getItem(cacheKey);
       if (cachedResponse) {
         modalBody.innerHTML = `<p>${cachedResponse.replace(/\n/g, "<br>")}</p>`;
-        showModal();
+        geminiModal.classList.remove("hidden");
+        setTimeout(() => {
+          geminiModal.classList.remove("opacity-0");
+          geminiModal.querySelector(".modal-content").classList.remove("scale-95");
+        }, 10);
         return;
       }
 
@@ -1478,6 +1511,7 @@ function setupGeminiButtons() {
 
       if (prompt) {
         const responseText = await callGemini(prompt, false);
+        if (!responseText) return;
         modalBody.innerHTML = `<p>${responseText.replace(/\n/g, "<br>")}</p>`;
         localStorage.setItem(cacheKey, responseText);
       }
