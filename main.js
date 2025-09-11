@@ -496,22 +496,34 @@ function startTimer() {
 function toggleTimer(forcePause = false) {
     const timerIcon = document.getElementById("timerIcon");
     const timerBar = document.getElementById("quizTimerBar");
+    
     if (isTimerPaused || forcePause) {
+        // 일시 정지 로직
+        if (!isTimerPaused) { // 이미 정지 상태가 아닐 때만 계산
+            const elapsed = Date.now() - timerStartTime;
+            timeRemaining = timeRemaining - elapsed;
+        }
         isTimerPaused = true;
+        
         timerIcon.classList.remove("fa-pause");
         timerIcon.classList.add("fa-play");
         clearTimeout(quizTimer);
-        const elapsed = Date.now() - timerStartTime;
-        timeRemaining = timeRemaining - elapsed;
+        
+        // 애니메이션 일시 정지
         timerBar.style.transition = "none";
         timerBar.style.width = `${(timeRemaining / (quizTimeLimit * 1000)) * 100}%`;
     } else {
+        // 재시작 로직
         isTimerPaused = false;
+        
         timerIcon.classList.remove("fa-play");
         timerIcon.classList.add("fa-pause");
         timerStartTime = Date.now();
+        
+        // 남은 시간부터 애니메이션 재시작
         timerBar.style.transition = `width linear ${timeRemaining / 1000}s`;
         timerBar.style.width = "0%";
+        
         quizTimer = setTimeout(() => {
             checkQuizAnswer(true, null);
         }, timeRemaining);
