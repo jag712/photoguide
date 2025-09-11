@@ -790,7 +790,7 @@ function generatePractice() {
           return `
         <div class="mb-4">
           <p class="font-semibold">${idx + 1}. ${q.question}</p>
-          <input type="text" class="practice-input w-full p-2 mt-1 border rounded" data-answer="${q.answer.replace(/"/g, '&quot;')}">
+          <input type="text" class="practice-input w-full p-2 mt-1 border rounded" data-answer="${q.answer.replace(/\"/g, '&quot;')}">
           <p class="text-xs text-gray-500 mt-1">${meta}</p>
           <p class="result text-sm mt-1 hidden"></p>
         </div>`;
