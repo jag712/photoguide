@@ -433,7 +433,6 @@ function generatePractice() {
     const html = questions.map((q, idx) => {
         const metaParts = [`난이도: ${q.difficulty}`, `태그: ${q.tags?.length ? q.tags.join(", ") : "없음"}`];
         if (q.era) metaParts.push(`시대: ${q.era}`);
-        metaParts.push(`스킬: ${q.skills?.length ? q.skills.join(", ") : "없음"}`);
         return `
         <div class="mb-4">
             <p class="font-semibold">${idx + 1}. ${q.question}</p>
@@ -493,7 +492,6 @@ function createPracticeQuestions(count = 4) {
         difficulty: levels[Math.floor(Math.random() * levels.length)],
         tags: item.tags || [item.category],
         ...(item.era ? { era: item.era } : {}),
-        skills: ["concept"],
     }));
 }
 
