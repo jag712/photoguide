@@ -683,45 +683,6 @@ async function callGemini(prompt, useSchema = false) {
   }
 }
 
-// 타이머 관련 전역 함수들
-function startTimer() {
-  if (isTimerPaused) return;
-
-  quizTimer = setTimeout(() => {
-    checkQuizAnswer(true);
-  }, timeRemaining);
-
-  const timerBar = document.getElementById("quizTimerBar");
-  // 애니메이션 시작
-  timerBar.style.transition = `width linear ${timeRemaining / 1000}s`;
-  timerBar.style.width = "0%";
-}
-
-function toggleTimer() {
-  const timerIcon = document.getElementById("timerIcon");
-  const timerBar = document.getElementById("quizTimerBar");
-
-  if (isTimerPaused) {
-    isTimerPaused = false;
-    timerIcon.classList.remove("fa-play");
-    timerIcon.classList.add("fa-pause");
-
-    timerStartTime = Date.now();
-    startTimer();
-  } else {
-    isTimerPaused = true;
-    timerIcon.classList.remove("fa-pause");
-    timerIcon.classList.add("fa-play");
-
-    clearTimeout(quizTimer);
-    const elapsed = Date.now() - timerStartTime;
-    timeRemaining = timeRemaining - elapsed;
-
-    timerBar.style.transition = "none";
-    timerBar.style.width = `${timeRemaining / quizTimeLimit / 10}%`; // 진행도 유지
-  }
-}
-
 /**
  * =================================================================
  * 기능 1: AI 퀴즈 생성
