@@ -200,14 +200,26 @@ function showModal(title, contentHtml = '', showLoading = false) {
     modalBody.innerHTML = contentHtml;
 
     if (showLoading) {
+        const loadingMessages = [
+            "촬영실기 준비 중... 📸",
+            "포트폴리오 촬영 중... 🧑‍🎨",
+            "친구랑 모의 면접 중... 🗣️",
+            "중대 글 쓰는 중... ✍️",
+            "촬실한다고 가놓고 폰하는 중... 📱"
+        ];
+        
         const loadingContainer = document.createElement("div");
         loadingContainer.className = "loading-container flex flex-col items-center";
+        
         const loadingText = document.createElement("p");
         loadingText.className = "text-xl font-semibold text-gray-700 mb-4";
+        
         const rotatingIcon = document.createElement("div");
         rotatingIcon.className = "rotating-icon-loader";
+        
         loadingContainer.appendChild(loadingText);
         loadingContainer.appendChild(rotatingIcon);
+
         const cancelBtn = document.createElement("button");
         cancelBtn.textContent = "취소";
         cancelBtn.className = "mt-4 bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800";
@@ -216,21 +228,28 @@ function showModal(title, contentHtml = '', showLoading = false) {
             controller.abort();
             hideModal();
         });
+
         modalBody.innerHTML = '';
         modalBody.appendChild(loadingContainer);
         modalBody.appendChild(cancelBtn);
-        loadingText.innerText = title;
+
+        // title 대신 무작위 메시지 사용
+        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+        loadingText.innerText = randomMessage;
+        
         rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
         iconChangeInterval = setInterval(() => {
             rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
         }, 1000);
     }
+    
     geminiModal.classList.remove("hidden");
     setTimeout(() => {
         geminiModal.classList.remove("opacity-0");
         geminiModal.querySelector(".modal-content").classList.remove("scale-95");
     }, 10);
 }
+
 function hideModal() {
     clearInterval(iconChangeInterval);
     geminiModal.classList.add("opacity-0");
@@ -330,7 +349,7 @@ async function generateQuiz() {
     }
     const shuffledTerms = contentForQuiz.sort(() => 0.5 - Math.random());
     const topics = shuffledTerms.slice(0, 15).map((item) => item.q).join(", ");
-    const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 다음 JSON 형식으로 반환해줘. 단, JSON 데이터 외에는 어떤 추가적인 설명도 포함하면 안 돼.`;
+    const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
     const responseText = await callGemini(prompt, true, `퀴즈 생성 중... ✨`);
     if (!responseText) return;
     try {
