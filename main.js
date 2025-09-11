@@ -9,7 +9,7 @@ const calendarEvents = {
         { day: 22, title: "1차 프린트(경일)", color: "bg-red-500" },
         { day: 26, title: "경일 실기/면접", color: "bg-purple-500" },
         { day: 27, title: "경일 실기/면접", color: "bg-purple-500" },
-    ],
+    ],  
     10: [
         { day: 3, title: "개천절", color: "bg-gray-500", isHoliday: true },
         { day: 5, title: "추석 연휴", color: "bg-gray-500", isHoliday: true },
@@ -321,7 +321,7 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
         clearInterval(iconChangeInterval);
         const errorMessage = (error.name === "AbortError")
             ? "요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요."
-            : `AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.<br>(${error.message})`;
+            : "AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
         showModal('오류', `<p class="text-red-500">${errorMessage}</p>`, false);
         return null;
     }
@@ -402,7 +402,8 @@ async function generateQuiz() {
     const dataLines = sample
         .map(item => `- [${item._category}] ${item.q}: ${simplify(item.a)}`)
         .join("\n");
-    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목에는 [카테고리]가 포함되어 있습니다. 이 정보를 바탕으로 객관식 퀴즈 3문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 카테고리가같은 다른 용어 3개를 사용해 총 4개의 선택지를 제공해. 서로 다른 유형의 단어가 섞이지 않도록, 예를 들어 카메라에 대한 문제에 사람 이름이 보기로 나오면 안 돼. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. question 필드는 물음표로 끝나는 질문으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
+    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목에는 [카테고리]가 포함되어 있습니다. 이 정보를 바탕으로 난이도 5의 객관식 퀴즈 5문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 같은 카테고리의 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 서로 다른 유형의 단어가 섞이지 않도록, 예를 들어 카메라에 대한 문제에 사람 이름이 보기로 나오면 안 돼. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. question 필드는 물음표로 끝나는 완전한 질문 문장으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
+
 
     let parsed = null;
     const responseText = await callGemini(prompt, true, "퀴즈 생성 중...");
@@ -890,7 +891,9 @@ function setupGeminiButtons() {
                 prompt = `사진학 용어인 "${question}"에 대해 입시생의 암기하기 쉽게 이해하기 쉽고 간결하게 설명해줘. 다음 설명을 참고하여, 중요한 개념을 놓치지 않으면서도 면접에서 자연스럽게 활용할 수 있도록 정리해줘 최대 300자 내외. 참고 설명: ${answer}`;
             } else if (action === "deepen") {
                 loadingTitle = "깊이 알아보기 중... 🧐";
+
                 prompt = `사진학 개념인 "${question}"에 대해 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 간단한 배경과 면접에 쓸만한 추가 정보를 제공해. 사진 작가인 경우에는 촬영 팁 대신 대표작이나 사진집, 또는 전시의 제목 알려줘.. 설명: ${answer}`;
+
             }
             if (prompt) {
                 const responseText = await callGemini(prompt, false, loadingTitle);
