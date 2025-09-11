@@ -717,9 +717,9 @@ async function callGemini(prompt, useSchema = false) {
         : "AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
     console.error("Gemini proxy call error:", error);
     modalBody.innerHTML = `<p class="text-red-500">${errorMessage}</p>`;
-    return `<p class="text-red-500">${errorMessage}</p>`;
+    return "";
   } finally {
-    hideModal();
+    clearInterval(iconChangeInterval);
   }
 }
 /**
