@@ -261,29 +261,24 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
             generationConfig: {},
         };
         if (useSchema) {
-           payload.generationConfig.responseMimeType = "application/json";
-           payload.generationConfig.responseSchema = {
-            type: "OBJECT",
-             properties: {
-              questions: {
-                 type: "ARRAY",
-                  items: {
-                 type: "OBJECT",
-              properties: {
-            question: { type: "STRING" },
-           options: { type: "ARRAY", items: { type: "STRING" } },
-          answer:  { type: "STRING" },
-          rationales: {
-            type: "ARRAY",
-            items: { type: "STRING" },
-            // options와 동일한 순서로 각 보기 해설(정답/오답 이유)
-          }
-        },
-        required: ["question", "options", "answer", "rationales"],
-      },
-    },
-  },
-};
+            payload.generationConfig.responseMimeType = "application/json";
+            payload.generationConfig.responseSchema = {
+                type: "OBJECT",
+                properties: {
+                    questions: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                question: { type: "STRING" },
+                                options: { type: "ARRAY", items: { type: "STRING" } },
+                                answer: { type: "STRING" },
+                            },
+                            required: ["question", "options", "answer"],
+                        },
+                    },
+                },
+            };
         } else {
             payload.generationConfig.responseMimeType = "text/plain";
         }
@@ -344,25 +339,8 @@ async function generateQuiz() {
     }
     const shuffledTerms = contentForQuiz.sort(() => 0.5 - Math.random());
     const topics = shuffledTerms.slice(0, 15).map((item) => item.q).join(", ");
-const prompt = `
-다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}.
-각 질문은 보기 4개를 가지며 단 하나만 정답.
-난이도는 '아주 쉬운 1개', '보통 2개', '어려운 2개'.
-
-JSON으로 아래 형식으로 반환:
-{
-  "questions": [
-    {
-      "question": "...",
-      "options": ["...","...","...","..."],        // 정확히 4개
-      "answer":  "...",                             // options 중 하나의 원문과 동일
-      "rationales": ["...","...","...","..."]       // options와 같은 순서. 각 보기별 해설(왜 맞는지/왜 틀린지), 1~2문장
-    }
-  ]
-}
-
-한국어로 작성해줘.
-`;    const responseText = await callGemini(prompt, true, `퀴즈 생성 중... ✨`);
+    const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
+    const responseText = await callGemini(prompt, true, `퀴즈 생성 중... ✨`);
     if (!responseText) {
         return;
     }
@@ -372,6 +350,7 @@ JSON으로 아래 형식으로 반환:
             currentQuizData = parsedData;
             currentQuestionIndex = 0;
             score = 0;
+            hideModal();
             displayQuizQuestion();
         } else {
             throw new Error("AI가 유효한 퀴즈 형식을 반환하지 못했습니다.");
@@ -455,13 +434,7 @@ function createPracticeQuestions(count = 4) {
 function displayQuizQuestion() {
     const q = currentQuizData.questions[currentQuestionIndex];
     quizTimeLimit = currentQuestionIndex >= 3 ? 20 : 15;
-    - const optionsHtml = q.options.map(option => `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option.replace(/"/g, "&quot;")}">${option}</div>`).join("");
-+ const optionsHtml = q.options
-+   .map((option, i) =>
-+     `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2"
-+           data-option="${option.replace(/"/g, "&quot;")}"
-+           data-index="${i}">${option}</div>`
-+   ).join("");
+    const optionsHtml = q.options.map(option => `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option.replace(/"/g, "&quot;")}">${option}</div>`).join("");
     const questionHtml = `
         <div class="mb-4">
             <p class="text-sm text-gray-500">문제 ${currentQuestionIndex + 1} / ${currentQuizData.questions.length}</p>
@@ -480,7 +453,7 @@ function displayQuizQuestion() {
         <div class="flex justify-end mt-4">
             <button id="nextQuestionBtn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 hidden">다음 문제</button>
         </div>`;
-    showModal(`퀴즈`, questionHtml, false);
+    modalBody.innerHTML = questionHtml; // 모달 내용만 업데이트합니다.
     timeRemaining = quizTimeLimit * 1000;
     startTimer();
     const quizOptionsContainer = document.getElementById("quizOptions");
@@ -522,156 +495,91 @@ function startTimer() {
 }
 
 function toggleTimer(forcePause = false) {
-  const timerIcon = document.getElementById("timerIcon");
-  const timerBar = document.getElementById("quizTimerBar");
-  const totalMs = quizTimeLimit * 1000;
+    const timerIcon = document.getElementById("timerIcon");
+    const timerBar = document.getElementById("quizTimerBar");
+    
+    if (isTimerPaused || forcePause) {
+        if (!isTimerPaused) {
+            const elapsed = Date.now() - timerStartTime;
+            timeRemaining = timeRemaining - elapsed;
+        }
+        isTimerPaused = true;
+        
+        timerIcon.classList.remove("fa-pause");
+        timerIcon.classList.add("fa-play");
+        clearTimeout(quizTimer);
+        
+        timerBar.style.transition = "none";
+        // Calculate the current percentage correctly before pausing
+        const currentProgress = 1 - (timeRemaining / (quizTimeLimit * 1000));
+        timerBar.style.width = `${currentProgress * 100}%`;
 
-  const pause = () => {
-    // 경과 시간 반영
-    const elapsed = Date.now() - timerStartTime;
-    timeRemaining = Math.max(0, timeRemaining - elapsed);
-
-    isTimerPaused = true;
-    clearTimeout(quizTimer);
-
-    // 아이콘 변경
-    timerIcon.classList.remove("fa-pause");
-    timerIcon.classList.add("fa-play");
-
-    // 진행 바 정지 + 현재 비율로 고정
-    timerBar.style.transition = "none";
-    const remainRatio = totalMs > 0 ? (timeRemaining / totalMs) : 0;
-    timerBar.style.width = `${remainRatio * 100}%`;
-  };
-
-  const resume = () => {
-    if (timeRemaining <= 0) {
-      // 이미 끝난 상태면 바로 채점
-      checkQuizAnswer(true, null);
-      return;
+    } else {
+        isTimerPaused = false;
+        
+        timerIcon.classList.remove("fa-play");
+        timerIcon.classList.add("fa-pause");
+        timerStartTime = Date.now();
+        
+        // Start animation from the paused position
+        timerBar.style.transition = `width linear ${timeRemaining / 1000}s`;
+        timerBar.style.width = "100%";
+        
+        quizTimer = setTimeout(() => {
+            checkQuizAnswer(true, null);
+        }, timeRemaining);
     }
-
-    isTimerPaused = false;
-    timerIcon.classList.remove("fa-play");
-    timerIcon.classList.add("fa-pause");
-
-    timerStartTime = Date.now();
-
-    // 남은 시간만큼 다시 0%까지 애니메이션
-    timerBar.style.transition = `width linear ${timeRemaining / 1000}s`;
-    // reflow 강제해서 transition 적용 보장
-    void timerBar.offsetWidth;
-    timerBar.style.width = "0%";
-
-    clearTimeout(quizTimer);
-    quizTimer = setTimeout(() => {
-      checkQuizAnswer(true, null);
-    }, timeRemaining);
-  };
-
-  // 강제 일시정지 요청이 오면 무조건 정지
-  if (forcePause) {
-    if (!isTimerPaused) pause();
-    return;
-  }
-
-  // 토글 동작
-  if (isTimerPaused) {
-    resume();
-  } else {
-    pause();
-  }
 }
 
-
 function checkQuizAnswer(isTimeUp = false, selectedOptionEl) {
-  const q = currentQuizData.questions[currentQuestionIndex];
-  const correctAnswer = q.answer;
-  const optionEls = [...modalBody.querySelectorAll(".quiz-option")];
-
-  // 인덱스 계산 (문자 비교 대신 인덱스로)
-  const correctIdx = q.options.findIndex(o => o === correctAnswer);
-  const selectedIdx = selectedOptionEl
-    ? Number(selectedOptionEl.dataset.index)
-    : -1;
-
-  let isCorrect = false;
-
-  // 선택 불가 처리 및 초기화
-  optionEls.forEach(opt => {
-    opt.style.pointerEvents = "none";
-    opt.classList.remove("selected");
-    // 이전 해설 제거
-    const old = opt.querySelector(".explain-block");
-    if (old) old.remove();
-  });
-
-  const quizResultEl = modalBody.querySelector("#quizResult");
-
-  if (isTimeUp) {
-    quizResultEl.innerHTML =
-      `<p class="text-red-600 font-semibold">
-        시간 초과! 😔 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.
-      </p>`;
-  } else {
-    selectedOptionEl.classList.add("selected");
-    const selectedAnswer = q.options[selectedIdx];
-    if (selectedAnswer === correctAnswer) {
-      isCorrect = true;
-      quizResultEl.innerHTML = `<p class="text-green-600 font-semibold">정답입니다! 🎉</p>`;
+    const q = currentQuizData.questions[currentQuestionIndex];
+    const correctAnswer = q.answer;
+    let isCorrect = false;
+    modalBody.querySelectorAll(".quiz-option").forEach(opt => {
+        opt.style.pointerEvents = "none";
+        opt.classList.remove("selected");
+    });
+    const quizResultEl = modalBody.querySelector("#quizResult");
+    if (isTimeUp) {
+        quizResultEl.innerHTML = `<p class="text-red-600 font-semibold">시간 초과! 😔 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
     } else {
-      quizResultEl.innerHTML =
-        `<p class="text-red-600 font-semibold">오답입니다. 😔</p>
-         <p class="text-gray-700 mt-2">정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
+        selectedOptionEl.classList.add("selected");
+        const selectedAnswer = selectedOptionEl.dataset.option;
+        if (selectedAnswer === correctAnswer) {
+            score++;
+            isCorrect = true;
+            quizResultEl.innerHTML = `<p class="text-green-600 font-semibold">정답입니다! 🎉</p>`;
+        } else {
+            // 오답 선택 시 정답 설명 추가
+            const allData = Object.values(photographyData).flat();
+            const explanation = allData.find((item) => item.q.toLowerCase() === correctAnswer.toLowerCase())?.a || "관련된 설명을 찾을 수 없습니다.";
+            quizResultEl.innerHTML = `
+                <p class="text-red-600 font-semibold">오답입니다. 😔</p>
+                <p class="text-gray-700 mt-2">정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>
+                <p class="text-sm text-gray-500 mt-1">**설명:** ${explanation.replace(/\n/g, "<br>")}</p>
+            `;
+        }
     }
-  }
-
-  // 스타일 표시
-  optionEls.forEach((opt, i) => {
-    if (i === correctIdx) opt.classList.add("correct");
-    else if (i === selectedIdx) opt.classList.add("incorrect");
-  });
-
-  // 🔍 해설 출력 (오답: 선택지 해설 + 정답 해설, 시간초과: 정답 해설만)
-  const ex = Array.isArray(q.rationales) ? q.rationales : [];
-  const explainHtml = (title, body) =>
-    `<div class="explain-block mt-2 text-xs px-2 py-2 rounded border
-                 ${title.includes('정답') ? 'bg-green-50 border-green-200 text-green-800'
-                                          : 'bg-red-50 border-red-200 text-red-800'}">
-       <div class="font-semibold mb-1">${title}</div>
-       <div class="leading-5">${body}</div>
-     </div>`;
-
-  // 정답 해설
-  if (correctIdx >= 0 && ex[correctIdx]) {
-    optionEls[correctIdx].insertAdjacentHTML(
-      "beforeend",
-      explainHtml("✅ 정답 해설", ex[correctIdx])
-    );
-  }
-
-  // 오답 선택 시: 선택지 해설도 보여주기
-  if (!isTimeUp && selectedIdx >= 0 && selectedIdx !== correctIdx && ex[selectedIdx]) {
-    optionEls[selectedIdx].insertAdjacentHTML(
-      "beforeend",
-      explainHtml("❌ 왜 오답인가요?", ex[selectedIdx])
-    );
-  }
-
-  // 다음 진행
-  if (isCorrect) {
-    setTimeout(() => {
-      document.getElementById("quizOptions").removeEventListener("click", handleQuizOptionClick);
-      currentQuestionIndex++;
-      if (currentQuestionIndex < currentQuizData.questions.length) {
-        displayQuizQuestion();
-      } else {
-        displayQuizFinalScore();
-      }
-    }, 1000);
-  } else {
-    document.getElementById("nextQuestionBtn").classList.remove("hidden");
-  }
+    modalBody.querySelectorAll(".quiz-option").forEach(opt => {
+        if (opt.dataset.option === correctAnswer) {
+            opt.classList.add("correct");
+        } else if (opt.classList.contains("selected")) {
+            opt.classList.add("incorrect");
+        }
+    });
+    if (isCorrect) {
+        setTimeout(() => {
+            document.getElementById("quizOptions").removeEventListener("click", handleQuizOptionClick);
+            currentQuestionIndex++;
+            if (currentQuestionIndex < currentQuizData.questions.length) {
+                displayQuizQuestion();
+            } else {
+                displayQuizFinalScore();
+            }
+        }, 1000);
+    } else {
+        document.getElementById("nextQuestionBtn").classList.remove("hidden");
+    }
 }
 
 function setupEventListeners() {
@@ -781,7 +689,7 @@ function renderContent(category, searchTerm = "") {
         }, ];
         html = visualizationContent.map((item) => `<div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">${item.q}</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6">${item.a}</div></div></div>`).join("");
     } else if (category === "cms") {
-        html = `<div class="max-w-4xl mx-auto"><header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold text-gray-800">디지털 색 관리 시스템(CMS) 이해하기</h1><p class="text-gray-600 mt-2">카메라부터 모니터, 프린터까지 모든 장비에서 일관된 색상을 유지하는 방법</p></header><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">1. 색 관리 시스템(CMS)이란?</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6"><div class="text-center text-sm text-gray-600 mb-6">카메라, 모니터, 프린터 등 서로 다른 장비들이 각자의 방식으로 색을 표현하기 때문에 발생하는 색상 차이를 최소화하고, 원본의 색을 모든 장비에서 일관되게 보이도록 관리하는 과정입니다.</div><div class="flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0 md:space-x-4 text-center"><div class="diagram-item"><div class="w-24 h-24 bg-gradient-to-br from-red-500 to-yellow-400 rounded-full flex items-center justify-center text-white font-bold mb-2 shadow-lg">현실</div><p class="text-sm font-semibold">원본 색상</p><p class="text-xs text-gray-500">실제 세상의 색</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-camera text-4xl text-blue-600"></i><div class="profile-tag bg-blue-100 text-blue-800">입력 프로파일</div></div><p class="text-sm font-semibold">촬영 (색상 정의)</p><p class="text-xs text-gray-500">(sRGB, AdobeRGB)</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-desktop text-4xl text-green-600"></i><div class="profile-tag bg-green-100 text-green-800">작업/모니터 프로파일</div></div><p class="text-sm font-semibold">편집 (색상 확인)</p><p class="text-xs text-gray-500">(모니터 프로파일)</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-print text-4xl text-purple-600"></i><div class="profile-tag bg-purple-100 text-purple-800">출력 프로파일</div></div><p class="text-sm font-semibold">출력 (색상 재현)</p><p class="text-xs text-gray-500">(프린터/용지 프로파일)</p></div></div></div></div></div><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">2. 색 공간(Color Space)의 종류</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6 space-y-6"><p class="text-sm text-gray-600">색 공간은 색상을 수학적으로 표현하는 모델입니다. CMS에서는 이들을 크게 '장치 독립적인 공간'과 '장치 의존적인 공간'으로 나눕니다.</p><div class="grid md:grid-cols-2 gap-6"><div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-globe mr-2 text-sky-500"></i>장치 독립 색 공간 (PCS)</h4><p class="text-sm text-gray-600 mt-2">특정 장비에 구애받지 않는 절대적인 기준 색 공간입니다. 모든 색상 변환의 '중간 다리' 또는 '번역기' 역할을 합니다. 대표적으로 CIELAB, CIEXYZ가 있습니다.</p></div><div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-cogs mr-2 text-amber-500"></i>장치 의존 색 공간 (ICC Profile)</h4><p class="text-sm text-gray-600 mt-2">카메라, 모니터, 프린터 등 특정 장비가 표현할 수 있는 색상의 범위(Gamut)와 특징을 정의한 데이터 파일입니다.</p></div></div><div><h5 class="font-semibold text-md text-gray-800 mb-2">ICC 프로파일의 세부 종류</h5><div class="space-y-3"><div class="bg-blue-50 p-3 rounded-md border border-blue-200"><p class="font-semibold text-blue-800">범용 (Standard)</p><p class="text-xs text-blue-700">sRGB, Adobe RGB (1998) 처럼 국제 표준으로 널리 사용되는 프로파일입니다. 웹, 일반 사진 등 대부분의 작업에서 기준으로 사용됩니다.<br><span class="font-medium text-gray-600">예: sRGB IEC61966-2.1, AdobeRGB1998.icc</span></p></div><div class="bg-green-50 p-3 rounded-md border border-green-200"><p class="font-semibold text-green-800">제네릭 (Generic)</p><p class="text-xs text-green-700">모니터나 프린터 제조사에서 특정 모델을 위해 제공하는 기본 프로파일입니다. 어느 정도 정확하지만, 개별 장비의 미세한 차이나 노후화는 반영하지 못합니다.<br><span class="font-medium text-gray-600">예: DELL U2723QE.icc, EPSON Stylus Pro 7900 Premium Luster.icc</span></p></div><div class="bg-yellow-50 p-3 rounded-md border border-yellow-200"><p class="font-semibold text-yellow-800">커스텀 (Custom)</p><p class="text-xs text-yellow-700">캘리브레이션 장비(계측기)를 사용하여 현재 내가 사용하는 장비의 상태를 직접 측정하여 생성한, 가장 정확한 맞춤형 프로파일입니다.<br><span class="font-medium text-gray-600">예: My_U2723QE_D65_120cd_231026.icc</span></p></div></div></div></div></div></div><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">4. 캘리브레이션 vs. 프로파일링</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6 space-y-4"><p class="text-sm text-gray-600">두 용어는 자주 혼용되지만 의미가 다릅니다. 캘리브레이션이 선행되어야 정확한 프로파일링이 가능합니다.</p><div class="flex flex-col md:flex-row items-stretch justify-center gap-6"><div class="w-full md:w-1/2 bg-indigo-50 p-4 rounded-lg border border-indigo-200 text-center"><i class="fas fa-sliders-h text-3xl text-indigo-500 mb-2"></i><h4 class="font-bold text-indigo-800">캘리브레이션 (Calibration)</h4><p class="text-sm text-indigo-700 mt-2">장비를 미리 정해진 <span class="font-semibold">표준 상태(밝기, 색온도, 감마 등)로 조정</span>하는 과정입니다. 일관된 결과물을 얻기 위한 사전 준비 작업입니다.</p></div><div class="w-full md:w-1/2 bg-teal-50 p-4 rounded-lg border border-teal-200 text-center"><i class="fas fa-ruler-combined text-3xl text-teal-500 mb-2"></i><h4 class="font-bold text-teal-800">프로파일링 (Profiling)</h4><p class="text-sm text-teal-700 mt-2">캘리브레이션 된 장비가 색상을 어떻게 표현하는지 <span class="font-semibold">정확히 측정하여 그 특성을 파일(ICC Profile)로 기록</span>하는 과정입니다.</p></div></div><div class="mt-4 pt-4 border-t"><h5 class="font-semibold text-md text-gray-800 mb-2">각 장비의 캘리브레이션 & 프로파일링</h5><p class="text-sm text-gray-600 mb-2"><span class="font-semibold text-gray-700">모니터:</span> 전용 센서(계측기)를 모니터에 부착하여 목표한 밝기(Luminance), 백색점(White Point), 감마(Gamma) 값에 맞도록 조정한 후, 측정된 색상 표현 특성을 모니터 프로파일로 저장합니다.</p><p class="text-sm text-gray-600"><span class="font-semibold text-gray-700">프린터:</span> 특정 프린터, 잉크, 용지 조합으로 정해진 색상 패치를 인쇄하고, 분광측색계(Spectrophotometer)로 각 패치의 색상을 정밀하게 측정하여 해당 조합에 맞는 프린터 프로파일을 생성합니다.</p></div></div></div></div></div></div>`;
+        html = `<div class="max-w-4xl mx-auto"><header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold text-gray-800">디지털 색 관리 시스템(CMS) 이해하기</h1><p class="text-gray-600 mt-2">카메라부터 모니터, 프린터까지 모든 장비에서 일관된 색상을 유지하는 방법</p></header><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">1. 색 관리 시스템(CMS)이란?</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6"><div class="text-center text-sm text-gray-600 mb-6">카메라, 모니터, 프린터 등 서로 다른 장비들이 각자의 방식으로 색을 표현하기 때문에 발생하는 색상 차이를 최소화하고, 원본의 색을 모든 장비에서 일관되게 보이도록 관리하는 과정입니다.</div><div class="flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0 md:space-x-4 text-center"><div class="diagram-item"><div class="w-24 h-24 bg-gradient-to-br from-red-500 to-yellow-400 rounded-full flex items-center justify-center text-white font-bold mb-2 shadow-lg">현실</div><p class="text-sm font-semibold">원본 색상</p><p class="text-xs text-gray-500">실제 세상의 색</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-camera text-4xl text-blue-600"></i><div class="profile-tag bg-blue-100 text-blue-800">입력 프로파일</div></div><p class="text-sm font-semibold">촬영 (색상 정의)</p><p class="text-xs text-gray-500">(sRGB, AdobeRGB)</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-desktop text-4xl text-green-600"></i><div class="profile-tag bg-green-100 text-green-800">작업/모니터 프로파일</div></div><p class="text-sm font-semibold">편집 (색상 확인)</p><p class="text-xs text-gray-500">(모니터 프로파일)</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-print text-4xl text-purple-600"></i><div class="profile-tag bg-purple-100 text-purple-800">출력 프로파일</div></div><p class="text-sm font-semibold">출력 (색상 재현)</p><p class="text-xs text-gray-500">(프린터/용지 프로파일)</p></div></div></div></div></div><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">2. 색 공간(Color Space)의 종류</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6 space-y-6"><p class="text-sm text-gray-600">색 공간은 색상을 수학적으로 표현하는 모델입니다. CMS에서는 이들을 크게 '장치 독립적인 공간'과 '장치 의존적인 공간'으로 나눕니다.</p><div class="grid md:grid-cols-2 gap-6"><div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-globe mr-2 text-sky-500"></i>장치 독립 색 공간 (PCS)</h4><p class="text-sm text-gray-600 mt-2">특정 장비에 구애받지 않는 절대적인 기준 색 공간입니다. 모든 색상 변환의 '중간 다리' 또는 '번역기' 역할을 합니다. 대표적으로 CIELAB, CIEXYZ가 있습니다.</p></div><div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-cogs mr-2 text-amber-500"></i>장치 의존 색 공간 (ICC Profile)</h4><p class="text-sm text-gray-600 mt-2">카메라, 모니터, 프린터 등 특정 장비가 표현할 수 있는 색상의 범위(Gamut)와 특징을 정의한 데이터 파일입니다.</p></div></div><div><h5 class="font-semibold text-md text-gray-800 mb-2">ICC 프로파일의 세부 종류</h5><div class="space-y-3"><div class="bg-blue-50 p-3 rounded-md border border-blue-200"><p class="font-semibold text-blue-800">범용 (Standard)</p><p class="text-xs text-blue-700">sRGB, Adobe RGB (1998) 처럼 국제 표준으로 널리 사용되는 프로파일입니다. 웹, 일반 사진 등 대부분의 작업에서 기준으로 사용됩니다.<br><span class="font-medium text-gray-600">예: sRGB IEC61966-2.1, AdobeRGB1998.icc</span></p></div><div class="bg-green-50 p-3 rounded-lg border border-green-200"><p class="font-semibold text-green-800">제네릭 (Generic)</p><p class="text-xs text-green-700">모니터나 프린터 제조사에서 특정 모델을 위해 제공하는 기본 프로파일입니다. 어느 정도 정확하지만, 개별 장비의 미세한 차이나 노후화는 반영하지 못합니다.<br><span class="font-medium text-gray-600">예: DELL U2723QE.icc, EPSON Stylus Pro 7900 Premium Luster.icc</span></p></div><div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200"><p class="font-semibold text-yellow-800">커스텀 (Custom)</p><p class="text-xs text-yellow-700">캘리브레이션 장비(계측기)를 사용하여 현재 내가 사용하는 장비의 상태를 직접 측정하여 생성한, 가장 정확한 맞춤형 프로파일입니다.<br><span class="font-medium text-gray-600">예: My_U2723QE_D65_120cd_231026.icc</span></p></div></div></div></div></div></div><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">4. 캘리브레이션 vs. 프로파일링</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6 space-y-4"><p class="text-sm text-gray-600">두 용어는 자주 혼용되지만 의미가 다릅니다. 캘리브레이션이 선행되어야 정확한 프로파일링이 가능합니다.</p><div class="flex flex-col md:flex-row items-stretch justify-center gap-6"><div class="w-full md:w-1/2 bg-indigo-50 p-4 rounded-lg border border-indigo-200 text-center"><i class="fas fa-sliders-h text-3xl text-indigo-500 mb-2"></i><h4 class="font-bold text-indigo-800">캘리브레이션 (Calibration)</h4><p class="text-sm text-indigo-700 mt-2">장비를 미리 정해진 <span class="font-semibold">표준 상태(밝기, 색온도, 감마 등)로 조정</span>하는 과정입니다. 일관된 결과물을 얻기 위한 사전 준비 작업입니다.</p></div><div class="w-full md:w-1/2 bg-teal-50 p-4 rounded-lg border border-teal-200 text-center"><i class="fas fa-ruler-combined text-3xl text-teal-500 mb-2"></i><h4 class="font-bold text-teal-800">프로파일링 (Profiling)</h4><p class="text-sm text-teal-700 mt-2">캘리브레이션 된 장비가 색상을 어떻게 표현하는지 <span class="font-semibold">정확히 측정하여 그 특성을 파일(ICC Profile)로 기록</span>하는 과정입니다.</p></div></div><div class="mt-4 pt-4 border-t"><h5 class="font-semibold text-md text-gray-800 mb-2">각 장비의 캘리브레이션 & 프로파일링</h5><p class="text-sm text-gray-600 mb-2"><span class="font-semibold text-gray-700">모니터:</span> 전용 센서(계측기)를 모니터에 부착하여 목표한 밝기(Luminance), 백색점(White Point), 감마(Gamma) 값에 맞도록 조정한 후, 측정된 색상 표현 특성을 모니터 프로파일로 저장합니다.</p><p class="text-sm text-gray-600"><span class="font-semibold text-gray-700">프린터:</span> 특정 프린터, 잉크, 용지 조합으로 정해진 색상 패치를 인쇄하고, 분광측색계(Spectrophotometer)로 각 패치의 색상을 정밀하게 측정하여 해당 조합에 맞는 프린터 프로파일을 생성합니다.</p></div></div></div></div></div></div>`;
     } else {
         let itemsToRender = [];
         if (searchTerm) {
@@ -921,4 +829,3 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !geminiModal.classList.contains("hidden")) hideModal();
 });
 renderContent("home");
-````
