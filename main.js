@@ -1326,9 +1326,12 @@ function renderContent(category, searchTerm = "") {
   }
 }
 function handleNavClick(e) {
-  e.preventDefault();
   const targetLink = e.target.closest("a");
   if (!targetLink) return;
+  if (targetLink.getAttribute("href") !== "#") {
+    return;
+  }
+  e.preventDefault();
   const category = targetLink.dataset.category;
   searchInput.value = "";
   document

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Practice Questions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="antialiased bg-gray-50 p-4">
+    <div id="questionContainer" class="max-w-xl mx-auto bg-white p-6 rounded shadow">
+      <div id="score" class="text-right font-bold mb-4">Score: 0</div>
+      <div id="questionText" class="text-lg font-semibold mb-4"></div>
+      <ul id="choicesContainer" class="mb-4"></ul>
+      <input
+        type="text"
+        id="answerInput"
+        class="border p-2 w-full mb-4"
+        placeholder="Enter your answer"
+      />
+      <div class="flex space-x-2">
+        <button
+          id="submitBtn"
+          class="bg-blue-500 text-white px-4 py-2 rounded"
+        >
+          Submit
+        </button>
+        <button
+          id="nextBtn"
+          class="bg-gray-500 text-white px-4 py-2 rounded hidden"
+        >
+          Next
+        </button>
+      </div>
+      <div id="feedback" class="mt-4 font-semibold"></div>
+    </div>
+    <script src="question.js"></script>
+  </body>
+</html>
