@@ -202,16 +202,12 @@ function showModal(title, contentHtml = '', showLoading = false) {
     if (showLoading) {
         const loadingContainer = document.createElement("div");
         loadingContainer.className = "loading-container flex flex-col items-center";
-        
         const loadingText = document.createElement("p");
         loadingText.className = "text-xl font-semibold text-gray-700 mb-4";
-        
         const rotatingIcon = document.createElement("div");
         rotatingIcon.className = "rotating-icon-loader";
-        
         loadingContainer.appendChild(loadingText);
         loadingContainer.appendChild(rotatingIcon);
-
         const cancelBtn = document.createElement("button");
         cancelBtn.textContent = "취소";
         cancelBtn.className = "mt-4 bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800";
@@ -220,20 +216,15 @@ function showModal(title, contentHtml = '', showLoading = false) {
             controller.abort();
             hideModal();
         });
-
         modalBody.innerHTML = '';
         modalBody.appendChild(loadingContainer);
         modalBody.appendChild(cancelBtn);
-
-        // title 인자로 전달된 메시지를 로딩 텍스트로 사용
         loadingText.innerText = title;
-        
         rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
         iconChangeInterval = setInterval(() => {
             rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
         }, 1000);
     }
-    
     geminiModal.classList.remove("hidden");
     setTimeout(() => {
         geminiModal.classList.remove("opacity-0");
@@ -253,10 +244,7 @@ function hideModal() {
 async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
     controller = new AbortController();
     abortedByUser = false;
-    
-    // 로딩 문구와 아이콘을 표시하도록 수정
     showModal(title, '', true);
-
     try {
         const payload = {
             contents: [{ parts: [{ text: prompt }] }],
@@ -284,39 +272,31 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
         } else {
             payload.generationConfig.responseMimeType = "text/plain";
         }
-        
         const timeoutId = setTimeout(() => {
             controller.abort();
             hideModal();
             showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`, false);
         }, 60000);
-
         const response = await fetch(PROXY_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
             signal: controller.signal,
         });
-
         clearTimeout(timeoutId);
-
         if (!response.ok) {
             throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
         }
-
         const result = await response.json();
         let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
         if (!text) {
             throw new Error("API에서 콘텐츠를 받지 못했습니다.");
         }
-
         text = text.trim();
         if (text.startsWith("```json") && text.endsWith("```")) {
             text = text.substring(7, text.length - 3).trim();
         }
-        
-        hideModal(); 
+        hideModal();
         return text;
     } catch (error) {
         if (error.name === "AbortError" && abortedByUser) {
@@ -777,7 +757,7 @@ function displayQuizFinalScore() {
 }
 function setupGeminiButtons() {
     document.querySelectorAll(".gemini-btn").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
+        btn.addEventListener("click", async (e) => {
             e.stopPropagation();
             const action = e.target.dataset.action;
             const question = e.target.dataset.q;
@@ -792,14 +772,14 @@ function setupGeminiButtons() {
             let prompt = "";
             let loadingTitle = "";
             if (action === "explain") {
-            loadingTitle = "쉽게 설명 중... 💡";
+                loadingTitle = "쉽게 설명 중... 💡";
                 prompt = `사진학 용어인 "${question}"에 대해 입시생의 암기하기 쉽게 이해하기 쉽고 간결하게 설명해줘. 다음 설명을 참고하여, 중요한 개념을 놓치지 않으면서도 면접에서 자연스럽게 활용할 수 있도록 정리해줘 최대 300자 내외. 참고 설명: ${answer}`;
             } else if (action === "deepen") {
-               loadingTitle = "깊이 알아보기 중... 🧐";
+                loadingTitle = "깊이 알아보기 중... 🧐";
                 prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 심화 개념, 역사적 배경, 또는 실전 촬영 팁을 포함하여 전문가 수준의 추가 정보를 제공해줘 작가의 경우 대표 사진도 보여줘 600자 내외로. 설명: ${answer}`;
             }
             if (prompt) {
-                const responseText = await callGemini(prompt, false);
+                const responseText = await callGemini(prompt, false, loadingTitle);
                 if (responseText) {
                     showModal(resultTitle, `<p>${responseText.replace(/\n/g, "<br>")}</p>`, false);
                     localStorage.setItem(cacheKey, responseText);
