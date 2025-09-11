@@ -329,7 +329,15 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
 
 function simplify(text) {
     if (!text) return "";
-    return text.replace(/\([^)]*\)/g, "").split(/[.]/)[0].trim();
+    const cleaned = text.replace(/\([^)]*\)/g, "").trim();
+    const match = cleaned.match(/[^.?!]+[.?!]/);
+    return match ? match[0].trim() : cleaned;
+}
+
+function ensureFullSentence(text) {
+    if (!text) return "";
+    const trimmed = text.trim();
+    return /[.?!]$/.test(trimmed) ? trimmed : `${trimmed}?`;
 }
 
 function escapeHtml(str) {
@@ -354,7 +362,7 @@ function createFallbackQuiz(pool, count = 5) {
                 explanations[p.q] = simplify(p.a);
             });
             return {
-                question: simplify(item.a),
+                question: ensureFullSentence(`${simplify(item.a)} 이 설명에 해당하는 용어는 무엇일까요?`),
                 options,
                 answer: item.q,
                 explanations
@@ -382,7 +390,7 @@ async function generateQuiz() {
 
     const sample = pool.sort(() => Math.random() - 0.5).slice(0, 8);
     const dataLines = sample.map(item => `- ${item.q}: ${simplify(item.a)}`).join("\n");
-    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 이 정보를 바탕으로 난이도 5의 객관식 퀴즈 5문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 헷갈릴 수 있는 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
+    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 이 정보를 바탕으로 난이도 5의 객관식 퀴즈 5문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 헷갈릴 수 있는 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. question 필드는 물음표로 끝나는 완전한 질문 문장으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
 
     let parsed = null;
     const responseText = await callGemini(prompt, true, "퀴즈 생성 중...");
@@ -392,6 +400,11 @@ async function generateQuiz() {
         } catch (_) {
             parsed = null;
         }
+    }
+    if (parsed && Array.isArray(parsed.questions)) {
+        parsed.questions.forEach(q => {
+            q.question = ensureFullSentence(q.question);
+        });
     }
     if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
         parsed = createFallbackQuiz(pool);
