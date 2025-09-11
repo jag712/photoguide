@@ -207,26 +207,36 @@ function showModal(title, contentHtml = '', showLoading = false) {
             "중대 글 쓰는 중... ✍️",
             "촬실한다고 가놓고 폰하는 중... 📱"
         ];
-        
+
         const loadingContainer = document.createElement("div");
         loadingContainer.className = "loading-container flex flex-col items-center";
+
         const loadingText = document.createElement("p");
         loadingText.className = "text-xl font-semibold text-gray-700 mb-4";
+
         const rotatingIcon = document.createElement("div");
         rotatingIcon.className = "rotating-icon-loader";
+
         loadingContainer.appendChild(loadingText);
         loadingContainer.appendChild(rotatingIcon);
+
         const cancelBtn = document.createElement("button");
         cancelBtn.textContent = "취소";
         cancelBtn.className = "mt-4 bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800";
+
         cancelBtn.addEventListener("click", () => {
             abortedByUser = true;
-            controller.abort();
-            hideModal();
+            try { controller?.abort(); } catch {}
+            clearInterval(iconChangeInterval);
+            // 모달은 닫지 않고 내용만 바꾼다
+            modalTitle.textContent = "요청 취소됨";
+            modalBody.innerHTML = `<p class="text-gray-700">요청을 취소했습니다.</p>`;
         });
+
         modalBody.innerHTML = '';
         modalBody.appendChild(loadingContainer);
         modalBody.appendChild(cancelBtn);
+
         const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
         loadingText.innerText = randomMessage;
         rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
@@ -234,12 +244,14 @@ function showModal(title, contentHtml = '', showLoading = false) {
             rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
         }, 1000);
     }
+
     geminiModal.classList.remove("hidden");
     setTimeout(() => {
         geminiModal.classList.remove("opacity-0");
         geminiModal.querySelector(".modal-content").classList.remove("scale-95");
     }, 10);
 }
+
 
 function hideModal() {
     clearInterval(iconChangeInterval);
@@ -254,11 +266,16 @@ function hideModal() {
 async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
     controller = new AbortController();
     abortedByUser = false;
+
     showModal(title, '', true);
+
+    let timedOut = false;
+    let timeoutId = null;
+
     try {
         const payload = {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {},
+            generationConfig: {}
         };
         if (useSchema) {
             payload.generationConfig.responseMimeType = "application/json";
@@ -282,45 +299,60 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
         } else {
             payload.generationConfig.responseMimeType = "text/plain";
         }
-        const timeoutId = setTimeout(() => {
-            controller.abort();
-            hideModal();
-            showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`, false);
+
+        timeoutId = setTimeout(() => {
+            timedOut = true;
+            try { controller.abort(); } catch {}
         }, 60000);
+
         const response = await fetch(PROXY_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
-            signal: controller.signal,
+            signal: controller.signal
         });
+
         clearTimeout(timeoutId);
+
         if (!response.ok) {
             throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
         }
+
         const result = await response.json();
         let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!text) {
-            throw new Error("API에서 콘텐츠를 받지 못했습니다.");
-        }
+        if (!text) throw new Error("API에서 콘텐츠를 받지 못했습니다.");
+
         text = text.trim();
         if (text.startsWith("```json") && text.endsWith("```")) {
             text = text.substring(7, text.length - 3).trim();
         }
-        hideModal(); // AI 응답 성공 후 모달을 닫습니다.
+
+        hideModal(); // 성공 시에만 닫기
         return text;
+
     } catch (error) {
+        clearTimeout(timeoutId);
+
+        // 사용자가 직접 취소
         if (error.name === "AbortError" && abortedByUser) {
+            // 모달은 이미 "요청 취소됨" 상태로 유지됨
             return null;
         }
-        console.error("Gemini proxy call error:", error);
-        hideModal();
-        const errorMessage = (error.name === "AbortError")
-            ? "요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요."
-            : `AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.<br>(${error.message})`;
-        showModal('오류', `<p class="text-red-500">${errorMessage}</p>`, false);
+
+        // 타임아웃
+        if (error.name === "AbortError" && timedOut) {
+            modalTitle.textContent = '오류';
+            modalBody.innerHTML = `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
+            return null;
+        }
+
+        // 그 외 오류
+        modalTitle.textContent = '오류';
+        modalBody.innerHTML = `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.<br>(${error.message})</p>`;
         return null;
     }
 }
+
 
 async function generateQuiz() {
     const activeLink = document.querySelector(".nav-item.active");
@@ -364,10 +396,12 @@ async function generateQuiz() {
 function generatePractice() {
     const questions = createPracticeQuestions();
     showModal('실전 연습');
+
     const html = questions.map((q, idx) => {
         const metaParts = [`난이도: ${q.difficulty}`, `태그: ${q.tags?.length ? q.tags.join(", ") : "없음"}`];
         if (q.era) metaParts.push(`시대: ${q.era}`);
         metaParts.push(`스킬: ${q.skills?.length ? q.skills.join(", ") : "없음"}`);
+
         return `
         <div class="mb-4">
             <p class="font-semibold">${idx + 1}. ${q.question}</p>
@@ -375,14 +409,21 @@ function generatePractice() {
             <p class="text-xs text-gray-500 mt-1">${metaParts.join(" | ")}</p>
             <p class="result text-sm mt-1 hidden"></p>
         </div>`;
-    }).join("") + '<button id="gradePractice" class="w-full bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 mt-2">채점하기</button>';
+    }).join("") + `
+        <div class="flex gap-2">
+            <button id="gradePractice" class="flex-1 bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 mt-2">채점하기</button>
+            <button id="closePractice" class="flex-1 bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 mt-2">닫기</button>
+        </div>`;
+
     modalBody.innerHTML = html;
+
     const gradeBtn = document.getElementById("gradePractice");
+    const closeBtn = document.getElementById("closePractice");
+
+    closeBtn.addEventListener("click", hideModal);
+
     gradeBtn.addEventListener("click", () => {
-        if (gradeBtn.dataset.state === "graded") {
-            hideModal();
-            return;
-        }
+        // 채점 후 자동 닫기 금지 — 결과만 표시
         modalBody.querySelectorAll(".practice-input").forEach(input => {
             const userAnswer = input.value.trim().toLowerCase();
             const correctAnswer = input.dataset.answer.toLowerCase();
@@ -391,44 +432,34 @@ function generatePractice() {
             const answerWords = normalize(correctAnswer);
             const matchCount = answerWords.filter(w => userWords.includes(w)).length;
             const ratio = answerWords.length ? matchCount / answerWords.length : 0;
-            const score = ratio === 1 ? 5 : ratio >= 0.75 ? 4 : ratio >= 0.5 ? 3 : ratio >= 0.25 ? 2 : 1;
+            const s = ratio === 1 ? 5 : ratio >= 0.75 ? 4 : ratio >= 0.5 ? 3 : ratio >= 0.25 ? 2 : 1;
+
             const resultEl = input.parentElement.querySelector(".result");
             resultEl.classList.remove("text-green-600", "text-red-600");
-            const highScore = score >= 4;
-            resultEl.innerHTML = `점수: <span class="${highScore ? "text-green-600" : "text-red-600"}">${score}/5</span><br>모범답안: <span class="text-green-600">${input.dataset.answer}</span>`;
+            const highScore = s >= 4;
+            resultEl.innerHTML = `점수: <span class="${highScore ? "text-green-600" : "text-red-600"}">${s}/5</span><br>모범답안: <span class="text-green-600">${input.dataset.answer}</span>`;
             resultEl.classList.remove("hidden");
             input.classList.toggle("border-green-400", highScore);
             input.classList.toggle("border-red-400", !highScore);
         });
-        gradeBtn.textContent = "닫기";
-        gradeBtn.dataset.state = "graded";
-    });
-}
 
-function createPracticeQuestions(count = 4) {
-    const mechanismCategories = ["structure", "exposure", "lens", "digital", "film", "lighting"];
-    const flattened = Object.entries(photographyData).flatMap(([category, arr]) => arr.map(item => ({ ...item, category })));
-    const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, Math.min(n, arr.length));
-    const hasTag = (item, regex) => Array.isArray(item.tags) && item.tags.some(t => regex.test(t));
-    const mechanisms = pickRandom(flattened.filter(item => mechanismCategories.includes(item.category)), 2);
-    const photographers = pickRandom(flattened.filter(item => ["history", "tags"].includes(item.category) && hasTag(item, /(person|photographer|인물|인명)/i)), 1);
-    const oral = pickRandom(flattened.filter(item => (!mechanismCategories.includes(item.category) && item.category !== "history") || (item.category === "history" && hasTag(item, /(concept|개념)/i))), 1);
-    let selected = [...mechanisms, ...photographers, ...oral];
-    if (selected.length < count) {
-        selected = selected.concat(pickRandom(flattened.filter(item => !selected.includes(item)), count - selected.length));
-    } else if (selected.length > count) {
-        selected = pickRandom(selected, count);
-    }
-    const levels = ["easy", "medium", "hard"];
-    const endings = ["에 대해 설명하세요.", "에 대해 말해보세요."];
-    return selected.map(item => ({
-        question: `${item.q}${endings[Math.floor(Math.random() * endings.length)]}`,
-        answer: (item.answer_short || item.a || "").trim(),
-        difficulty: levels[Math.floor(Math.random() * levels.length)],
-        tags: item.tags || [item.category],
-        ...(item.era ? { era: item.era } : {}),
-        skills: ["concept"],
-    }));
+        // 버튼을 "다시 풀기"로 변경하고 폼 초기화 기능 제공
+        gradeBtn.textContent = "다시 풀기";
+        gradeBtn.onclick = () => {
+            modalBody.querySelectorAll(".practice-input").forEach(input => {
+                input.value = "";
+                input.classList.remove("border-green-400", "border-red-400");
+            });
+            modalBody.querySelectorAll(".result").forEach(el => {
+                el.classList.add("hidden");
+                el.innerHTML = "";
+            });
+            gradeBtn.textContent = "채점하기";
+            // 리스너를 원래 채점 리스너로 되돌림
+            gradeBtn.onclick = null;
+            gradeBtn.addEventListener("click", arguments.callee);
+        };
+    });
 }
 
 function displayQuizQuestion() {
