@@ -210,16 +210,12 @@ function showModal(title, contentHtml = '', showLoading = false) {
         
         const loadingContainer = document.createElement("div");
         loadingContainer.className = "loading-container flex flex-col items-center";
-        
         const loadingText = document.createElement("p");
         loadingText.className = "text-xl font-semibold text-gray-700 mb-4";
-        
         const rotatingIcon = document.createElement("div");
         rotatingIcon.className = "rotating-icon-loader";
-        
         loadingContainer.appendChild(loadingText);
         loadingContainer.appendChild(rotatingIcon);
-
         const cancelBtn = document.createElement("button");
         cancelBtn.textContent = "취소";
         cancelBtn.className = "mt-4 bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800";
@@ -228,21 +224,16 @@ function showModal(title, contentHtml = '', showLoading = false) {
             controller.abort();
             hideModal();
         });
-
         modalBody.innerHTML = '';
         modalBody.appendChild(loadingContainer);
         modalBody.appendChild(cancelBtn);
-
-        // title 대신 무작위 메시지 사용
         const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
         loadingText.innerText = randomMessage;
-        
         rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
         iconChangeInterval = setInterval(() => {
             rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
         }, 1000);
     }
-    
     geminiModal.classList.remove("hidden");
     setTimeout(() => {
         geminiModal.classList.remove("opacity-0");
@@ -315,7 +306,7 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
         if (text.startsWith("```json") && text.endsWith("```")) {
             text = text.substring(7, text.length - 3).trim();
         }
-        hideModal();
+        hideModal(); // AI 응답 성공 후 모달을 닫습니다.
         return text;
     } catch (error) {
         if (error.name === "AbortError" && abortedByUser) {
@@ -351,7 +342,9 @@ async function generateQuiz() {
     const topics = shuffledTerms.slice(0, 15).map((item) => item.q).join(", ");
     const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
     const responseText = await callGemini(prompt, true, `퀴즈 생성 중... ✨`);
-    if (!responseText) return;
+    if (!responseText) {
+        return; // 오류 발생 시 이미 모달이 처리되었으므로 여기서 함수 종료
+    }
     try {
         let parsedData = JSON.parse(responseText);
         if (parsedData && Array.isArray(parsedData.questions) && parsedData.questions.length > 0) {
