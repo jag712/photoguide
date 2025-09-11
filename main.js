@@ -774,31 +774,41 @@ async function generateQuiz() {
 function generatePractice() {
   const questions = createPracticeQuestions();
   modalTitle.textContent = "실전 연습";
-  const html = questions
-    .map((q, idx) => {
-      const optionsHtml = q.options
-        .map(
-          (opt) =>
-            `<div class="practice-option p-2 my-1 border rounded-lg cursor-pointer" data-correct="${opt === q.answer}">${opt}</div>`,
-        )
-        .join("");
-      return `<div class="mb-4">
+  const html =
+    questions
+      .map(
+        (q, idx) => `
+        <div class="mb-4">
           <p class="font-semibold">${idx + 1}. ${q.question}</p>
-          ${optionsHtml}
+          <input type="text" class="practice-input w-full p-2 mt-1 border rounded" data-answer="${q.answer.replace(/"/g, '&quot;')}">
           <p class="text-xs text-gray-500 mt-1">난이도: ${q.difficulty} | 태그: ${q.tags.join(", ")} | 시대: ${q.era} | 스킬: ${q.skills.join(", ")}</p>
-        </div>`;
-    })
-    .join("");
+          <p class="result text-sm mt-1 hidden"></p>
+        </div>`
+      )
+      .join("") +
+    '<button id="gradePractice" class="w-full bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 mt-2">채점하기</button>';
+
   modalBody.innerHTML = html;
   geminiModal.classList.remove("hidden");
   setTimeout(() => {
     geminiModal.classList.remove("opacity-0");
     geminiModal.querySelector(".modal-content").classList.remove("scale-95");
   }, 10);
-  modalBody.querySelectorAll(".practice-option").forEach((opt) => {
-    opt.addEventListener("click", (e) => {
-      const correct = e.currentTarget.dataset.correct === "true";
-      e.currentTarget.classList.add(correct ? "bg-green-200" : "bg-red-200");
+
+  document.getElementById("gradePractice").addEventListener("click", () => {
+    modalBody.querySelectorAll(".practice-input").forEach((input) => {
+      const userAnswer = input.value.trim().toLowerCase();
+      const correctAnswer = input.dataset.answer.toLowerCase();
+      const isCorrect = userAnswer && userAnswer.includes(correctAnswer);
+      const resultEl = input.parentElement.querySelector(".result");
+      resultEl.textContent = isCorrect
+        ? "정답입니다!"
+        : `오답입니다. 정답: ${input.dataset.answer}`;
+      resultEl.classList.remove("hidden");
+      resultEl.classList.toggle("text-green-600", isCorrect);
+      resultEl.classList.toggle("text-red-600", !isCorrect);
+      input.classList.toggle("border-green-400", isCorrect);
+      input.classList.toggle("border-red-400", !isCorrect);
     });
   });
 }
@@ -808,24 +818,15 @@ function createPracticeQuestions(count = 5) {
     arr.map((item) => ({ ...item, category })),
   );
   const selected = [...flattened].sort(() => 0.5 - Math.random()).slice(0, count);
-  return selected.map((item) => {
-    const incorrect = flattened
-      .filter((i) => i.q !== item.q)
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 3)
-      .map((i) => i.a);
-    const options = [...incorrect, item.a].sort(() => 0.5 - Math.random());
-    const levels = ["easy", "medium", "hard"];
-    return {
-      question: `${item.q}의 정의는?`,
-      options,
-      answer: item.a,
-      difficulty: levels[Math.floor(Math.random() * levels.length)],
-      tags: [item.category],
-      era: item.era || "N/A",
-      skills: ["concept"],
-    };
-  });
+  const levels = ["easy", "medium", "hard"];
+  return selected.map((item) => ({
+    question: `${item.q}의 정의는?`,
+    answer: (item.answer_short || item.a).trim(),
+    difficulty: levels[Math.floor(Math.random() * levels.length)],
+    tags: item.tags || [item.category],
+    era: item.era || "N/A",
+    skills: ["concept"],
+  }));
 }
 
 function displayQuizQuestion() {
