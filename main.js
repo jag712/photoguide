@@ -595,6 +595,8 @@ const PROXY_URL = "/.netlify/functions/gemini-proxy";
 
 // 로딩 화면을 위한 변수 및 함수
 let iconChangeInterval;
+let controller;
+let userAborted = false;
 function showModal() {
   const icons = ["❓", "🤔", "💡", "😊"];
   const loadingContainer = document.createElement("div");
@@ -603,7 +605,17 @@ function showModal() {
   const rotatingIcon = document.createElement("div");
   rotatingIcon.className = "rotating-icon-loader";
 
+  const cancelButton = document.createElement("button");
+  cancelButton.className = "mt-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300";
+  cancelButton.textContent = "취소";
+  cancelButton.addEventListener("click", () => {
+    userAborted = true;
+    if (controller) controller.abort();
+    hideModal();
+  });
+
   loadingContainer.appendChild(rotatingIcon);
+  loadingContainer.appendChild(cancelButton);
   modalBody.innerHTML = "";
   modalBody.appendChild(loadingContainer);
 
@@ -634,6 +646,8 @@ function hideModal() {
 }
 
 async function callGemini(prompt, useSchema = false) {
+  controller = new AbortController();
+  userAborted = false;
   showModal();
   try {
     const payload = {
@@ -662,7 +676,6 @@ async function callGemini(prompt, useSchema = false) {
     } else {
       payload.generationConfig.responseMimeType = "text/plain";
     }
-    const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     const response = await fetch(PROXY_URL, {
       method: "POST",
@@ -683,6 +696,7 @@ async function callGemini(prompt, useSchema = false) {
     return text;
   } catch (error) {
     if (error.name === "AbortError") {
+      if (userAborted) return "";
       clearInterval(iconChangeInterval);
       modalBody.innerHTML = `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
       return `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
