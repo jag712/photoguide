@@ -497,6 +497,11 @@ function toggleTimer(forcePause = false) {
     const timerIcon = document.getElementById("timerIcon");
     const timerBar = document.getElementById("quizTimerBar");
     
+    // 현재 애니메이션 상태를 가져옵니다.
+    const currentWidth = timerBar.offsetWidth;
+    const parentWidth = timerBar.parentElement.offsetWidth;
+    const currentProgress = (currentWidth / parentWidth);
+
     if (isTimerPaused || forcePause) {
         // 일시 정지 로직
         if (!isTimerPaused) { // 이미 정지 상태가 아닐 때만 계산
@@ -509,9 +514,9 @@ function toggleTimer(forcePause = false) {
         timerIcon.classList.add("fa-play");
         clearTimeout(quizTimer);
         
-        // 애니메이션 일시 정지
+        // 애니메이션을 즉시 정지하고 현재 진행 상태를 유지합니다.
         timerBar.style.transition = "none";
-        timerBar.style.width = `${(timeRemaining / (quizTimeLimit * 1000)) * 100}%`;
+        timerBar.style.width = `${(1-currentProgress)*100}%`;
     } else {
         // 재시작 로직
         isTimerPaused = false;
