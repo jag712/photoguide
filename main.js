@@ -662,11 +662,15 @@ async function callGemini(prompt, useSchema = false) {
     } else {
       payload.generationConfig.responseMimeType = "text/plain";
     }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     const response = await fetch(PROXY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     if (!response.ok)
       throw new Error(`Proxy call failed. Status: ${response.status}`);
     const result = await response.json();
@@ -678,6 +682,11 @@ async function callGemini(prompt, useSchema = false) {
     }
     return text;
   } catch (error) {
+    if (error.name === "AbortError") {
+      clearInterval(iconChangeInterval);
+      modalBody.innerHTML = `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
+      return `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
+    }
     console.error("Gemini proxy call error:", error);
     return `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>`;
   }
