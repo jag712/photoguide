@@ -510,6 +510,7 @@ const mainContent = document.getElementById("mainContent");
 const navLinks = document.querySelectorAll(".nav-item, #homeLink");
 const searchInput = document.getElementById("searchInput");
 const quizBtn = document.getElementById("quizBtn");
+const practiceBtn = document.getElementById("practiceBtn");
 const geminiModal = document.getElementById("geminiModal");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
@@ -767,6 +768,64 @@ async function generateQuiz() {
     console.error("Quiz parsing error:", e);
     modalBody.innerHTML = `<p class="text-red-500">퀴즈를 생성하는 데 실패했습니다. AI가 유효한 퀴즈 형식을 반환하지 못했습니다.</p>`;
   }
+}
+
+// 실전 연습 문제 생성
+function generatePractice() {
+  const questions = createPracticeQuestions();
+  modalTitle.textContent = "실전 연습";
+  const html = questions
+    .map((q, idx) => {
+      const optionsHtml = q.options
+        .map(
+          (opt) =>
+            `<div class="practice-option p-2 my-1 border rounded-lg cursor-pointer" data-correct="${opt === q.answer}">${opt}</div>`,
+        )
+        .join("");
+      return `<div class="mb-4">
+          <p class="font-semibold">${idx + 1}. ${q.question}</p>
+          ${optionsHtml}
+          <p class="text-xs text-gray-500 mt-1">난이도: ${q.difficulty} | 태그: ${q.tags.join(", ")} | 시대: ${q.era} | 스킬: ${q.skills.join(", ")}</p>
+        </div>`;
+    })
+    .join("");
+  modalBody.innerHTML = html;
+  geminiModal.classList.remove("hidden");
+  setTimeout(() => {
+    geminiModal.classList.remove("opacity-0");
+    geminiModal.querySelector(".modal-content").classList.remove("scale-95");
+  }, 10);
+  modalBody.querySelectorAll(".practice-option").forEach((opt) => {
+    opt.addEventListener("click", (e) => {
+      const correct = e.currentTarget.dataset.correct === "true";
+      e.currentTarget.classList.add(correct ? "bg-green-200" : "bg-red-200");
+    });
+  });
+}
+
+function createPracticeQuestions(count = 5) {
+  const flattened = Object.entries(photographyData).flatMap(([category, arr]) =>
+    arr.map((item) => ({ ...item, category })),
+  );
+  const selected = [...flattened].sort(() => 0.5 - Math.random()).slice(0, count);
+  return selected.map((item) => {
+    const incorrect = flattened
+      .filter((i) => i.q !== item.q)
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 3)
+      .map((i) => i.a);
+    const options = [...incorrect, item.a].sort(() => 0.5 - Math.random());
+    const levels = ["easy", "medium", "hard"];
+    return {
+      question: `${item.q}의 정의는?`,
+      options,
+      answer: item.a,
+      difficulty: levels[Math.floor(Math.random() * levels.length)],
+      tags: [item.category],
+      era: item.era || "N/A",
+      skills: ["concept"],
+    };
+  });
 }
 
 function displayQuizQuestion() {
@@ -1408,6 +1467,7 @@ function setupGeminiButtons() {
 
 // AI 퀴즈 생성 버튼 이벤트
 quizBtn.addEventListener("click", generateQuiz);
+practiceBtn.addEventListener("click", generatePractice);
 
 // 모달 닫기 이벤트
 closeModal.addEventListener("click", hideModal);
