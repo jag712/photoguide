@@ -799,16 +799,35 @@ function generatePractice() {
     modalBody.querySelectorAll(".practice-input").forEach((input) => {
       const userAnswer = input.value.trim().toLowerCase();
       const correctAnswer = input.dataset.answer.toLowerCase();
-      const isCorrect = userAnswer && userAnswer.includes(correctAnswer);
+
+      const normalize = (str) =>
+        str
+          .split(/[^\p{L}\p{N}]+/u)
+          .filter((w) => w.length >= 2);
+
+      const userWords = normalize(userAnswer);
+      const answerWords = normalize(correctAnswer);
+      const matchCount = answerWords.filter((w) => userWords.includes(w)).length;
+      const ratio = answerWords.length ? matchCount / answerWords.length : 0;
+      const score =
+        ratio === 1
+          ? 5
+          : ratio >= 0.75
+          ? 4
+          : ratio >= 0.5
+          ? 3
+          : ratio >= 0.25
+          ? 2
+          : 1;
+
       const resultEl = input.parentElement.querySelector(".result");
-      resultEl.textContent = isCorrect
-        ? "정답입니다!"
-        : `오답입니다. 정답: ${input.dataset.answer}`;
+      resultEl.innerHTML = `점수: ${score}/5<br>모범답안: ${input.dataset.answer}`;
       resultEl.classList.remove("hidden");
-      resultEl.classList.toggle("text-green-600", isCorrect);
-      resultEl.classList.toggle("text-red-600", !isCorrect);
-      input.classList.toggle("border-green-400", isCorrect);
-      input.classList.toggle("border-red-400", !isCorrect);
+      const highScore = score >= 4;
+      resultEl.classList.toggle("text-green-600", highScore);
+      resultEl.classList.toggle("text-red-600", !highScore);
+      input.classList.toggle("border-green-400", highScore);
+      input.classList.toggle("border-red-400", !highScore);
     });
   });
 }
