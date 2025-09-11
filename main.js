@@ -1,12 +1,3 @@
-아쉽게도 제공해주신 코드는 여전히 문제를 완전히 해결하지 못했습니다. `callGemini` 함수 내부에서 `hideModal()`이 호출되어 로딩 모달을 닫았고, 그 후에 호출된 함수들(`generateQuiz`와 `setupGeminiButtons`)에서 결과를 표시하기 전에 모달이 사라지는 현상이 계속 발생하고 있습니다.
-
-이 문제를 근본적으로 해결하려면 **`callGemini`가 모달을 닫는 책임을 갖지 않도록** 해야 합니다. 대신 `callGemini`를 호출하는 함수가 응답을 성공적으로 받으면 직접 모달을 닫거나 새로운 내용으로 업데이트해야 합니다.
-
-아래는 이 문제를 해결하기 위해 `callGemini` 함수에서 `hideModal()` 호출을 제거하고, `generateQuiz`와 `setupGeminiButtons` 함수에 모달을 업데이트하는 코드를 추가한 최종 코드입니다.
-
-### **전체 코드**
-
-````javascript
 // --- 데이터 영역 ---
 // 데이터는 photographyData.js 파일에서 로드됩니다.
 
