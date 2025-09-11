@@ -8,23 +8,25 @@ exports.handler = async (event) => {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-pro" });
   try {
-    const body = JSON.parse(event.body);
-    const prompt = body.contents[0].parts[0].text;
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
+    const { contents, generationConfig } = JSON.parse(event.body);
+    const request = {
+      contents,
+      ...(generationConfig && { generationConfig })
+    };
+    const result = await model.generateContent(request);
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "application/json",
         "Cache-Control": "public, max-age=86400, s-maxage=86400"
       },
-      body: JSON.stringify({
-        candidates: [{ content: { parts: [{ text: text }] } }]
-      })
+      body: JSON.stringify(result.response)
     };
   } catch (error) {
     console.error("API call error:", error);
-    return { statusCode: 500, body: JSON.stringify({ error: 'Failed to generate content.' }) };
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Failed to generate content.' })
+    };
   }
 };
