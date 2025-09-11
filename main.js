@@ -652,10 +652,11 @@ function hideModal() {
   }, 300);
 }
 
-async function callGemini(prompt, useSchema = false) {
+async function callGemini(prompt, useSchema = false, loadingTitle = "AI 응답 생성 중") {
   controller = new AbortController();
   abortedByUser = false;
 
+  modalTitle.textContent = loadingTitle;
   showModal();
   try {
     const payload = {
@@ -730,8 +731,6 @@ async function callGemini(prompt, useSchema = false) {
 async function generateQuiz() {
   const activeLink = document.querySelector(".nav-item.active");
   const category = activeLink ? activeLink.dataset.category : "all";
-  const categoryName = activeLink ? activeLink.textContent : "전체";
-  modalTitle.textContent = `${categoryName} 퀴즈`;
   let contentForQuiz = [];
   if (
     ["home", "visualization", "all", "cms"].includes(category) ||
@@ -749,7 +748,7 @@ async function generateQuiz() {
     .map((item) => item.q)
     .join(", ");
   const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
-  const responseText = await callGemini(prompt, true);
+  const responseText = await callGemini(prompt, true, "AI 퀴즈 생성 중");
   if (!responseText) return;
   try {
     let parsedData = JSON.parse(responseText);
@@ -892,6 +891,7 @@ function createPracticeQuestions(count = 4) {
 
 function displayQuizQuestion() {
   const q = currentQuizData.questions[currentQuestionIndex];
+  modalTitle.textContent = "퀴즈";
   quizTimeLimit = currentQuestionIndex >= 3 ? 20 : 15;
   const optionsHtml = q.options
     .map(
@@ -1501,11 +1501,13 @@ function setupGeminiButtons() {
       const answer = e.target.dataset.a;
 
       const cacheKey = `${action}-${question}`;
-
-      modalTitle.textContent = `"${question}" ${action === "explain" ? "쉽게 이해하기" : "깊이 알아보기"}`;
+      const resultTitle = `"${question}" ${
+        action === "explain" ? "쉽게 이해하기" : "깊이 알아보기"
+      }`;
 
       const cachedResponse = localStorage.getItem(cacheKey);
       if (cachedResponse) {
+        modalTitle.textContent = resultTitle;
         modalBody.innerHTML = `<p>${cachedResponse.replace(/\n/g, "<br>")}</p>`;
         geminiModal.classList.remove("hidden");
         setTimeout(() => {
@@ -1523,8 +1525,10 @@ function setupGeminiButtons() {
       }
 
       if (prompt) {
-        const responseText = await callGemini(prompt, false);
+        const loadingTitle = action === "explain" ? "쉽게 설명" : "깊이 알아보기";
+        const responseText = await callGemini(prompt, false, loadingTitle);
         if (!responseText) return;
+        modalTitle.textContent = resultTitle;
         modalBody.innerHTML = `<p>${responseText.replace(/\n/g, "<br>")}</p>`;
         localStorage.setItem(cacheKey, responseText);
       }
