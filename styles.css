@@ -1,0 +1,372 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap");
+body {
+  font-family: "Noto Sans KR", sans-serif;
+  background-color: #f8f9fa;
+  color: #4a4a4a;
+}
+.nav-item {
+  transition: all 0.2s ease-in-out;
+}
+.nav-item.active {
+  background-color: #4a5568;
+  color: #ffffff;
+  transform: translateX(4px);
+}
+.nav-item:not(.active):hover {
+  background-color: #e2e8f0;
+  color: #2d3748;
+}
+.content-card {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  transition: box-shadow 0.3s ease;
+}
+.content-card:hover {
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -2px rgb(0 0 0 / 0.1);
+}
+
+/* --- 아코디언 UI 스타일 (시각화, CMS 페이지용) --- */
+.question {
+  cursor: pointer;
+}
+.answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.7s ease-in-out;
+}
+.answer.open {
+  max-height: 5000px; /* 충분한 높이 확보 */
+}
+.fa-chevron-down {
+  transition: transform 0.3s ease-in-out;
+}
+.question.open .fa-chevron-down {
+  transform: rotate(180deg);
+}
+
+/* --- 퀴즈 카드 플립 스타일 시작 --- */
+.quiz-card {
+  background-color: transparent;
+  border-radius: 12px;
+  aspect-ratio: 16 / 10;
+  perspective: 1000px;
+  cursor: pointer;
+}
+.quiz-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+}
+.quiz-card.is-flipped .quiz-card-inner {
+  transform: rotateY(180deg);
+}
+.quiz-card-front,
+.quiz-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.quiz-card-front {
+  background-color: #c4c8ce;
+  color: #394e6a;
+  font-size: 1rem;
+}
+.quiz-card-back {
+  background-color: #2d3748;
+  color: white;
+  transform: rotateY(180deg);
+  padding: 1.2rem;
+}
+.quiz-card-question {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.quiz-card-answer-text {
+  font-size: 1vw;
+  line-height: 1.5;
+  flex-grow: 1;
+  overflow-y: auto;
+  width: 100%;
+  max-height: 150px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  /* 새롭게 추가된 부분 */
+  background-color: rgba(0, 0, 0, 0.05); /* 불투명한 파란색 배경 */
+  padding: 1rem; /* 텍스트와 박스 경계 사이에 여백 추가 */
+  border-radius: 0.5rem; /* 박스 모서리를 둥글게 */
+}
+@keyframes new-animation {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 새로운 이모티콘 로더를 위한 스타일 */
+.rotating-icon-loader {
+  font-size: 3rem;
+  display: inline-block;
+  perspective: 1000px;
+  animation: flip-y 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes flip-y {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+/* 스크롤바 디자인 (webkit-based browsers) */
+.quiz-card-answer-text::-webkit-scrollbar {
+  width: 8px;
+}
+.quiz-card-answer-text::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+.quiz-card-answer-text::-webkit-scrollbar-thumb {
+  background: #a0aec0;
+  border-radius: 10px;
+}
+.quiz-card-answer-text::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+@media (max-width: 768px) {
+  .quiz-card-answer-text {
+    font-size: 5vw; /* 모바일 화면에서는 더 크게 */
+  }
+}
+.quiz-card-answer-text::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, and Opera */
+}
+/* --- 퀴즈 카드 플립 스타일 끝 --- */
+
+/* --- 모바일 모달 창 텍스트 크기 조정 --- */
+@media (max-width: 768px) {
+  #modalBody p {
+    white-space: pre-wrap; /* 공백과 줄바꿈을 유지하면서 자동 줄바꿈 */
+    text-align: justify; /* 양쪽 정렬 */
+    word-break: keep-all; /* 단어 단위로 줄바꿈 */
+    line-height: 1.6; /* 줄간격 추가 */
+    margin-bottom: 1rem; /* 문단 아래 여백 */
+  }
+}
+
+.chart-container {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  margin: auto;
+  height: 300px;
+  max-height: 40vh;
+}
+@media (min-width: 768px) {
+  .chart-container {
+    height: 400px;
+  }
+}
+
+.stop-btn {
+  transition: background-color 0.2s ease-in-out;
+}
+.stop-btn.active {
+  background-color: #4a5568;
+  color: white;
+}
+.diagram-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 120px;
+}
+.diagram-icon-box {
+  border: 2px solid #cbd5e1;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 110px;
+  height: 110px;
+}
+.profile-tag {
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+}
+.zone-block {
+  transition: all 0.2s ease-in-out;
+}
+.zone-block:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #a0aec0;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+.modal-overlay {
+  transition: opacity 0.3s ease;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+.modal-content {
+  transition: transform 0.3s ease;
+}
+
+.loading-container {
+  /* Flexbox를 사용하여 자식 요소를 중앙에 배치합니다. */
+  display: flex;
+  justify-content: center; /* 가로 중앙 정렬 */
+  align-items: center; /* 세로 중앙 정렬 */
+  width: 100%;
+  height: 100%;
+}
+
+/* rotating-icon-loader 스타일은 그대로 사용합니다. */
+.rotating-icon-loader {
+  font-size: 3rem; /* 아이콘 크기 */
+  display: inline-block;
+  perspective: 1000px;
+  animation: flip-y 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-style: preserve-3d;
+}
+
+@keyframes flip-y {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+.loader {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4a5568;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+.gemini-btn {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #f0f4f8;
+  transition: all 0.2s ease;
+}
+.gemini-btn:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+.today {
+  background-color: #e3f2fd; /* 배경색을 연한 파란색으로 */
+  border: 2px solid #2196f3; /* 테두리를 파란색으로 */
+  border-radius: 8px; /* 모서리를 둥글게 */
+}
+/* 퀴즈 옵션의 기본 스타일 */
+.quiz-option {
+  background-color: #f0f8ff; /* 옅은 푸른색 배경 */
+  border: 1px solid #d0e8f8;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease-in-out,
+    transform 0.2s ease-in-out;
+}
+
+/* 마우스 오버 시 효과 */
+.quiz-option:hover {
+  background-color: #e0f2ff;
+  transform: translateY(-2px);
+}
+
+/* 정답, 오답에 따른 색상 및 애니메이션 */
+.quiz-option.correct {
+  background-color: #d4edda; /* 연한 초록색 */
+  border-color: #4caf50;
+  animation: pulse-correct 0.5s ease-in-out;
+}
+
+.quiz-option.incorrect {
+  background-color: #f8d7da; /* 연한 빨간색 */
+  border-color: #dc3545;
+  animation: shake-incorrect 0.4s ease-in-out;
+}
+
+/* 정답 시 살짝 커지는 애니메이션 */
+@keyframes pulse-correct {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.01);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 오답 시 좌우로 흔들리는 애니메이션 */
+@keyframes shake-incorrect {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
