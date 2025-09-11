@@ -343,6 +343,26 @@ function escapeHtml(str) {
     }[c] || c));
 }
 
+function createFallbackQuiz(pool, count = 5) {
+    const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, count);
+    return {
+        questions: shuffled.map(item => {
+            const wrongPool = pool.filter(p => p !== item).sort(() => Math.random() - 0.5).slice(0, 4);
+            const options = [item, ...wrongPool].map(p => p.q).sort(() => Math.random() - 0.5);
+            const explanations = {};
+            [item, ...wrongPool].forEach(p => {
+                explanations[p.q] = simplify(p.a);
+            });
+            return {
+                question: simplify(item.a),
+                options,
+                answer: item.q,
+                explanations
+            };
+        })
+    };
+}
+
 async function generateQuiz() {
     const activeLink = document.querySelector(".nav-item.active");
     const category = activeLink ? activeLink.dataset.category : "all";
@@ -364,20 +384,17 @@ async function generateQuiz() {
     const dataLines = sample.map(item => `- ${item.q}: ${simplify(item.a)}`).join("\n");
     const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 이 정보를 바탕으로 난이도 5의 객관식 퀴즈 5문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 헷갈릴 수 있는 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
 
+    let parsed = null;
     const responseText = await callGemini(prompt, true, "퀴즈 생성 중...");
-    if (!responseText) {
-        return;
+    if (responseText) {
+        try {
+            parsed = JSON.parse(responseText);
+        } catch (_) {
+            parsed = null;
+        }
     }
-    let parsed;
-    try {
-        parsed = JSON.parse(responseText);
-    } catch (err) {
-        showModal('오류', `<p class="text-red-500">퀴즈 생성에 실패했습니다. (${err.message})</p>`, false);
-        return;
-    }
-    if (!parsed.questions || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-        showModal('오류', `<p class="text-red-500">AI로부터 유효한 퀴즈 데이터를 받지 못했습니다.</p>`, false);
-        return;
+    if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+        parsed = createFallbackQuiz(pool);
     }
     currentQuizData = parsed;
     currentQuestionIndex = 0;
