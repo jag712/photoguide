@@ -151,6 +151,8 @@ let timerStartTime;
 let timeRemaining;
 let isTimerPaused = false;
 let quizTimeLimit;
+let timerInterval;
+let quizTotalMs;
 
 function createCalendar(year, month, events = {}) {
     const today = new Date();
@@ -321,43 +323,44 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
     }
 }
 
-async function generateQuiz() {
+function simplify(text) {
+    if (!text) return "";
+    return text.replace(/\([^)]*\)/g, "").split(/[.]/)[0].trim();
+}
+
+function generateQuiz() {
     const activeLink = document.querySelector(".nav-item.active");
     const category = activeLink ? activeLink.dataset.category : "all";
-    let contentForQuiz = [];
+    let pool = [];
     if (["home", "visualization", "all", "cms"].includes(category)) {
-        Object.values(photographyData).forEach((cat) => contentForQuiz.push(...cat));
+        Object.values(photographyData).forEach(cat => pool.push(...cat));
     } else if (photographyData[category]) {
-        contentForQuiz = photographyData[category];
+        pool = photographyData[category];
     } else {
         showModal('오류', `<p class="text-red-500">선택된 카테고리에 퀴즈를 만들 데이터가 없습니다.</p>`, false);
         return;
     }
-    if (contentForQuiz.length === 0) {
+    if (pool.length < 4) {
         showModal('오류', `<p class="text-red-500">퀴즈를 만들 데이터가 부족합니다.</p>`, false);
         return;
     }
-    const shuffledTerms = contentForQuiz.sort(() => 0.5 - Math.random());
-    const topics = shuffledTerms.slice(0, 15).map((item) => item.q).join(", ");
-    const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
-    const responseText = await callGemini(prompt, true, `퀴즈 생성 중... ✨`);
-    if (!responseText) {
-        return;
-    }
-    try {
-        let parsedData = JSON.parse(responseText);
-        if (parsedData && Array.isArray(parsedData.questions) && parsedData.questions.length > 0) {
-            currentQuizData = parsedData;
-            currentQuestionIndex = 0;
-            score = 0;
-            displayQuizQuestion();
-        } else {
-            throw new Error("AI가 유효한 퀴즈 형식을 반환하지 못했습니다.");
-        }
-    } catch (e) {
-        console.error("Quiz parsing error:", e);
-        showModal('오류', `<p class="text-red-500">퀴즈를 생성하는 데 실패했습니다. AI가 유효한 퀴즈 형식을 반환하지 못했습니다.</p>`, false);
-    }
+    const shuffled = pool.sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, 5);
+    currentQuizData = {
+        questions: selected.map(item => {
+            const correct = item.q;
+            const wrongTerms = pool.filter(p => p !== item).sort(() => Math.random() - 0.5).slice(0, 3).map(p => p.q);
+            const options = [...wrongTerms, correct].sort(() => Math.random() - 0.5);
+            return {
+                question: `다음 설명에 맞는 용어는 무엇인가요? ${simplify(item.a)}`,
+                options,
+                answer: correct
+            };
+        })
+    };
+    currentQuestionIndex = 0;
+    score = 0;
+    displayQuizQuestion();
 }
 
 function generatePractice() {
@@ -475,88 +478,89 @@ function handleQuizOptionClick(e) {
     if (selectedOptionEl.classList.contains("selected")) return;
     modalBody.querySelectorAll(".quiz-option").forEach(opt => opt.classList.remove("selected"));
     selectedOptionEl.classList.add("selected");
-    clearTimeout(quizTimer);
     toggleTimer(true);
     checkQuizAnswer(false, selectedOptionEl);
 }
 
 function startTimer() {
     isTimerPaused = false;
+    quizTotalMs = quizTimeLimit * 1000;
+    timeRemaining = quizTotalMs;
     timerStartTime = Date.now();
     const timerBar = document.getElementById("quizTimerBar");
     timerBar.style.width = "100%";
-    timerBar.style.transition = `width linear ${timeRemaining / 1000}s`;
-    timerBar.style.width = "0%";
     clearTimeout(quizTimer);
+    clearInterval(timerInterval);
     quizTimer = setTimeout(() => {
+        clearInterval(timerInterval);
         checkQuizAnswer(true, null);
     }, timeRemaining);
+    timerInterval = setInterval(() => {
+        const elapsed = Date.now() - timerStartTime;
+        const remain = Math.max(timeRemaining - elapsed, 0);
+        timerBar.style.width = `${(remain / quizTotalMs) * 100}%`;
+        if (remain <= 0) {
+            clearInterval(timerInterval);
+        }
+    }, 100);
 }
 
 function toggleTimer(forcePause = false) {
-  const timerIcon = document.getElementById("timerIcon");
-  const timerBar = document.getElementById("quizTimerBar");
-  const totalMs = quizTimeLimit * 1000;
+    const timerIcon = document.getElementById("timerIcon");
+    const timerBar = document.getElementById("quizTimerBar");
 
-  const pause = () => {
-    // 경과 시간 반영
-    const elapsed = Date.now() - timerStartTime;
-    timeRemaining = Math.max(0, timeRemaining - elapsed);
+    const pause = () => {
+        const elapsed = Date.now() - timerStartTime;
+        timeRemaining = Math.max(0, timeRemaining - elapsed);
+        isTimerPaused = true;
+        clearTimeout(quizTimer);
+        clearInterval(timerInterval);
+        timerIcon.classList.remove("fa-pause");
+        timerIcon.classList.add("fa-play");
+        timerBar.style.width = `${(timeRemaining / quizTotalMs) * 100}%`;
+    };
 
-    isTimerPaused = true;
-    clearTimeout(quizTimer);
+    const resume = () => {
+        if (timeRemaining <= 0) {
+            checkQuizAnswer(true, null);
+            return;
+        }
+        isTimerPaused = false;
+        timerIcon.classList.remove("fa-play");
+        timerIcon.classList.add("fa-pause");
+        timerStartTime = Date.now();
+        clearTimeout(quizTimer);
+        clearInterval(timerInterval);
+        quizTimer = setTimeout(() => {
+            clearInterval(timerInterval);
+            checkQuizAnswer(true, null);
+        }, timeRemaining);
+        timerInterval = setInterval(() => {
+            const elapsed = Date.now() - timerStartTime;
+            const remain = Math.max(timeRemaining - elapsed, 0);
+            timerBar.style.width = `${(remain / quizTotalMs) * 100}%`;
+            if (remain <= 0) {
+                clearInterval(timerInterval);
+            }
+        }, 100);
+    };
 
-    // 아이콘 변경
-    timerIcon.classList.remove("fa-pause");
-    timerIcon.classList.add("fa-play");
-
-    // 진행 바 정지 + 현재 비율로 고정
-    timerBar.style.transition = "none";
-    const remainRatio = totalMs > 0 ? (timeRemaining / totalMs) : 0;
-    timerBar.style.width = `${remainRatio * 100}%`;
-  };
-
-  const resume = () => {
-    if (timeRemaining <= 0) {
-      // 이미 끝난 상태면 바로 채점
-      checkQuizAnswer(true, null);
-      return;
+    if (forcePause) {
+        if (!isTimerPaused) pause();
+        return;
     }
 
-    isTimerPaused = false;
-    timerIcon.classList.remove("fa-play");
-    timerIcon.classList.add("fa-pause");
-
-    timerStartTime = Date.now();
-
-    // 남은 시간만큼 다시 0%까지 애니메이션
-    timerBar.style.transition = `width linear ${timeRemaining / 1000}s`;
-    // reflow 강제해서 transition 적용 보장
-    void timerBar.offsetWidth;
-    timerBar.style.width = "0%";
-
-    clearTimeout(quizTimer);
-    quizTimer = setTimeout(() => {
-      checkQuizAnswer(true, null);
-    }, timeRemaining);
-  };
-
-  // 강제 일시정지 요청이 오면 무조건 정지
-  if (forcePause) {
-    if (!isTimerPaused) pause();
-    return;
-  }
-
-  // 토글 동작
-  if (isTimerPaused) {
-    resume();
-  } else {
-    pause();
-  }
+    if (isTimerPaused) {
+        resume();
+    } else {
+        pause();
+    }
 }
 
 
 function checkQuizAnswer(isTimeUp = false, selectedOptionEl) {
+    clearTimeout(quizTimer);
+    clearInterval(timerInterval);
     const q = currentQuizData.questions[currentQuestionIndex];
     const correctAnswer = q.answer;
     let isCorrect = false;
