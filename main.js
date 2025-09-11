@@ -776,15 +776,23 @@ function generatePractice() {
   modalTitle.textContent = "실전 연습";
   const html =
     questions
-      .map(
-        (q, idx) => `
+      .map((q, idx) => {
+        const metaParts = [
+          `난이도: ${q.difficulty}`,
+          `태그: ${q.tags?.length ? q.tags.join(", ") : "없음"}`,
+        ];
+        if (q.era) metaParts.push(`시대: ${q.era}`);
+        metaParts.push(
+          `스킬: ${q.skills?.length ? q.skills.join(", ") : "없음"}`,
+        );
+        return `
         <div class="mb-4">
           <p class="font-semibold">${idx + 1}. ${q.question}</p>
           <input type="text" class="practice-input w-full p-2 mt-1 border rounded" data-answer="${q.answer.replace(/"/g, '&quot;')}">
-          <p class="text-xs text-gray-500 mt-1">난이도: ${q.difficulty} | 태그: ${q.tags.join(", ")}${q.era ? ` | 시대: ${q.era}` : ""} | 스킬: ${q.skills.join(", ")}</p>
+          <p class="text-xs text-gray-500 mt-1">${metaParts.join(" | ")}</p>
           <p class="result text-sm mt-1 hidden"></p>
-        </div>`
-      )
+        </div>`;
+      })
       .join("") +
     '<button id="gradePractice" class="w-full bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 mt-2">채점하기</button>';
 
