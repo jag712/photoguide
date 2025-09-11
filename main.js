@@ -915,4 +915,3 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !geminiModal.classList.contains("hidden")) hideModal();
 });
 renderContent("home");
-````
