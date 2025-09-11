@@ -494,46 +494,67 @@ function startTimer() {
 }
 
 function toggleTimer(forcePause = false) {
-    const timerIcon = document.getElementById("timerIcon");
-    const timerBar = document.getElementById("quizTimerBar");
-    
-    // 현재 애니메이션 상태를 가져옵니다.
-    const currentWidth = timerBar.offsetWidth;
-    const parentWidth = timerBar.parentElement.offsetWidth;
-    const currentProgress = (currentWidth / parentWidth);
+  const timerIcon = document.getElementById("timerIcon");
+  const timerBar = document.getElementById("quizTimerBar");
+  const totalMs = quizTimeLimit * 1000;
 
-    if (isTimerPaused || forcePause) {
-        // 일시 정지 로직
-        if (!isTimerPaused) { // 이미 정지 상태가 아닐 때만 계산
-            const elapsed = Date.now() - timerStartTime;
-            timeRemaining = timeRemaining - elapsed;
-        }
-        isTimerPaused = true;
-        
-        timerIcon.classList.remove("fa-pause");
-        timerIcon.classList.add("fa-play");
-        clearTimeout(quizTimer);
-        
-        // 애니메이션을 즉시 정지하고 현재 진행 상태를 유지합니다.
-        timerBar.style.transition = "none";
-        timerBar.style.width = `${(1-currentProgress)*100}%`;
-    } else {
-        // 재시작 로직
-        isTimerPaused = false;
-        
-        timerIcon.classList.remove("fa-play");
-        timerIcon.classList.add("fa-pause");
-        timerStartTime = Date.now();
-        
-        // 남은 시간부터 애니메이션 재시작
-        timerBar.style.transition = `width linear ${timeRemaining / 1000}s`;
-        timerBar.style.width = "0%";
-        
-        quizTimer = setTimeout(() => {
-            checkQuizAnswer(true, null);
-        }, timeRemaining);
+  const pause = () => {
+    // 경과 시간 반영
+    const elapsed = Date.now() - timerStartTime;
+    timeRemaining = Math.max(0, timeRemaining - elapsed);
+
+    isTimerPaused = true;
+    clearTimeout(quizTimer);
+
+    // 아이콘 변경
+    timerIcon.classList.remove("fa-pause");
+    timerIcon.classList.add("fa-play");
+
+    // 진행 바 정지 + 현재 비율로 고정
+    timerBar.style.transition = "none";
+    const remainRatio = totalMs > 0 ? (timeRemaining / totalMs) : 0;
+    timerBar.style.width = `${remainRatio * 100}%`;
+  };
+
+  const resume = () => {
+    if (timeRemaining <= 0) {
+      // 이미 끝난 상태면 바로 채점
+      checkQuizAnswer(true, null);
+      return;
     }
+
+    isTimerPaused = false;
+    timerIcon.classList.remove("fa-play");
+    timerIcon.classList.add("fa-pause");
+
+    timerStartTime = Date.now();
+
+    // 남은 시간만큼 다시 0%까지 애니메이션
+    timerBar.style.transition = `width linear ${timeRemaining / 1000}s`;
+    // reflow 강제해서 transition 적용 보장
+    void timerBar.offsetWidth;
+    timerBar.style.width = "0%";
+
+    clearTimeout(quizTimer);
+    quizTimer = setTimeout(() => {
+      checkQuizAnswer(true, null);
+    }, timeRemaining);
+  };
+
+  // 강제 일시정지 요청이 오면 무조건 정지
+  if (forcePause) {
+    if (!isTimerPaused) pause();
+    return;
+  }
+
+  // 토글 동작
+  if (isTimerPaused) {
+    resume();
+  } else {
+    pause();
+  }
 }
+
 
 function checkQuizAnswer(isTimeUp = false, selectedOptionEl) {
     const q = currentQuizData.questions[currentQuestionIndex];
