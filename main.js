@@ -634,7 +634,6 @@ function hideModal() {
 }
 
 async function callGemini(prompt, useSchema = false) {
-  showModal();
   try {
     const payload = {
       contents: [{ parts: [{ text: prompt }] }],
@@ -749,6 +748,7 @@ async function generateQuiz() {
     .map((item) => item.q)
     .join(", ");
   const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
+  showModal();
   const responseText = await callGemini(prompt, true);
   try {
     let parsedData = JSON.parse(responseText);
@@ -1490,6 +1490,7 @@ function setupGeminiButtons() {
       }
 
       if (prompt) {
+        showModal();
         const responseText = await callGemini(prompt, false);
         modalBody.innerHTML = `<p>${responseText.replace(/\n/g, "<br>")}</p>`;
         localStorage.setItem(cacheKey, responseText);
