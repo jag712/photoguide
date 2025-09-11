@@ -209,16 +209,30 @@ let iconChangeInterval;
 let controller;
 let abortedByUser = false;
 
-function showModal(title, contentHtml = '', showLoading = true) {
+function showModal(title, contentHtml = '', showLoading = false) {
     const icons = ["❓", "🤔", "💡", "😊"];
     modalTitle.textContent = title;
     modalBody.innerHTML = contentHtml;
 
     if (showLoading) {
+        const loadingMessages = [
+            "촬영실기 준비 중... 📸",
+            "포트폴리오 촬영 중... 🧑‍🎨",
+            "친구랑 모의 면접 중... 🗣️",
+            "중대 글 쓰는 중... ✍️",
+            "촬실한다고 가놓고 폰하는 중... 📱"
+        ];
+
         const loadingContainer = document.createElement("div");
         loadingContainer.className = "loading-container flex flex-col items-center";
+
+        const loadingText = document.createElement("p");
+        loadingText.className = "text-xl font-semibold text-gray-700 mb-4";
+
         const rotatingIcon = document.createElement("div");
         rotatingIcon.className = "rotating-icon-loader";
+
+        loadingContainer.appendChild(loadingText);
         loadingContainer.appendChild(rotatingIcon);
 
         const cancelBtn = document.createElement("button");
@@ -233,6 +247,9 @@ function showModal(title, contentHtml = '', showLoading = true) {
         modalBody.innerHTML = '';
         modalBody.appendChild(loadingContainer);
         modalBody.appendChild(cancelBtn);
+
+        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+        loadingText.innerText = randomMessage;
 
         rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
         iconChangeInterval = setInterval(() => {
@@ -262,68 +279,17 @@ async function callGemini(prompt, useSchema = false) {
     controller = new AbortController();
     abortedByUser = false;
 
- function showModal(title, contentHtml = '', showLoading = false) {
-    const icons = ["❓", "🤔", "💡", "😊"];
-    modalTitle.textContent = title;
-    modalBody.innerHTML = contentHtml;
+    const payload = {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        ...(useSchema ? { generationConfig: { responseMimeType: "application/json" } } : {})
+    };
 
-    if (showLoading) {
-        const loadingMessages = [
-            "촬영실기 준비 중... 📸",
-            "포트폴리오 촬영 중... 🧑‍🎨",
-            "친구랑 모의 면접 중... 🗣️",
-            "중대 글 쓰는 중... ✍️",
-            "촬실한다고 가놓고 폰하는 중... 📱"
-        ];
-        
-        const loadingContainer = document.createElement("div");
-        loadingContainer.className = "loading-container flex flex-col items-center";
-        
-        const loadingText = document.createElement("p");
-        loadingText.className = "text-xl font-semibold text-gray-700 mb-4";
-        
-        const rotatingIcon = document.createElement("div");
-        rotatingIcon.className = "rotating-icon-loader";
-        
-        loadingContainer.appendChild(loadingText);
-        loadingContainer.appendChild(rotatingIcon);
-
-        const cancelBtn = document.createElement("button");
-        cancelBtn.textContent = "취소";
-        cancelBtn.className = "mt-4 bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800";
-        cancelBtn.addEventListener("click", () => {
-            abortedByUser = true;
-            controller.abort();
-            hideModal();
-        });
-
-        modalBody.innerHTML = '';
-        modalBody.appendChild(loadingContainer);
-        modalBody.appendChild(cancelBtn);
-
-        // 메시지와 아이콘을 무작위로 선택하여 표시
-        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
-        loadingText.innerText = randomMessage;
-        
-        rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
-        iconChangeInterval = setInterval(() => {
-            rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
-        }, 1000);
-    }
-    
-    geminiModal.classList.remove("hidden");
-    setTimeout(() => {
-        geminiModal.classList.remove("opacity-0");
-        geminiModal.querySelector(".modal-content").classList.remove("scale-95");
-    }, 10);
-}
-
+    try {
+        showModal('생각 중...', '', true);
 
         const timeoutId = setTimeout(() => {
             controller.abort();
-            hideModal();
-            showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`, false);
-        }, 60000); // 타임아웃 60초로 연장
+        }, 60000);
 
         const response = await fetch(PROXY_URL, {
             method: "POST",
@@ -350,6 +316,7 @@ async function callGemini(prompt, useSchema = false) {
             text = text.substring(7, text.length - 3).trim();
         }
 
+        hideModal();
         return text;
     } catch (error) {
         if (error.name === "AbortError" && abortedByUser) {
@@ -360,11 +327,8 @@ async function callGemini(prompt, useSchema = false) {
         const errorMessage = (error.name === "AbortError")
             ? "요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요."
             : `AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.<br>(${error.message})`;
-        showModal('오류', `<p class="text-red-500">${errorMessage}</p>`, false);
+        showModal('오류', `<p class="text-red-500">${errorMessage}</p>`);
         return null;
-    } finally {
-        // 성공적으로 응답을 받았을 경우에만 hideModal을 호출
-        // 오류 처리 부분에서 이미 hideModal을 호출했으므로 여기서는 제거
     }
 }
 
@@ -396,18 +360,7 @@ async function generateQuiz() {
     const shuffledTerms = contentForQuiz.sort(() => 0.5 - Math.random());
     const topics = shuffledTerms.slice(0, 15).map((item) => item.q).join(", ");
     
-    const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 다음 JSON 형식으로 반환해줘. 단, JSON 데이터 외에는 어떤 추가적인 설명도 포함하면 안 돼.
-    
-    {
-      "questions": [
-        {
-          "question": "질문1",
-          "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
-          "answer": "정답"
-        },
-        ...
-      ]
-    }`;
+    const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 결과는 질문, 4개의 선택지, 정답을 포함한 JSON 객체로만 반환하고 다른 설명은 포함하지 마. 형식은 {"questions":[{"question":"...","options":["..."],"answer":"..."}]} 이어야 해.`;
 
     const responseText = await callGemini(prompt, true);
     if (!responseText) return;
@@ -892,11 +845,11 @@ function setupGeminiButtons() {
             const answer = e.target.dataset.a;
 
             const cacheKey = `${action}-${question}`;
-            modalTitle.textContent = `"${question}" ${action === "explain" ? "쉽게 이해하기" : "깊이 알아보기"}`;
-            
+            const resultTitle = `"${question}" ${action === "explain" ? "쉽게 이해하기" : "깊이 알아보기"}`;
+
             const cachedResponse = localStorage.getItem(cacheKey);
             if (cachedResponse) {
-                showModal(modalTitle.textContent, `<p>${cachedResponse.replace(/\n/g, "<br>")}</p>`, false);
+                showModal(resultTitle, `<p>${cachedResponse.replace(/\n/g, "<br>")}</p>`);
                 return;
             }
 
@@ -910,7 +863,7 @@ function setupGeminiButtons() {
             if (prompt) {
                 const responseText = await callGemini(prompt, false);
                 if (responseText) {
-                    modalBody.innerHTML = `<p>${responseText.replace(/\n/g, "<br>")}</p>`;
+                    showModal(resultTitle, `<p>${responseText.replace(/\n/g, "<br>")}</p>`);
                     localStorage.setItem(cacheKey, responseText);
                 }
             }
