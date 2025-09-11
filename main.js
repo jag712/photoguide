@@ -328,7 +328,7 @@ function simplify(text) {
     return text.replace(/\([^)]*\)/g, "").split(/[.]/)[0].trim();
 }
 
-function generateQuiz() {
+async function generateQuiz() {
     const activeLink = document.querySelector(".nav-item.active");
     const category = activeLink ? activeLink.dataset.category : "all";
     let pool = [];
@@ -344,20 +344,27 @@ function generateQuiz() {
         showModal('오류', `<p class="text-red-500">퀴즈를 만들 데이터가 부족합니다.</p>`, false);
         return;
     }
-    const shuffled = pool.sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, 5);
-    currentQuizData = {
-        questions: selected.map(item => {
-            const correct = item.q;
-            const wrongTerms = pool.filter(p => p !== item).sort(() => Math.random() - 0.5).slice(0, 3).map(p => p.q);
-            const options = [...wrongTerms, correct].sort(() => Math.random() - 0.5);
-            return {
-                question: `다음 설명에 맞는 용어는 무엇인가요? ${simplify(item.a)}`,
-                options,
-                answer: correct
-            };
-        })
-    };
+
+    const sample = pool.sort(() => Math.random() - 0.5).slice(0, 8);
+    const dataLines = sample.map(item => `- ${item.q}: ${simplify(item.a)}`).join("\n");
+    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 이 정보를 바탕으로 5개의 객관식 퀴즈를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 다른 용어 3개를 사용해 총 4개의 선택지를 제공해야 해. 결과는 question, options, answer 필드를 가진 JSON으로만 응답해줘.\n\n${dataLines}`;
+
+    const responseText = await callGemini(prompt, true, "퀴즈 생성 중...");
+    if (!responseText) {
+        return;
+    }
+    let parsed;
+    try {
+        parsed = JSON.parse(responseText);
+    } catch (err) {
+        showModal('오류', `<p class="text-red-500">퀴즈 생성에 실패했습니다. (${err.message})</p>`, false);
+        return;
+    }
+    if (!parsed.questions || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+        showModal('오류', `<p class="text-red-500">AI로부터 유효한 퀴즈 데이터를 받지 못했습니다.</p>`, false);
+        return;
+    }
+    currentQuizData = parsed;
     currentQuestionIndex = 0;
     score = 0;
     displayQuizQuestion();
@@ -829,7 +836,7 @@ function setupGeminiButtons() {
                 prompt = `사진학 용어인 "${question}"에 대해 입시생의 암기하기 쉽게 이해하기 쉽고 간결하게 설명해줘. 다음 설명을 참고하여, 중요한 개념을 놓치지 않으면서도 면접에서 자연스럽게 활용할 수 있도록 정리해줘 최대 300자 내외. 참고 설명: ${answer}`;
             } else if (action === "deepen") {
                 loadingTitle = "깊이 알아보기 중... 🧐";
-                prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 심화 개념, 역사적 배경, 또는 실전 촬영 팁을 포함하여 전문가 수준의 추가 정보를 제공해줘 작가의 경우 대표 사진도 보여줘 600자 내외로. 설명: ${answer}`;
+                prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 역사적 배경과 전문가가 알아야 할 추가 정보를 제공해줘. 사진 작가인 경우에는 촬영 팁 대신 대표작, 대표 사진집 또는 전시의 제목만 나열해 검색할 수 있게 해줘. 설명: ${answer}`;
             }
             if (prompt) {
                 const responseText = await callGemini(prompt, false, loadingTitle);
