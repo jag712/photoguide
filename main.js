@@ -604,7 +604,6 @@ function showModal() {
 
   const rotatingIcon = document.createElement("div");
   rotatingIcon.className = "rotating-icon-loader";
-
   loadingContainer.appendChild(rotatingIcon);
   loadingContainer.appendChild(cancelButton);
   modalBody.innerHTML = "";
