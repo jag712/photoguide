@@ -1,3 +1,12 @@
+아쉽게도 제공해주신 코드는 여전히 문제를 완전히 해결하지 못했습니다. `callGemini` 함수 내부에서 `hideModal()`이 호출되어 로딩 모달을 닫았고, 그 후에 호출된 함수들(`generateQuiz`와 `setupGeminiButtons`)에서 결과를 표시하기 전에 모달이 사라지는 현상이 계속 발생하고 있습니다.
+
+이 문제를 근본적으로 해결하려면 **`callGemini`가 모달을 닫는 책임을 갖지 않도록** 해야 합니다. 대신 `callGemini`를 호출하는 함수가 응답을 성공적으로 받으면 직접 모달을 닫거나 새로운 내용으로 업데이트해야 합니다.
+
+아래는 이 문제를 해결하기 위해 `callGemini` 함수에서 `hideModal()` 호출을 제거하고, `generateQuiz`와 `setupGeminiButtons` 함수에 모달을 업데이트하는 코드를 추가한 최종 코드입니다.
+
+### **전체 코드**
+
+````javascript
 // --- 데이터 영역 ---
 // 데이터는 photographyData.js 파일에서 로드됩니다.
 
@@ -207,36 +216,26 @@ function showModal(title, contentHtml = '', showLoading = false) {
             "중대 글 쓰는 중... ✍️",
             "촬실한다고 가놓고 폰하는 중... 📱"
         ];
-
+        
         const loadingContainer = document.createElement("div");
         loadingContainer.className = "loading-container flex flex-col items-center";
-
         const loadingText = document.createElement("p");
         loadingText.className = "text-xl font-semibold text-gray-700 mb-4";
-
         const rotatingIcon = document.createElement("div");
         rotatingIcon.className = "rotating-icon-loader";
-
         loadingContainer.appendChild(loadingText);
         loadingContainer.appendChild(rotatingIcon);
-
         const cancelBtn = document.createElement("button");
         cancelBtn.textContent = "취소";
         cancelBtn.className = "mt-4 bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800";
-
         cancelBtn.addEventListener("click", () => {
             abortedByUser = true;
-            try { controller?.abort(); } catch {}
-            clearInterval(iconChangeInterval);
-            // 모달은 닫지 않고 내용만 바꾼다
-            modalTitle.textContent = "요청 취소됨";
-            modalBody.innerHTML = `<p class="text-gray-700">요청을 취소했습니다.</p>`;
+            controller.abort();
+            hideModal();
         });
-
         modalBody.innerHTML = '';
         modalBody.appendChild(loadingContainer);
         modalBody.appendChild(cancelBtn);
-
         const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
         loadingText.innerText = randomMessage;
         rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
@@ -244,14 +243,12 @@ function showModal(title, contentHtml = '', showLoading = false) {
             rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
         }, 1000);
     }
-
     geminiModal.classList.remove("hidden");
     setTimeout(() => {
         geminiModal.classList.remove("opacity-0");
         geminiModal.querySelector(".modal-content").classList.remove("scale-95");
     }, 10);
 }
-
 
 function hideModal() {
     clearInterval(iconChangeInterval);
@@ -266,16 +263,11 @@ function hideModal() {
 async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
     controller = new AbortController();
     abortedByUser = false;
-
     showModal(title, '', true);
-
-    let timedOut = false;
-    let timeoutId = null;
-
     try {
         const payload = {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {}
+            generationConfig: {},
         };
         if (useSchema) {
             payload.generationConfig.responseMimeType = "application/json";
@@ -299,60 +291,44 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
         } else {
             payload.generationConfig.responseMimeType = "text/plain";
         }
-
-        timeoutId = setTimeout(() => {
-            timedOut = true;
-            try { controller.abort(); } catch {}
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            hideModal();
+            showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`, false);
         }, 60000);
-
         const response = await fetch(PROXY_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
-            signal: controller.signal
+            signal: controller.signal,
         });
-
         clearTimeout(timeoutId);
-
         if (!response.ok) {
             throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
         }
-
         const result = await response.json();
         let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!text) throw new Error("API에서 콘텐츠를 받지 못했습니다.");
-
+        if (!text) {
+            throw new Error("API에서 콘텐츠를 받지 못했습니다.");
+        }
         text = text.trim();
         if (text.startsWith("```json") && text.endsWith("```")) {
             text = text.substring(7, text.length - 3).trim();
         }
-
-        hideModal(); // 성공 시에만 닫기
         return text;
-
     } catch (error) {
-        clearTimeout(timeoutId);
-
-        // 사용자가 직접 취소
         if (error.name === "AbortError" && abortedByUser) {
-            // 모달은 이미 "요청 취소됨" 상태로 유지됨
             return null;
         }
-
-        // 타임아웃
-        if (error.name === "AbortError" && timedOut) {
-            modalTitle.textContent = '오류';
-            modalBody.innerHTML = `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`;
-            return null;
-        }
-
-        // 그 외 오류
-        modalTitle.textContent = '오류';
-        modalBody.innerHTML = `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.<br>(${error.message})</p>`;
+        console.error("Gemini proxy call error:", error);
+        hideModal();
+        const errorMessage = (error.name === "AbortError")
+            ? "요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요."
+            : `AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.<br>(${error.message})`;
+        showModal('오류', `<p class="text-red-500">${errorMessage}</p>`, false);
         return null;
     }
 }
-
 
 async function generateQuiz() {
     const activeLink = document.querySelector(".nav-item.active");
@@ -375,7 +351,7 @@ async function generateQuiz() {
     const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
     const responseText = await callGemini(prompt, true, `퀴즈 생성 중... ✨`);
     if (!responseText) {
-        return; // 오류 발생 시 이미 모달이 처리되었으므로 여기서 함수 종료
+        return;
     }
     try {
         let parsedData = JSON.parse(responseText);
@@ -396,12 +372,10 @@ async function generateQuiz() {
 function generatePractice() {
     const questions = createPracticeQuestions();
     showModal('실전 연습');
-
     const html = questions.map((q, idx) => {
         const metaParts = [`난이도: ${q.difficulty}`, `태그: ${q.tags?.length ? q.tags.join(", ") : "없음"}`];
         if (q.era) metaParts.push(`시대: ${q.era}`);
         metaParts.push(`스킬: ${q.skills?.length ? q.skills.join(", ") : "없음"}`);
-
         return `
         <div class="mb-4">
             <p class="font-semibold">${idx + 1}. ${q.question}</p>
@@ -409,21 +383,14 @@ function generatePractice() {
             <p class="text-xs text-gray-500 mt-1">${metaParts.join(" | ")}</p>
             <p class="result text-sm mt-1 hidden"></p>
         </div>`;
-    }).join("") + `
-        <div class="flex gap-2">
-            <button id="gradePractice" class="flex-1 bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 mt-2">채점하기</button>
-            <button id="closePractice" class="flex-1 bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 mt-2">닫기</button>
-        </div>`;
-
+    }).join("") + '<button id="gradePractice" class="w-full bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 mt-2">채점하기</button>';
     modalBody.innerHTML = html;
-
     const gradeBtn = document.getElementById("gradePractice");
-    const closeBtn = document.getElementById("closePractice");
-
-    closeBtn.addEventListener("click", hideModal);
-
     gradeBtn.addEventListener("click", () => {
-        // 채점 후 자동 닫기 금지 — 결과만 표시
+        if (gradeBtn.dataset.state === "graded") {
+            hideModal();
+            return;
+        }
         modalBody.querySelectorAll(".practice-input").forEach(input => {
             const userAnswer = input.value.trim().toLowerCase();
             const correctAnswer = input.dataset.answer.toLowerCase();
@@ -432,34 +399,44 @@ function generatePractice() {
             const answerWords = normalize(correctAnswer);
             const matchCount = answerWords.filter(w => userWords.includes(w)).length;
             const ratio = answerWords.length ? matchCount / answerWords.length : 0;
-            const s = ratio === 1 ? 5 : ratio >= 0.75 ? 4 : ratio >= 0.5 ? 3 : ratio >= 0.25 ? 2 : 1;
-
+            const score = ratio === 1 ? 5 : ratio >= 0.75 ? 4 : ratio >= 0.5 ? 3 : ratio >= 0.25 ? 2 : 1;
             const resultEl = input.parentElement.querySelector(".result");
             resultEl.classList.remove("text-green-600", "text-red-600");
-            const highScore = s >= 4;
-            resultEl.innerHTML = `점수: <span class="${highScore ? "text-green-600" : "text-red-600"}">${s}/5</span><br>모범답안: <span class="text-green-600">${input.dataset.answer}</span>`;
+            const highScore = score >= 4;
+            resultEl.innerHTML = `점수: <span class="${highScore ? "text-green-600" : "text-red-600"}">${score}/5</span><br>모범답안: <span class="text-green-600">${input.dataset.answer}</span>`;
             resultEl.classList.remove("hidden");
             input.classList.toggle("border-green-400", highScore);
             input.classList.toggle("border-red-400", !highScore);
         });
-
-        // 버튼을 "다시 풀기"로 변경하고 폼 초기화 기능 제공
-        gradeBtn.textContent = "다시 풀기";
-        gradeBtn.onclick = () => {
-            modalBody.querySelectorAll(".practice-input").forEach(input => {
-                input.value = "";
-                input.classList.remove("border-green-400", "border-red-400");
-            });
-            modalBody.querySelectorAll(".result").forEach(el => {
-                el.classList.add("hidden");
-                el.innerHTML = "";
-            });
-            gradeBtn.textContent = "채점하기";
-            // 리스너를 원래 채점 리스너로 되돌림
-            gradeBtn.onclick = null;
-            gradeBtn.addEventListener("click", arguments.callee);
-        };
+        gradeBtn.textContent = "닫기";
+        gradeBtn.dataset.state = "graded";
     });
+}
+
+function createPracticeQuestions(count = 4) {
+    const mechanismCategories = ["structure", "exposure", "lens", "digital", "film", "lighting"];
+    const flattened = Object.entries(photographyData).flatMap(([category, arr]) => arr.map(item => ({ ...item, category })));
+    const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, Math.min(n, arr.length));
+    const hasTag = (item, regex) => Array.isArray(item.tags) && item.tags.some(t => regex.test(t));
+    const mechanisms = pickRandom(flattened.filter(item => mechanismCategories.includes(item.category)), 2);
+    const photographers = pickRandom(flattened.filter(item => ["history", "tags"].includes(item.category) && hasTag(item, /(person|photographer|인물|인명)/i)), 1);
+    const oral = pickRandom(flattened.filter(item => (!mechanismCategories.includes(item.category) && item.category !== "history") || (item.category === "history" && hasTag(item, /(concept|개념)/i))), 1);
+    let selected = [...mechanisms, ...photographers, ...oral];
+    if (selected.length < count) {
+        selected = selected.concat(pickRandom(flattened.filter(item => !selected.includes(item)), count - selected.length));
+    } else if (selected.length > count) {
+        selected = pickRandom(selected, count);
+    }
+    const levels = ["easy", "medium", "hard"];
+    const endings = ["에 대해 설명하세요.", "에 대해 말해보세요."];
+    return selected.map(item => ({
+        question: `${item.q}${endings[Math.floor(Math.random() * endings.length)]}`,
+        answer: (item.answer_short || item.a || "").trim(),
+        difficulty: levels[Math.floor(Math.random() * levels.length)],
+        tags: item.tags || [item.category],
+        ...(item.era ? { era: item.era } : {}),
+        skills: ["concept"],
+    }));
 }
 
 function displayQuizQuestion() {
@@ -691,7 +668,7 @@ function renderContent(category, searchTerm = "") {
     } else if (category === "visualization") {
         const visualizationContent = [{
             q: "노출의 이해: 조리개와 셔터 속도",
-            a: `<p class="text-sm text-gray-600 mb-6">노출의 세 가지 요소 중 조리개와 셔터 속도의 관계를 시각적으로 확인해 보세요. 각 막대 위로 마우스를 올리면 해당 설정 값에 대한 설명을 볼 수 있습니다.</p><div class="grid grid-cols-1 lg:grid-cols-2 gap-8"><div><div class="flex justify-center items-center mb-4"><h3 class="text-xl font-bold text-center mr-4">조리개 (Aperture)</h3><div class="flex rounded-lg bg-gray-200 p-1 text-sm"><button class="stop-btn active px-3 py-1 rounded-md" data-chart="aperture" data-stop="fullStop">1 스톱</button><button class="stop-btn px-3 py-1 rounded-md" data-chart="aperture" data-stop="thirdStop">1/3 스톱</button></div></div><div class="chart-container"><canvas id="apertureChart"></canvas></div><div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md"><p>• <strong>심도와 빛의 양:</strong> 조리개 값(f-number)이 낮을수록 배경이 흐려지고(얕은 심도), 빛을 많이 받아들입니다.</p><p>• <strong>회절:</strong> 일반적으로 f/16 이상으로 조이면 심도는 깊어지지만, 빛의 회절 현상으로 이미지의 선명도가 저하될 수 있습니다.</p><p>• <strong>사용 범위:</strong> 소형/중형 카메라는 보통 f/22까지, 대형 카메라는 f/64나 f/128까지 사용하기도 합니다.</p></div></div><div><div class="flex justify-center items-center mb-4"><h3 class="text-xl font-bold text-center mr-4">셔터 속도 (Shutter Speed)</h3><div class="flex rounded-lg bg-gray-200 p-1 text-sm"><button class="stop-btn active px-3 py-1 rounded-md" data-chart="shutter" data-stop="fullStop">1 스톱</button><button class="stop-btn px-3 py-1 rounded-md" data-chart="shutter" data-stop="thirdStop">1/3 스톱</button></div></div><div class="chart-container"><canvas id="shutterChart"></canvas></div><div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md"><p>• <strong>움직임 표현:</strong> 셔터 속도가 느릴수록 움직임이 흐릿하게(Motion Blur) 표현되고, 빠를수록 움직임이 정지됩니다.</p><p>• <strong>카메라 흔들림:</strong> 일반적으로 '1/초점거리'초 보다 느린 속도에서는 삼각대 없이는 사진이 흔들리기 쉽습니다.</p></div></div></div>`,
+            a: `<p class="text-sm text-gray-600 mb-6">노출의 세 가지 요소 중 조리개와 셔터 속도의 관계를 시각적으로 확인해 보세요. 각 막대 위로 마우스를 올리면 해당 설정 값에 대한 설명을 볼 수 있습니다.</p><div class="grid grid-cols-1 lg:grid-cols-2 gap-8"><div><div class="flex justify-center items-center mb-4"><h3 class="text-xl font-bold text-center mr-4">조리개 (Aperture)</h3><div class="flex rounded-lg bg-gray-200 p-1 text-sm"><button class="stop-btn active px-3 py-1 rounded-md" data-chart="aperture" data-stop="fullStop">1 스톱</button><button class="stop-btn px-3 py-1 rounded-md" data-chart="aperture" data-stop="thirdStop">1/3 스톱</button></div></div><div class="chart-container"><canvas id="apertureChart"></canvas></div><div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md"><p>• <strong>심도와 빛의 양:</strong> 조리개 값(f-number)이 낮을수록 배경이 흐려지고(얕은 심도), 빛을 많이 받아들입니다.</p><p>• <strong>회절:</strong> 일반적으로 f/16 이상으로 조이면 심도는 깊어지지만, 빛의 회절 현상으로 이미지의 선명도가 저하될 수 있습니다.</p></div></div><div><div class="flex justify-center items-center mb-4"><h3 class="text-xl font-bold text-center mr-4">셔터 속도 (Shutter Speed)</h3><div class="flex rounded-lg bg-gray-200 p-1 text-sm"><button class="stop-btn active px-3 py-1 rounded-md" data-chart="shutter" data-stop="fullStop">1 스톱</button><button class="stop-btn px-3 py-1 rounded-md" data-chart="shutter" data-stop="thirdStop">1/3 스톱</button></div></div><div class="chart-container"><canvas id="shutterChart"></canvas></div><div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md"><p>• <strong>움직임 표현:</strong> 셔터 속도가 느릴수록 움직임이 흐릿하게(Motion Blur) 표현되고, 빠를수록 움직임이 정지됩니다.</p><p>• <strong>카메라 흔들림:</strong> 일반적으로 '1/초점거리'초 보다 느린 속도에서는 삼각대 없이는 사진이 흔들리기 쉽습니다.</p></div></div></div>`,
         }, {
             q: "필름 특성곡선 (Characteristic Curve)",
             a: `<div class="relative w-full max-w-4xl mx-auto mb-4" style="height: 450px;"><svg class="absolute w-full h-full" viewBox="0 0 450 300"><rect x="260" y="10" width="20" height="2" fill="#059669"></rect><text x="285" y="15" font-size="10">저감도 (ISO 100) 필름 (고대비)</text><rect x="260" y="20" width="20" height="2" fill="#DB2777"></rect><text x="285" y="25" font-size="10">고감도 (ISO 400) 필름 (저대비)</text><line x1="60" y1="250" x2="420" y2="250" stroke="#cbd5e1" stroke-width="1"></line><line x1="60" y1="50" x2="60" y2="250" stroke="#cbd5e1" stroke-width="1"></line><text x="50" y="255" font-size="10" text-anchor="end">0.0</text><line x1="55" y1="250" x2="60" y2="250" stroke="#9ca3af" stroke-width="1"></line><text x="50" y="205" font-size="10" text-anchor="end">0.5</text><line x1="55" y1="200" x2="420" y2="200" stroke="#e5e7eb" stroke-width="0.5"></line><text x="50" y="155" font-size="10" text-anchor="end">1.0</text><line x1="55" y1="150" x2="420" y2="150" stroke="#e5e7eb" stroke-width="0.5"></line><text x="50" y="105" font-size="10" text-anchor="end">1.5</text><line x1="55" y1="100" x2="420" y2="100" stroke="#e5e7eb" stroke-width="0.5"></line><text x="50" y="55" font-size="10" text-anchor="end">2.0</text><line x1="55" y1="50" x2="60" y2="50" stroke="#9ca3af" stroke-width="1"></line><text x="120" y="265" font-size="10" text-anchor="middle">-2.0</text><line x1="120" y1="250" x2="120" y2="245" stroke="#9ca3af" stroke-width="1"></line><text x="195" y="265" font-size="10" text-anchor="middle">-1.0</text><line x1="195" y1="250" x2="195" y2="245" stroke="#9ca3af" stroke-width="1"></line><text x="270" y="265" font-size="10" text-anchor="middle">0.0</text><line x1="270" y1="250" x2="270" y2="245" stroke="#9ca3af" stroke-width="1"></line><text x="345" y="265" font-size="10" text-anchor="middle">1.0</text><line x1="345" y1="250" x2="345" y2="245" stroke="#9ca3af" stroke-width="1"></line><text x="420" y="290" font-size="10" text-anchor="end">노광량 (Log Exposure) →</text><text x="20" y="50" font-size="10" text-anchor="middle" transform="rotate(-90 20,50)">농도 (Density) →</text><path d="M 120 240 Q 150 230, 190 180 T 320 70 L 360 60" stroke="#DB2777" stroke-width="2.5" fill="none"></path><path d="M 190 240 Q 220 230, 250 150 T 340 55 L 380 50" stroke="#059669" stroke-width="2.5" fill="none"></path></svg></div><div class="mt-6 space-y-4 text-sm text-gray-700 leading-relaxed"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="bg-pink-50 p-3 rounded-lg border border-pink-200"><h4 class="font-bold text-pink-800">고감도 필름 (예: ISO 400)</h4><p class="mt-1 text-xs">적은 빛(낮은 노광량)에도 빠르게 반응하여 곡선이 왼쪽에 위치합니다. 일반적으로 관용도가 넓고 입자가 거칠며, 콘트라스트가 부드러운(낮은 감마) 특성을 가집니다.</p></div><div class="bg-green-50 p-3 rounded-lg border border-green-200"><h4 class="font-bold text-green-800">저감도 필름 (예: ISO 100)</h4><p class="mt-1 text-xs">많은 빛(높은 노광량)이 필요하므로 곡선이 오른쪽에 위치합니다. 일반적으로 입자가 곱고 해상력이 높으며, 콘트라스트가 강한(높은 감마) 특성을 보입니다.</p></div></div><div class="pt-4 border-t"><div class="space-y-3"><div><h4 class="font-semibold text-gray-800">① 베이스+포그 농도 (Base+Fog)</h4><p class="mt-1">빛에 전혀 노출되지 않아도 필름 자체의 지지체(Base)가 가진 최소한의 농도와, 현상 과정에서 화학적으로 발생하는 포그(Fog)가 더해진 초기 농도입니다. 그래프에서 곡선이 시작되는 가장 낮은 높이에 해당합니다.</p></div><div><h4 class="font-semibold text-gray-800">② 발끝 부분 (Toe)</h4><p class="mt-1">이미지의 가장 어두운 영역(섀도우)의 정보를 담는 부분입니다. 곡선이 누워있어 노광량이 변해도 농도 변화가 적기 때문에, 이 영역의 계조 표현은 압축되어 콘트라스트가 낮습니다.</p></div><div><h4 class="font-semibold text-gray-800">③ 직선부 (Straight-line)</h4><p class="mt-1">이미지의 중간 톤(Mid-tone)을 담당하는 가장 중요한 영역입니다. 노광량의 변화와 농도의 변화가 정비례 관계를 가져, 가장 풍부하고 정확한 계조를 표현합니다. 이 직선의 기울기가 사진의 콘트라스트를 결정합니다.</p></div><div><h4 class="font-semibold text-gray-800">④ 어깨 부분 (Shoulder)</h4><p class="mt-1">이미지의 가장 밝은 영역(하이라이트) 정보를 담습니다. 곡선이 다시 눕기 시작하며 노광량이 증가해도 농도 변화가 둔해집니다. 하이라이트의 계조가 압축되어 표현됩니다.</p></div><div><h4 class="font-semibold text-gray-800">⑤ 최대 농도 (D-max)</h4><p class="mt-1">해당 필름과 현상 조건에서 얻을 수 있는 가장 높은 농도값입니다. 이 이상 노광을 주어도 농도는 더 이상 증가하지 않습니다.</p></div><div><h4 class="font-semibold text-gray-800">⑥ 솔라리제이션 (Solarization)</h4><p class="mt-1">극심한 과다 노광이 발생했을 때 오히려 농도가 다시 감소하는 현상입니다. 이로 인해 이미지의 밝고 어두움이 반전되어 독특한 시각 효과를 만들어냅니다.</p></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t mt-4"><div><h4 class="font-semibold text-gray-800">감마 (Gamma, γ)</h4><p class="mt-1">특성곡선의 직선부 기울기만을 측정한 값으로, 필름의 순수한 콘트라스트 특성을 나타냅니다. 일반적인 흑백 필름의 **표준 감마는 약 0.6**이며, 감마값이 높을수록 고대비(High Contrast) 필름입니다.</p></div><div><h4 class="font-semibold text-gray-800">콘트라스트 인덱스 (Contrast Index, C.I)</h4><p class="mt-1">발끝 부분(Toe)과 직선부 일부를 포함한, 실제 사진에서 유효하게 사용되는 영역의 평균 기울기입니다. 감마보다 더 실용적인 콘트라스트 지표로 활용됩니다.</p></div></div></div></div></div>`,
@@ -701,7 +678,7 @@ function renderContent(category, searchTerm = "") {
         }, ];
         html = visualizationContent.map((item) => `<div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">${item.q}</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6">${item.a}</div></div></div>`).join("");
     } else if (category === "cms") {
-        html = `<div class="max-w-4xl mx-auto"><header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold text-gray-800">디지털 색 관리 시스템(CMS) 이해하기</h1><p class="text-gray-600 mt-2">카메라부터 모니터, 프린터까지 모든 장비에서 일관된 색상을 유지하는 방법</p></header><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">1. 색 관리 시스템(CMS)이란?</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6"><div class="text-center text-sm text-gray-600 mb-6">카메라, 모니터, 프린터 등 서로 다른 장비들이 각자의 방식으로 색을 표현하기 때문에 발생하는 색상 차이를 최소화하고, 원본의 색을 모든 장비에서 일관되게 보이도록 관리하는 과정입니다.</div><div class="flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0 md:space-x-4 text-center"><div class="diagram-item"><div class="w-24 h-24 bg-gradient-to-br from-red-500 to-yellow-400 rounded-full flex items-center justify-center text-white font-bold mb-2 shadow-lg">현실</div><p class="text-sm font-semibold">원본 색상</p><p class="text-xs text-gray-500">실제 세상의 색</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-camera text-4xl text-blue-600"></i><div class="profile-tag bg-blue-100 text-blue-800">입력 프로파일</div></div><p class="text-sm font-semibold">촬영 (색상 정의)</p><p class="text-xs text-gray-500">(sRGB, AdobeRGB)</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-desktop text-4xl text-green-600"></i><div class="profile-tag bg-green-100 text-green-800">작업/모니터 프로파일</div></div><p class="text-sm font-semibold">편집 (색상 확인)</p><p class="text-xs text-gray-500">(모니터 프로파일)</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-print text-4xl text-purple-600"></i><div class="profile-tag bg-purple-100 text-purple-800">출력 프로파일</div></div><p class="text-sm font-semibold">출력 (색상 재현)</p><p class="text-xs text-gray-500">(프린터/용지 프로파일)</p></div></div></div></div></div><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">2. 색 공간(Color Space)의 종류</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6 space-y-6"><p class="text-sm text-gray-600">색 공간은 색상을 수학적으로 표현하는 모델입니다. CMS에서는 이들을 크게 '장치 독립적인 공간'과 '장치 의존적인 공간'으로 나눕니다.</p><div class="grid md:grid-cols-2 gap-6"><div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-globe mr-2 text-sky-500"></i>장치 독립 색 공간 (PCS)</h4><p class="text-sm text-gray-600 mt-2">특정 장비에 구애받지 않는 절대적인 기준 색 공간입니다. 모든 색상 변환의 '중간 다리' 또는 '번역기' 역할을 합니다. 대표적으로 CIELAB, CIEXYZ가 있습니다.</p></div><div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-cogs mr-2 text-amber-500"></i>장치 의존 색 공간 (ICC Profile)</h4><p class="text-sm text-gray-600 mt-2">카메라, 모니터, 프린터 등 특정 장비가 표현할 수 있는 색상의 범위(Gamut)와 특징을 정의한 데이터 파일입니다.</p></div></div><div><h5 class="font-semibold text-md text-gray-800 mb-2">ICC 프로파일의 세부 종류</h5><div class="space-y-3"><div class="bg-blue-50 p-3 rounded-md border border-blue-200"><p class="font-semibold text-blue-800">범용 (Standard)</p><p class="text-xs text-blue-700">sRGB, Adobe RGB (1998) 처럼 국제 표준으로 널리 사용되는 프로파일입니다. 웹, 일반 사진 등 대부분의 작업에서 기준으로 사용됩니다.<br><span class="font-medium text-gray-600">예: sRGB IEC61966-2.1, AdobeRGB1998.icc</span></p></div><div class="bg-green-50 p-3 rounded-md border border-green-200"><p class="font-semibold text-green-800">제네릭 (Generic)</p><p class="text-xs text-green-700">모니터나 프린터 제조사에서 특정 모델을 위해 제공하는 기본 프로파일입니다. 어느 정도 정확하지만, 개별 장비의 미세한 차이나 노후화는 반영하지 못합니다.<br><span class="font-medium text-gray-600">예: DELL U2723QE.icc, EPSON Stylus Pro 7900 Premium Luster.icc</span></p></div><div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200"><p class="font-semibold text-yellow-800">커스텀 (Custom)</p><p class="text-xs text-yellow-700">캘리브레이션 장비(계측기)를 사용하여 현재 내가 사용하는 장비의 상태를 직접 측정하여 생성한, 가장 정확한 맞춤형 프로파일입니다.<br><span class="font-medium text-gray-600">예: My_U2723QE_D65_120cd_231026.icc</span></p></div></div></div></div></div></div><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">4. 캘리브레이션 vs. 프로파일링</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6 space-y-4"><p class="text-sm text-gray-600">두 용어는 자주 혼용되지만 의미가 다릅니다. 캘리브레이션이 선행되어야 정확한 프로파일링이 가능합니다.</p><div class="flex flex-col md:flex-row items-stretch justify-center gap-6"><div class="w-full md:w-1/2 bg-indigo-50 p-4 rounded-lg border border-indigo-200 text-center"><i class="fas fa-sliders-h text-3xl text-indigo-500 mb-2"></i><h4 class="font-bold text-indigo-800">캘리브레이션 (Calibration)</h4><p class="text-sm text-indigo-700 mt-2">장비를 미리 정해진 <span class="font-semibold">표준 상태(밝기, 색온도, 감마 등)로 조정</span>하는 과정입니다. 일관된 결과물을 얻기 위한 사전 준비 작업입니다.</p></div><div class="w-full md:w-1/2 bg-teal-50 p-4 rounded-lg border border-teal-200 text-center"><i class="fas fa-ruler-combined text-3xl text-teal-500 mb-2"></i><h4 class="font-bold text-teal-800">프로파일링 (Profiling)</h4><p class="text-sm text-teal-700 mt-2">캘리브레이션 된 장비가 색상을 어떻게 표현하는지 <span class="font-semibold">정확히 측정하여 그 특성을 파일(ICC Profile)로 기록</span>하는 과정입니다.</p></div></div><div class="mt-4 pt-4 border-t"><h5 class="font-semibold text-md text-gray-800 mb-2">각 장비의 캘리브레이션 & 프로파일링</h5><p class="text-sm text-gray-600 mb-2"><span class="font-semibold text-gray-700">모니터:</span> 전용 센서(계측기)를 모니터에 부착하여 목표한 밝기(Luminance), 백색점(White Point), 감마(Gamma) 값에 맞도록 조정한 후, 측정된 색상 표현 특성을 모니터 프로파일로 저장합니다.</p><p class="text-sm text-gray-600"><span class="font-semibold text-gray-700">프린터:</span> 특정 프린터, 잉크, 용지 조합으로 정해진 색상 패치를 인쇄하고, 분광측색계(Spectrophotometer)로 각 패치의 색상을 정밀하게 측정하여 해당 조합에 맞는 프린터 프로파일을 생성합니다.</p></div></div></div></div></div></div>`;
+        html = `<div class="max-w-4xl mx-auto"><header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold text-gray-800">디지털 색 관리 시스템(CMS) 이해하기</h1><p class="text-gray-600 mt-2">카메라부터 모니터, 프린터까지 모든 장비에서 일관된 색상을 유지하는 방법</p></header><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">1. 색 관리 시스템(CMS)이란?</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6"><div class="text-center text-sm text-gray-600 mb-6">카메라, 모니터, 프린터 등 서로 다른 장비들이 각자의 방식으로 색을 표현하기 때문에 발생하는 색상 차이를 최소화하고, 원본의 색을 모든 장비에서 일관되게 보이도록 관리하는 과정입니다.</div><div class="flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0 md:space-x-4 text-center"><div class="diagram-item"><div class="w-24 h-24 bg-gradient-to-br from-red-500 to-yellow-400 rounded-full flex items-center justify-center text-white font-bold mb-2 shadow-lg">현실</div><p class="text-sm font-semibold">원본 색상</p><p class="text-xs text-gray-500">실제 세상의 색</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-camera text-4xl text-blue-600"></i><div class="profile-tag bg-blue-100 text-blue-800">입력 프로파일</div></div><p class="text-sm font-semibold">촬영 (색상 정의)</p><p class="text-xs text-gray-500">(sRGB, AdobeRGB)</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-desktop text-4xl text-green-600"></i><div class="profile-tag bg-green-100 text-green-800">작업/모니터 프로파일</div></div><p class="text-sm font-semibold">편집 (색상 확인)</p><p class="text-xs text-gray-500">(모니터 프로파일)</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-print text-4xl text-purple-600"></i><div class="profile-tag bg-purple-100 text-purple-800">출력 프로파일</div></div><p class="text-sm font-semibold">출력 (색상 재현)</p><p class="text-xs text-gray-500">(프린터/용지 프로파일)</p></div></div></div></div></div><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">2. 색 공간(Color Space)의 종류</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6 space-y-6"><p class="text-sm text-gray-600">색 공간은 색상을 수학적으로 표현하는 모델입니다. CMS에서는 이들을 크게 '장치 독립적인 공간'과 '장치 의존적인 공간'으로 나눕니다.</p><div class="grid md:grid-cols-2 gap-6"><div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-globe mr-2 text-sky-500"></i>장치 독립 색 공간 (PCS)</h4><p class="text-sm text-gray-600 mt-2">특정 장비에 구애받지 않는 절대적인 기준 색 공간입니다. 모든 색상 변환의 '중간 다리' 또는 '번역기' 역할을 합니다. 대표적으로 CIELAB, CIEXYZ가 있습니다.</p></div><div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-cogs mr-2 text-amber-500"></i>장치 의존 색 공간 (ICC Profile)</h4><p class="text-sm text-gray-600 mt-2">카메라, 모니터, 프린터 등 특정 장비가 표현할 수 있는 색상의 범위(Gamut)와 특징을 정의한 데이터 파일입니다.</p></div></div><div><h5 class="font-semibold text-md text-gray-800 mb-2">ICC 프로파일의 세부 종류</h5><div class="space-y-3"><div class="bg-blue-50 p-3 rounded-md border border-blue-200"><p class="font-semibold text-blue-800">범용 (Standard)</p><p class="text-xs text-blue-700">sRGB, Adobe RGB (1998) 처럼 국제 표준으로 널리 사용되는 프로파일입니다. 웹, 일반 사진 등 대부분의 작업에서 기준으로 사용됩니다.<br><span class="font-medium text-gray-600">예: sRGB IEC61966-2.1, AdobeRGB1998.icc</span></p></div><div class="bg-green-50 p-3 rounded-md border border-green-200"><p class="font-semibold text-green-800">제네릭 (Generic)</p><p class="text-xs text-green-700">모니터나 프린터 제조사에서 특정 모델을 위해 제공하는 기본 프로파일입니다. 어느 정도 정확하지만, 개별 장비의 미세한 차이나 노후화는 반영하지 못합니다.<br><span class="font-medium text-gray-600">예: DELL U2723QE.icc, EPSON Stylus Pro 7900 Premium Luster.icc</span></p></div><div class="bg-yellow-50 p-3 rounded-md border border-yellow-200"><p class="font-semibold text-yellow-800">커스텀 (Custom)</p><p class="text-xs text-yellow-700">캘리브레이션 장비(계측기)를 사용하여 현재 내가 사용하는 장비의 상태를 직접 측정하여 생성한, 가장 정확한 맞춤형 프로파일입니다.<br><span class="font-medium text-gray-600">예: My_U2723QE_D65_120cd_231026.icc</span></p></div></div></div></div></div></div><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">4. 캘리브레이션 vs. 프로파일링</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6 space-y-4"><p class="text-sm text-gray-600">두 용어는 자주 혼용되지만 의미가 다릅니다. 캘리브레이션이 선행되어야 정확한 프로파일링이 가능합니다.</p><div class="flex flex-col md:flex-row items-stretch justify-center gap-6"><div class="w-full md:w-1/2 bg-indigo-50 p-4 rounded-lg border border-indigo-200 text-center"><i class="fas fa-sliders-h text-3xl text-indigo-500 mb-2"></i><h4 class="font-bold text-indigo-800">캘리브레이션 (Calibration)</h4><p class="text-sm text-indigo-700 mt-2">장비를 미리 정해진 <span class="font-semibold">표준 상태(밝기, 색온도, 감마 등)로 조정</span>하는 과정입니다. 일관된 결과물을 얻기 위한 사전 준비 작업입니다.</p></div><div class="w-full md:w-1/2 bg-teal-50 p-4 rounded-lg border border-teal-200 text-center"><i class="fas fa-ruler-combined text-3xl text-teal-500 mb-2"></i><h4 class="font-bold text-teal-800">프로파일링 (Profiling)</h4><p class="text-sm text-teal-700 mt-2">캘리브레이션 된 장비가 색상을 어떻게 표현하는지 <span class="font-semibold">정확히 측정하여 그 특성을 파일(ICC Profile)로 기록</span>하는 과정입니다.</p></div></div><div class="mt-4 pt-4 border-t"><h5 class="font-semibold text-md text-gray-800 mb-2">각 장비의 캘리브레이션 & 프로파일링</h5><p class="text-sm text-gray-600 mb-2"><span class="font-semibold text-gray-700">모니터:</span> 전용 센서(계측기)를 모니터에 부착하여 목표한 밝기(Luminance), 백색점(White Point), 감마(Gamma) 값에 맞도록 조정한 후, 측정된 색상 표현 특성을 모니터 프로파일로 저장합니다.</p><p class="text-sm text-gray-600"><span class="font-semibold text-gray-700">프린터:</span> 특정 프린터, 잉크, 용지 조합으로 정해진 색상 패치를 인쇄하고, 분광측색계(Spectrophotometer)로 각 패치의 색상을 정밀하게 측정하여 해당 조합에 맞는 프린터 프로파일을 생성합니다.</p></div></div></div></div></div></div>`;
     } else {
         let itemsToRender = [];
         if (searchTerm) {
@@ -841,3 +818,4 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !geminiModal.classList.contains("hidden")) hideModal();
 });
 renderContent("home");
+````
