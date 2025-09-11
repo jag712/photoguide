@@ -261,24 +261,29 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
             generationConfig: {},
         };
         if (useSchema) {
-            payload.generationConfig.responseMimeType = "application/json";
-            payload.generationConfig.responseSchema = {
-                type: "OBJECT",
-                properties: {
-                    questions: {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                question: { type: "STRING" },
-                                options: { type: "ARRAY", items: { type: "STRING" } },
-                                answer: { type: "STRING" },
-                            },
-                            required: ["question", "options", "answer"],
-                        },
-                    },
-                },
-            };
+           payload.generationConfig.responseMimeType = "application/json";
+           payload.generationConfig.responseSchema = {
+            type: "OBJECT",
+             properties: {
+              questions: {
+                 type: "ARRAY",
+                  items: {
+                 type: "OBJECT",
+              properties: {
+            question: { type: "STRING" },
+           options: { type: "ARRAY", items: { type: "STRING" } },
+          answer:  { type: "STRING" },
+          rationales: {
+            type: "ARRAY",
+            items: { type: "STRING" },
+            // options와 동일한 순서로 각 보기 해설(정답/오답 이유)
+          }
+        },
+        required: ["question", "options", "answer", "rationales"],
+      },
+    },
+  },
+};
         } else {
             payload.generationConfig.responseMimeType = "text/plain";
         }
@@ -339,8 +344,25 @@ async function generateQuiz() {
     }
     const shuffledTerms = contentForQuiz.sort(() => 0.5 - Math.random());
     const topics = shuffledTerms.slice(0, 15).map((item) => item.q).join(", ");
-    const prompt = `다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}. 각 질문은 4개의 선택지를 가져야 하고, 그 중 하나만 정답이어야 해. 질문의 난이도는 '아주 쉬운 문제 1개', '보통 문제 2개', '어려운 문제 2개'로 구성해줘. 질문, 선택지, 정답을 JSON 형식으로 반환해줘.`;
-    const responseText = await callGemini(prompt, true, `퀴즈 생성 중... ✨`);
+const prompt = `
+다음 사진학 주제들을 바탕으로 객관식 퀴즈 5개를 생성해줘: ${topics}.
+각 질문은 보기 4개를 가지며 단 하나만 정답.
+난이도는 '아주 쉬운 1개', '보통 2개', '어려운 2개'.
+
+JSON으로 아래 형식으로 반환:
+{
+  "questions": [
+    {
+      "question": "...",
+      "options": ["...","...","...","..."],        // 정확히 4개
+      "answer":  "...",                             // options 중 하나의 원문과 동일
+      "rationales": ["...","...","...","..."]       // options와 같은 순서. 각 보기별 해설(왜 맞는지/왜 틀린지), 1~2문장
+    }
+  ]
+}
+
+한국어로 작성해줘.
+`;    const responseText = await callGemini(prompt, true, `퀴즈 생성 중... ✨`);
     if (!responseText) {
         return;
     }
@@ -433,7 +455,13 @@ function createPracticeQuestions(count = 4) {
 function displayQuizQuestion() {
     const q = currentQuizData.questions[currentQuestionIndex];
     quizTimeLimit = currentQuestionIndex >= 3 ? 20 : 15;
-    const optionsHtml = q.options.map(option => `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option.replace(/"/g, "&quot;")}">${option}</div>`).join("");
+    - const optionsHtml = q.options.map(option => `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option.replace(/"/g, "&quot;")}">${option}</div>`).join("");
++ const optionsHtml = q.options
++   .map((option, i) =>
++     `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2"
++           data-option="${option.replace(/"/g, "&quot;")}"
++           data-index="${i}">${option}</div>`
++   ).join("");
     const questionHtml = `
         <div class="mb-4">
             <p class="text-sm text-gray-500">문제 ${currentQuestionIndex + 1} / ${currentQuizData.questions.length}</p>
@@ -557,47 +585,93 @@ function toggleTimer(forcePause = false) {
 
 
 function checkQuizAnswer(isTimeUp = false, selectedOptionEl) {
-    const q = currentQuizData.questions[currentQuestionIndex];
-    const correctAnswer = q.answer;
-    let isCorrect = false;
-    modalBody.querySelectorAll(".quiz-option").forEach(opt => {
-        opt.style.pointerEvents = "none";
-        opt.classList.remove("selected");
-    });
-    const quizResultEl = modalBody.querySelector("#quizResult");
-    if (isTimeUp) {
-        quizResultEl.innerHTML = `<p class="text-red-600 font-semibold">시간 초과! 😔 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
+  const q = currentQuizData.questions[currentQuestionIndex];
+  const correctAnswer = q.answer;
+  const optionEls = [...modalBody.querySelectorAll(".quiz-option")];
+
+  // 인덱스 계산 (문자 비교 대신 인덱스로)
+  const correctIdx = q.options.findIndex(o => o === correctAnswer);
+  const selectedIdx = selectedOptionEl
+    ? Number(selectedOptionEl.dataset.index)
+    : -1;
+
+  let isCorrect = false;
+
+  // 선택 불가 처리 및 초기화
+  optionEls.forEach(opt => {
+    opt.style.pointerEvents = "none";
+    opt.classList.remove("selected");
+    // 이전 해설 제거
+    const old = opt.querySelector(".explain-block");
+    if (old) old.remove();
+  });
+
+  const quizResultEl = modalBody.querySelector("#quizResult");
+
+  if (isTimeUp) {
+    quizResultEl.innerHTML =
+      `<p class="text-red-600 font-semibold">
+        시간 초과! 😔 정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.
+      </p>`;
+  } else {
+    selectedOptionEl.classList.add("selected");
+    const selectedAnswer = q.options[selectedIdx];
+    if (selectedAnswer === correctAnswer) {
+      isCorrect = true;
+      quizResultEl.innerHTML = `<p class="text-green-600 font-semibold">정답입니다! 🎉</p>`;
     } else {
-        selectedOptionEl.classList.add("selected");
-        const selectedAnswer = selectedOptionEl.dataset.option;
-        if (selectedAnswer === correctAnswer) {
-            score++;
-            isCorrect = true;
-            quizResultEl.innerHTML = `<p class="text-green-600 font-semibold">정답입니다! 🎉</p>`;
-        } else {
-            quizResultEl.innerHTML = `<p class="text-red-600 font-semibold">오답입니다. 😔</p><p class="text-gray-700 mt-2">정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
-        }
+      quizResultEl.innerHTML =
+        `<p class="text-red-600 font-semibold">오답입니다. 😔</p>
+         <p class="text-gray-700 mt-2">정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
     }
-    modalBody.querySelectorAll(".quiz-option").forEach(opt => {
-        if (opt.dataset.option === correctAnswer) {
-            opt.classList.add("correct");
-        } else if (opt.classList.contains("selected")) {
-            opt.classList.add("incorrect");
-        }
-    });
-    if (isCorrect) {
-        setTimeout(() => {
-            document.getElementById("quizOptions").removeEventListener("click", handleQuizOptionClick);
-            currentQuestionIndex++;
-            if (currentQuestionIndex < currentQuizData.questions.length) {
-                displayQuizQuestion();
-            } else {
-                displayQuizFinalScore();
-            }
-        }, 1000);
-    } else {
-        document.getElementById("nextQuestionBtn").classList.remove("hidden");
-    }
+  }
+
+  // 스타일 표시
+  optionEls.forEach((opt, i) => {
+    if (i === correctIdx) opt.classList.add("correct");
+    else if (i === selectedIdx) opt.classList.add("incorrect");
+  });
+
+  // 🔍 해설 출력 (오답: 선택지 해설 + 정답 해설, 시간초과: 정답 해설만)
+  const ex = Array.isArray(q.rationales) ? q.rationales : [];
+  const explainHtml = (title, body) =>
+    `<div class="explain-block mt-2 text-xs px-2 py-2 rounded border
+                 ${title.includes('정답') ? 'bg-green-50 border-green-200 text-green-800'
+                                          : 'bg-red-50 border-red-200 text-red-800'}">
+       <div class="font-semibold mb-1">${title}</div>
+       <div class="leading-5">${body}</div>
+     </div>`;
+
+  // 정답 해설
+  if (correctIdx >= 0 && ex[correctIdx]) {
+    optionEls[correctIdx].insertAdjacentHTML(
+      "beforeend",
+      explainHtml("✅ 정답 해설", ex[correctIdx])
+    );
+  }
+
+  // 오답 선택 시: 선택지 해설도 보여주기
+  if (!isTimeUp && selectedIdx >= 0 && selectedIdx !== correctIdx && ex[selectedIdx]) {
+    optionEls[selectedIdx].insertAdjacentHTML(
+      "beforeend",
+      explainHtml("❌ 왜 오답인가요?", ex[selectedIdx])
+    );
+  }
+
+  // 다음 진행
+  if (isCorrect) {
+    setTimeout(() => {
+      document.getElementById("quizOptions").removeEventListener("click", handleQuizOptionClick);
+      currentQuestionIndex++;
+      if (currentQuestionIndex < currentQuizData.questions.length) {
+        displayQuizQuestion();
+      } else {
+        displayQuizFinalScore();
+      }
+    }, 1000);
+  } else {
+    document.getElementById("nextQuestionBtn").classList.remove("hidden");
+  }
 }
 
 function setupEventListeners() {
