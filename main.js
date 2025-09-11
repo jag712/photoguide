@@ -290,7 +290,7 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
         }
         const timeoutId = setTimeout(() => {
             controller.abort();
-            hideModal();
+            clearInterval(iconChangeInterval);
             showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`, false);
         }, 60000);
         const response = await fetch(PROXY_URL, {
@@ -318,7 +318,7 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
             return null;
         }
         console.error("Gemini proxy call error:", error);
-        hideModal();
+        clearInterval(iconChangeInterval);
         const errorMessage = (error.name === "AbortError")
             ? "요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요."
             : `AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.<br>(${error.message})`;
