@@ -275,8 +275,12 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
                                 question: { type: "STRING" },
                                 options: { type: "ARRAY", items: { type: "STRING" } },
                                 answer: { type: "STRING" },
+                                explanations: {
+                                    type: "OBJECT",
+                                    additionalProperties: { type: "STRING" },
+                                },
                             },
-                            required: ["question", "options", "answer"],
+                            required: ["question", "options", "answer", "explanations"],
                         },
                     },
                 },
@@ -286,7 +290,7 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
         }
         const timeoutId = setTimeout(() => {
             controller.abort();
-            hideModal();
+            clearInterval(iconChangeInterval);
             showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`, false);
         }, 60000);
         const response = await fetch(PROXY_URL, {
@@ -314,7 +318,7 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
             return null;
         }
         console.error("Gemini proxy call error:", error);
-        hideModal();
+        clearInterval(iconChangeInterval);
         const errorMessage = (error.name === "AbortError")
             ? "요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요."
             : `AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.<br>(${error.message})`;
@@ -325,39 +329,99 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
 
 function simplify(text) {
     if (!text) return "";
-    return text.replace(/\([^)]*\)/g, "").split(/[.]/)[0].trim();
+    const cleaned = text.replace(/\([^)]*\)/g, "").trim();
+    const match = cleaned.match(/[^.?!]+[.?!]/);
+    return match ? match[0].trim() : cleaned;
 }
 
-function generateQuiz() {
+function ensureFullSentence(text) {
+    if (!text) return "";
+    const trimmed = text.trim();
+    return /[.?!]$/.test(trimmed) ? trimmed : `${trimmed}?`;
+}
+
+function escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/[&<>"']/g, c => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    }[c] || c));
+}
+
+function createFallbackQuiz(pool, count = 5) {
+    const byCat = pool.reduce((acc, item) => {
+        (acc[item._category] = acc[item._category] || []).push(item);
+        return acc;
+    }, {});
+    const validCats = Object.values(byCat).filter(arr => arr.length >= 5);
+    const questions = [];
+    while (questions.length < count && validCats.length) {
+        const catItems = validCats[Math.floor(Math.random() * validCats.length)];
+        const correct = catItems[Math.floor(Math.random() * catItems.length)];
+        const wrongPool = catItems.filter(p => p !== correct);
+        if (wrongPool.length < 4) continue;
+        const wrong = [...wrongPool].sort(() => Math.random() - 0.5).slice(0, 4);
+        const options = [correct, ...wrong].map(p => p.q).sort(() => Math.random() - 0.5);
+        const explanations = {};
+        [correct, ...wrong].forEach(p => {
+            explanations[p.q] = simplify(p.a);
+        });
+        questions.push({
+            question: ensureFullSentence(`${simplify(correct.a)} 이 설명에 해당하는 용어는 무엇일까요?`),
+            options,
+            answer: correct.q,
+            explanations
+        });
+    }
+    return { questions };
+}
+
+async function generateQuiz() {
     const activeLink = document.querySelector(".nav-item.active");
     const category = activeLink ? activeLink.dataset.category : "all";
     let pool = [];
     if (["home", "visualization", "all", "cms"].includes(category)) {
-        Object.values(photographyData).forEach(cat => pool.push(...cat));
+        Object.entries(photographyData).forEach(([cat, arr]) => {
+            pool.push(...arr.map(item => ({ ...item, _category: cat })));
+        });
     } else if (photographyData[category]) {
-        pool = photographyData[category];
+        pool = photographyData[category].map(item => ({ ...item, _category: category }));
     } else {
         showModal('오류', `<p class="text-red-500">선택된 카테고리에 퀴즈를 만들 데이터가 없습니다.</p>`, false);
         return;
     }
-    if (pool.length < 4) {
+    if (pool.length < 5) {
         showModal('오류', `<p class="text-red-500">퀴즈를 만들 데이터가 부족합니다.</p>`, false);
         return;
     }
-    const shuffled = pool.sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, 5);
-    currentQuizData = {
-        questions: selected.map(item => {
-            const correct = item.q;
-            const wrongTerms = pool.filter(p => p !== item).sort(() => Math.random() - 0.5).slice(0, 3).map(p => p.q);
-            const options = [...wrongTerms, correct].sort(() => Math.random() - 0.5);
-            return {
-                question: `다음 설명에 맞는 용어는 무엇인가요? ${simplify(item.a)}`,
-                options,
-                answer: correct
-            };
-        })
-    };
+
+    const sample = pool.sort(() => Math.random() - 0.5).slice(0, 8);
+    const dataLines = sample
+        .map(item => `- [${item._category}] ${item.q}: ${simplify(item.a)}`)
+        .join("\n");
+    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목에는 [카테고리]가 포함되어 있습니다. 이 정보를 바탕으로 난이도 5의 객관식 퀴즈 5문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 같은 카테고리의 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 서로 다른 유형의 단어가 섞이지 않도록, 예를 들어 카메라에 대한 문제에 사람 이름이 보기로 나오면 안 돼. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. question 필드는 물음표로 끝나는 완전한 질문 문장으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
+
+    let parsed = null;
+    const responseText = await callGemini(prompt, true, "퀴즈 생성 중...");
+    if (responseText) {
+        try {
+            parsed = JSON.parse(responseText);
+        } catch (_) {
+            parsed = null;
+        }
+    }
+    if (parsed && Array.isArray(parsed.questions)) {
+        parsed.questions.forEach(q => {
+            q.question = ensureFullSentence(q.question);
+        });
+    }
+    if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+        parsed = createFallbackQuiz(pool);
+    }
+    currentQuizData = parsed;
     currentQuestionIndex = 0;
     score = 0;
     displayQuizQuestion();
@@ -369,7 +433,6 @@ function generatePractice() {
     const html = questions.map((q, idx) => {
         const metaParts = [`난이도: ${q.difficulty}`, `태그: ${q.tags?.length ? q.tags.join(", ") : "없음"}`];
         if (q.era) metaParts.push(`시대: ${q.era}`);
-        metaParts.push(`스킬: ${q.skills?.length ? q.skills.join(", ") : "없음"}`);
         return `
         <div class="mb-4">
             <p class="font-semibold">${idx + 1}. ${q.question}</p>
@@ -429,7 +492,6 @@ function createPracticeQuestions(count = 4) {
         difficulty: levels[Math.floor(Math.random() * levels.length)],
         tags: item.tags || [item.category],
         ...(item.era ? { era: item.era } : {}),
-        skills: ["concept"],
     }));
 }
 
@@ -582,6 +644,13 @@ function checkQuizAnswer(isTimeUp = false, selectedOptionEl) {
             quizResultEl.innerHTML = `<p class="text-red-600 font-semibold">오답입니다. 😔</p><p class="text-gray-700 mt-2">정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
         }
     }
+    const explanations = q.explanations || {};
+    const expList = q.options.map(option => {
+        const safeOpt = escapeHtml(option);
+        const reason = explanations[option] || "";
+        return `<li><span class="font-bold">${safeOpt}</span>: ${reason}</li>`;
+    }).join("");
+    quizResultEl.innerHTML += `<ul class="mt-2 text-sm text-gray-700 space-y-1">${expList}</ul>`;
     modalBody.querySelectorAll(".quiz-option").forEach(opt => {
         if (opt.dataset.option === correctAnswer) {
             opt.classList.add("correct");
@@ -829,7 +898,7 @@ function setupGeminiButtons() {
                 prompt = `사진학 용어인 "${question}"에 대해 입시생의 암기하기 쉽게 이해하기 쉽고 간결하게 설명해줘. 다음 설명을 참고하여, 중요한 개념을 놓치지 않으면서도 면접에서 자연스럽게 활용할 수 있도록 정리해줘 최대 300자 내외. 참고 설명: ${answer}`;
             } else if (action === "deepen") {
                 loadingTitle = "깊이 알아보기 중... 🧐";
-                prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 심화 개념, 역사적 배경, 또는 실전 촬영 팁을 포함하여 전문가 수준의 추가 정보를 제공해줘 작가의 경우 대표 사진도 보여줘 600자 내외로. 설명: ${answer}`;
+                prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 역사적 배경과 전문가가 알아야 할 추가 정보를 제공해줘. 사진 작가인 경우에는 촬영 팁 대신 대표작, 대표 사진집 또는 전시의 제목만 나열해 검색할 수 있게 해줘. 설명: ${answer}`;
             }
             if (prompt) {
                 const responseText = await callGemini(prompt, false, loadingTitle);
