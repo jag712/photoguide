@@ -292,7 +292,7 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
             controller.abort();
             clearInterval(iconChangeInterval);
             showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`, false);
-        }, 100000);
+        }, 15000);
         const response = await fetch(PROXY_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
