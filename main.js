@@ -262,40 +262,68 @@ async function callGemini(prompt, useSchema = false) {
     controller = new AbortController();
     abortedByUser = false;
 
-    showModal('AI 응답 생성 중');
-    try {
-        const payload = {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {},
-        };
-        if (useSchema) {
-            payload.generationConfig.responseMimeType = "application/json";
-            payload.generationConfig.responseSchema = {
-                type: "OBJECT",
-                properties: {
-                    questions: {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                question: { type: "STRING" },
-                                options: { type: "ARRAY", items: { type: "STRING" } },
-                                answer: { type: "STRING" },
-                            },
-                            required: ["question", "options", "answer"],
-                        },
-                    },
-                },
-            };
-        } else {
-            payload.generationConfig.responseMimeType = "text/plain";
-        }
+ function showModal(title, contentHtml = '', showLoading = false) {
+    const icons = ["❓", "🤔", "💡", "😊"];
+    modalTitle.textContent = title;
+    modalBody.innerHTML = contentHtml;
+
+    if (showLoading) {
+        const loadingMessages = [
+            "촬영실기 준비 중... 📸",
+            "포트폴리오 촬영 중... 🧑‍🎨",
+            "친구랑 모의 면접 중... 🗣️",
+            "중대 글 쓰는 중... ✍️",
+            "촬실한다고 가놓고 폰하는 중... 📱"
+        ];
+        
+        const loadingContainer = document.createElement("div");
+        loadingContainer.className = "loading-container flex flex-col items-center";
+        
+        const loadingText = document.createElement("p");
+        loadingText.className = "text-xl font-semibold text-gray-700 mb-4";
+        
+        const rotatingIcon = document.createElement("div");
+        rotatingIcon.className = "rotating-icon-loader";
+        
+        loadingContainer.appendChild(loadingText);
+        loadingContainer.appendChild(rotatingIcon);
+
+        const cancelBtn = document.createElement("button");
+        cancelBtn.textContent = "취소";
+        cancelBtn.className = "mt-4 bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800";
+        cancelBtn.addEventListener("click", () => {
+            abortedByUser = true;
+            controller.abort();
+            hideModal();
+        });
+
+        modalBody.innerHTML = '';
+        modalBody.appendChild(loadingContainer);
+        modalBody.appendChild(cancelBtn);
+
+        // 메시지와 아이콘을 무작위로 선택하여 표시
+        const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+        loadingText.innerText = randomMessage;
+        
+        rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
+        iconChangeInterval = setInterval(() => {
+            rotatingIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
+        }, 1000);
+    }
+    
+    geminiModal.classList.remove("hidden");
+    setTimeout(() => {
+        geminiModal.classList.remove("opacity-0");
+        geminiModal.querySelector(".modal-content").classList.remove("scale-95");
+    }, 10);
+}
+
 
         const timeoutId = setTimeout(() => {
             controller.abort();
             hideModal();
             showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`, false);
-        }, 15000); // 타임아웃 15초로 연장
+        }, 60000); // 타임아웃 60초로 연장
 
         const response = await fetch(PROXY_URL, {
             method: "POST",
