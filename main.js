@@ -778,12 +778,15 @@ function generatePractice() {
     questions
       .map(
         (q, idx) => {
-          const meta = [
+          const metaParts = [
             `난이도: ${q.difficulty}`,
             `태그: ${q.tags.join(", ")}`,
             ...(q.era ? [`시대: ${q.era}`] : []),
-            `스킬: ${q.skills.join(", ")}`,
-          ].join(" | ");
+            ...(q.skills && q.skills.length
+              ? [`스킬: ${q.skills.join(", ")}`]
+              : []),
+          ];
+          const meta = metaParts.join(" | ");
           return `
         <div class="mb-4">
           <p class="font-semibold">${idx + 1}. ${q.question}</p>
@@ -807,16 +810,19 @@ function generatePractice() {
     modalBody.querySelectorAll(".practice-input").forEach((input) => {
       const userAnswer = input.value.trim().toLowerCase();
       const correctAnswer = input.dataset.answer.toLowerCase();
-      const isCorrect = userAnswer && userAnswer.includes(correctAnswer);
+      const keywords = correctAnswer
+        .split(/\s+/)
+        .filter((w) => w.length > 1);
+      const userWords = userAnswer.split(/\s+/);
+      const matchCount = keywords.filter((kw) =>
+        userWords.some((uw) => uw.includes(kw))
+      ).length;
+      let score = userAnswer
+        ? Math.max(1, Math.round((matchCount / keywords.length) * 5))
+        : 1;
       const resultEl = input.parentElement.querySelector(".result");
-      resultEl.textContent = isCorrect
-        ? "정답입니다!"
-        : `오답입니다. 정답: ${input.dataset.answer}`;
+      resultEl.innerHTML = `점수: ${score}/5<br>모범답안: ${input.dataset.answer}`;
       resultEl.classList.remove("hidden");
-      resultEl.classList.toggle("text-green-600", isCorrect);
-      resultEl.classList.toggle("text-red-600", !isCorrect);
-      input.classList.toggle("border-green-400", isCorrect);
-      input.classList.toggle("border-red-400", !isCorrect);
     });
   });
 }
@@ -851,7 +857,7 @@ function createPracticeQuestions() {
     difficulty: levels[Math.floor(Math.random() * levels.length)],
     tags: item.tags || [item.category],
     ...(item.era ? { era: item.era } : {}),
-    skills: item.skills || ["concept"],
+    skills: item.skills || [],
   }));
 }
 
