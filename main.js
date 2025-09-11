@@ -275,8 +275,12 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
                                 question: { type: "STRING" },
                                 options: { type: "ARRAY", items: { type: "STRING" } },
                                 answer: { type: "STRING" },
+                                explanations: {
+                                    type: "OBJECT",
+                                    additionalProperties: { type: "STRING" },
+                                },
                             },
-                            required: ["question", "options", "answer"],
+                            required: ["question", "options", "answer", "explanations"],
                         },
                     },
                 },
@@ -328,6 +332,17 @@ function simplify(text) {
     return text.replace(/\([^)]*\)/g, "").split(/[.]/)[0].trim();
 }
 
+function escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/[&<>"']/g, c => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    }[c] || c));
+}
+
 async function generateQuiz() {
     const activeLink = document.querySelector(".nav-item.active");
     const category = activeLink ? activeLink.dataset.category : "all";
@@ -340,14 +355,14 @@ async function generateQuiz() {
         showModal('오류', `<p class="text-red-500">선택된 카테고리에 퀴즈를 만들 데이터가 없습니다.</p>`, false);
         return;
     }
-    if (pool.length < 4) {
+    if (pool.length < 5) {
         showModal('오류', `<p class="text-red-500">퀴즈를 만들 데이터가 부족합니다.</p>`, false);
         return;
     }
 
     const sample = pool.sort(() => Math.random() - 0.5).slice(0, 8);
     const dataLines = sample.map(item => `- ${item.q}: ${simplify(item.a)}`).join("\n");
-    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 이 정보를 바탕으로 5개의 객관식 퀴즈를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 다른 용어 3개를 사용해 총 4개의 선택지를 제공해야 해. 결과는 question, options, answer 필드를 가진 JSON으로만 응답해줘.\n\n${dataLines}`;
+    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 이 정보를 바탕으로 난이도 5의 객관식 퀴즈 5문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 헷갈릴 수 있는 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
 
     const responseText = await callGemini(prompt, true, "퀴즈 생성 중...");
     if (!responseText) {
@@ -589,6 +604,13 @@ function checkQuizAnswer(isTimeUp = false, selectedOptionEl) {
             quizResultEl.innerHTML = `<p class="text-red-600 font-semibold">오답입니다. 😔</p><p class="text-gray-700 mt-2">정답은 "<span class="font-bold">${correctAnswer}</span>" 입니다.</p>`;
         }
     }
+    const explanations = q.explanations || {};
+    const expList = q.options.map(option => {
+        const safeOpt = escapeHtml(option);
+        const reason = explanations[option] || "";
+        return `<li><span class="font-bold">${safeOpt}</span>: ${reason}</li>`;
+    }).join("");
+    quizResultEl.innerHTML += `<ul class="mt-2 text-sm text-gray-700 space-y-1">${expList}</ul>`;
     modalBody.querySelectorAll(".quiz-option").forEach(opt => {
         if (opt.dataset.option === correctAnswer) {
             opt.classList.add("correct");
