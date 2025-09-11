@@ -852,8 +852,9 @@ function createPracticeQuestions(count = 4) {
     selected = pickRandom(selected, count);
   }
   const levels = ["easy", "medium", "hard"];
+  const endings = ["에 대해 설명하세요.", "에 대해 말해보세요."];
   return selected.map((item) => ({
-    question: `${item.q}의 정의는?`,
+    question: `${item.q}${endings[Math.floor(Math.random() * endings.length)]}`,
     answer: (item.answer_short || item.a || "").trim(),
     difficulty: levels[Math.floor(Math.random() * levels.length)],
     tags: item.tags || [item.category],
