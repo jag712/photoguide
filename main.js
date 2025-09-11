@@ -510,6 +510,7 @@ const mainContent = document.getElementById("mainContent");
 const navLinks = document.querySelectorAll(".nav-item, #homeLink");
 const searchInput = document.getElementById("searchInput");
 const quizBtn = document.getElementById("quizBtn");
+const practiceBtn = document.getElementById("practiceBtn");
 const geminiModal = document.getElementById("geminiModal");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
@@ -767,6 +768,91 @@ async function generateQuiz() {
     console.error("Quiz parsing error:", e);
     modalBody.innerHTML = `<p class="text-red-500">퀴즈를 생성하는 데 실패했습니다. AI가 유효한 퀴즈 형식을 반환하지 못했습니다.</p>`;
   }
+}
+
+// 실전 연습 문제 생성
+function generatePractice() {
+  const questions = createPracticeQuestions();
+  modalTitle.textContent = "실전 연습";
+  const html =
+    questions
+      .map(
+        (q, idx) => {
+          const meta = [
+            `난이도: ${q.difficulty}`,
+            `태그: ${q.tags.join(", ")}`,
+            ...(q.era ? [`시대: ${q.era}`] : []),
+            `스킬: ${q.skills.join(", ")}`,
+          ].join(" | ");
+          return `
+        <div class="mb-4">
+          <p class="font-semibold">${idx + 1}. ${q.question}</p>
+          <input type="text" class="practice-input w-full p-2 mt-1 border rounded" data-answer="${q.answer.replace(/"/g, '&quot;')}">
+          <p class="text-xs text-gray-500 mt-1">${meta}</p>
+          <p class="result text-sm mt-1 hidden"></p>
+        </div>`;
+        }
+      )
+      .join("") +
+    '<button id="gradePractice" class="w-full bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 mt-2">채점하기</button>';
+
+  modalBody.innerHTML = html;
+  geminiModal.classList.remove("hidden");
+  setTimeout(() => {
+    geminiModal.classList.remove("opacity-0");
+    geminiModal.querySelector(".modal-content").classList.remove("scale-95");
+  }, 10);
+
+  document.getElementById("gradePractice").addEventListener("click", () => {
+    modalBody.querySelectorAll(".practice-input").forEach((input) => {
+      const userAnswer = input.value.trim().toLowerCase();
+      const correctAnswer = input.dataset.answer.toLowerCase();
+      const isCorrect = userAnswer && userAnswer.includes(correctAnswer);
+      const resultEl = input.parentElement.querySelector(".result");
+      resultEl.textContent = isCorrect
+        ? "정답입니다!"
+        : `오답입니다. 정답: ${input.dataset.answer}`;
+      resultEl.classList.remove("hidden");
+      resultEl.classList.toggle("text-green-600", isCorrect);
+      resultEl.classList.toggle("text-red-600", !isCorrect);
+      input.classList.toggle("border-green-400", isCorrect);
+      input.classList.toggle("border-red-400", !isCorrect);
+    });
+  });
+}
+
+function createPracticeQuestions() {
+  const getItems = (cat) =>
+    (photographyData[cat] || []).map((item) => ({ ...item, category: cat }));
+  const shufflePick = (arr, n) => [...arr].sort(() => 0.5 - Math.random()).slice(0, n);
+
+  const mechanismCats = ["structure", "exposure", "lens", "digital", "film", "lighting"];
+  const mechanismPool = mechanismCats.flatMap(getItems);
+
+  const historyItems = getItems("history");
+  const photographerPool = historyItems.filter((i) =>
+    i.tags && i.tags.some((t) => t === "photographer" || t === "person"),
+  );
+  const generalPool = historyItems.filter((i) =>
+    !i.tags || !i.tags.some((t) => t === "photographer" || t === "person"),
+  );
+
+  const levels = ["easy", "medium", "hard"];
+
+  const selected = [
+    ...shufflePick(mechanismPool, 2),
+    ...shufflePick(photographerPool.length ? photographerPool : generalPool, 1),
+    ...shufflePick(generalPool.length ? generalPool : mechanismPool, 1),
+  ];
+
+  return selected.map((item) => ({
+    question: `${item.q}에 관해 말해보세요.`,
+    answer: (item.answer_short || item.a).trim(),
+    difficulty: levels[Math.floor(Math.random() * levels.length)],
+    tags: item.tags || [item.category],
+    ...(item.era ? { era: item.era } : {}),
+    skills: item.skills || ["concept"],
+  }));
 }
 
 function displayQuizQuestion() {
@@ -1408,6 +1494,7 @@ function setupGeminiButtons() {
 
 // AI 퀴즈 생성 버튼 이벤트
 quizBtn.addEventListener("click", generateQuiz);
+practiceBtn.addEventListener("click", generatePractice);
 
 // 모달 닫기 이벤트
 closeModal.addEventListener("click", hideModal);
