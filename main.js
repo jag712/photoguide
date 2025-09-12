@@ -408,10 +408,19 @@ async function generateQuiz() {
     let pool = [];
     if (["home", "visualization", "all", "cms"].includes(category)) {
         Object.entries(photographyData).forEach(([cat, arr]) => {
-            pool.push(...arr.map(item => ({ ...item, _category: cat })));
+            const entries = arr.map(item => ({ ...item, _category: cat }));
+            pool.push(...entries);
+            if (cat === "history") {
+                // Give history items a higher weight by duplicating them
+                pool.push(...arr.map(item => ({ ...item, _category: cat })));
+            }
         });
     } else if (photographyData[category]) {
-        pool = photographyData[category].map(item => ({ ...item, _category: category }));
+        const entries = photographyData[category].map(item => ({ ...item, _category: category }));
+        pool.push(...entries);
+        if (category === "history") {
+            pool.push(...photographyData[category].map(item => ({ ...item, _category: category })));
+        }
     } else {
         showModal('오류', `<p class="text-red-500">선택된 카테고리에 퀴즈를 만들 데이터가 없습니다.</p>`, false);
         return;
@@ -421,19 +430,16 @@ async function generateQuiz() {
         return;
     }
 
-    const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, Math.min(n, arr.length));
-    let sample;
-    if (["home", "visualization", "all", "cms"].includes(category)) {
-        const historyItems = pool.filter(item => item._category === "history");
-        const otherItems = pool.filter(item => item._category !== "history");
-        const historyCount = Math.min(historyItems.length, Math.max(2, Math.ceil(0.2 * 8)));
-        sample = [
-            ...pickRandom(historyItems, historyCount),
-            ...pickRandom(otherItems, 8 - historyCount)
-        ].sort(() => Math.random() - 0.5);
-    } else {
-        sample = pickRandom(pool, 8);
-    }
+    const pickRandom = (arr, n) => {
+        const copy = [...arr];
+        const result = [];
+        for (let i = 0; i < n && copy.length; i++) {
+            const idx = Math.floor(Math.random() * copy.length);
+            result.push(copy.splice(idx, 1)[0]);
+        }
+        return result;
+    };
+    const sample = pickRandom(pool, 8);
     const dataLines = sample
         .map(item => `- [${item._category}] ${item.q}: ${simplify(item.a)}`)
         .join("\n");
