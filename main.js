@@ -162,7 +162,7 @@ if (quizBtn) {
 if (practiceBtn) {
     practiceBtn.textContent = "🏃‍♂️ 서술형 실전 연습";
     if (quizBtn) {
-        practiceBtn.className = `${quizBtn.className} mt-2`;
+        practiceBtn.className = quizBtn.className;
     }
 }
 
