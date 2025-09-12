@@ -1409,6 +1409,17 @@ const photographyData = {
     }]
 };
 
+// populate concise answer_short fields for practice
+Object.values(photographyData).forEach(arr => {
+    arr.forEach(item => {
+        if (!item.answer_short && item.a) {
+            item.answer_short = item.a
+                .replace(/\s*[★☆]+/g, "")
+                .split(/[.?!]/)[0]
+                .trim();
+        }
+    });
+});
 
 if (typeof window !== "undefined") { window.photographyData = photographyData; }
 if (typeof module !== "undefined") { module.exports = photographyData; }
