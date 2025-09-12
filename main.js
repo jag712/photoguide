@@ -961,11 +961,17 @@ searchInput.addEventListener("input", () => {
     }
 });
 function displayQuizFinalScore() {
+    const total = currentQuizData.questions.length;
+    const percentage = total ? (score / total) * 100 : 0;
+    const message = typeof getPracticeMessage === 'function'
+        ? getPracticeMessage(percentage)
+        : '';
     showModal('퀴즈 완료', `
         <div class="p-6 text-center">
             <h2 class="text-2xl font-bold mb-4">🎉 퀴즈 완료! 🎉</h2>
-            <p class="text-xl">당신의 점수는 <span class="text-blue-600 font-bold">${score}</span>/${currentQuizData.questions.length}점 입니다!</p>
-            ${score === currentQuizData.questions.length ? '<p class="text-lg font-semibold mt-4 text-green-600">축하합니다! 모든 문제를 맞히셨어요! 🏆</p>' : ""}
+            <p class="text-xl">당신의 점수는 <span class="text-blue-600 font-bold">${score}</span>/${total}점 입니다!</p>
+            ${message ? `<p class="text-lg font-semibold mt-4">${message}</p>` : ''}
+            ${score === total ? '<p class="text-lg font-semibold mt-4 text-green-600">축하합니다! 모든 문제를 맞히셨어요! 🏆</p>' : ''}
             <button id="closeModalBtn" class="mt-8 bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-800">닫기</button>
         </div>
     `, false);
