@@ -968,8 +968,17 @@ function setupGeminiButtons() {
     });
 }
 quizBtn.addEventListener("click", () => {
-    const quizCount = window.confirm('20문제 퀴즈를 생성하시겠습니까?\n(취소를 누르면 5문제가 생성됩니다.)') ? 20 : 5;
-    generateQuiz(quizCount);
+    const content = `
+        <div class="text-center">
+            <p class="mb-4">몇 문제로 퀴즈를 풀어볼까요?</p>
+            <div class="flex justify-center space-x-4">
+                <button id="quiz5Btn" class="bg-pink-300 hover:bg-pink-400 text-white font-bold py-2 px-4 rounded-full shadow transform transition hover:scale-105">🐣 5문제</button>
+                <button id="quiz20Btn" class="bg-yellow-300 hover:bg-yellow-400 text-white font-bold py-2 px-4 rounded-full shadow transform transition hover:scale-105">🐥 20문제</button>
+            </div>
+        </div>`;
+    showModal('퀴즈 문제 수 선택', content, false);
+    document.getElementById('quiz5Btn').addEventListener('click', () => generateQuiz(5));
+    document.getElementById('quiz20Btn').addEventListener('click', () => generateQuiz(20));
 });
 practiceBtn.addEventListener("click", generatePractice);
 closeModalBtn.addEventListener("click", hideModal);
