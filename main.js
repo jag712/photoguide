@@ -513,15 +513,15 @@ function generatePractice() {
             const answerWords = normalize(correctAnswer);
             const matchCount = answerWords.filter(w => userWords.includes(w)).length;
             const ratio = answerWords.length ? matchCount / answerWords.length : 0;
-            const score = ratio === 1 ? 5 : ratio >= 0.75 ? 4 : ratio >= 0.5 ? 3 : ratio >= 0.25 ? 2 : 1;
+            const questionScore = ratio === 1 ? 5 : ratio >= 0.75 ? 4 : ratio >= 0.5 ? 3 : ratio >= 0.25 ? 2 : 1;
             const resultEl = input.parentElement.querySelector(".result");
             resultEl.classList.remove("text-green-600", "text-red-600");
-            const highScore = score >= 4;
-            resultEl.innerHTML = `점수: <span class="${highScore ? "text-green-600" : "text-red-600"}">${score}/5</span><br>모범답안: <span class="text-green-600">${input.dataset.answer}</span>`;
+            const highScore = questionScore >= 4;
+            resultEl.innerHTML = `점수: <span class="${highScore ? "text-green-600" : "text-red-600"}">${questionScore}/5</span><br>모범답안: <span class="text-green-600">${input.dataset.answer}</span>`;
             resultEl.classList.remove("hidden");
             input.classList.toggle("border-green-400", highScore);
             input.classList.toggle("border-red-400", !highScore);
-            totalScore += score;
+            totalScore += questionScore;
             if (!highScore) incorrect.push({ input, idx });
         });
 
@@ -560,7 +560,6 @@ function createPracticeQuestions(count = 4) {
     const flattened = Object.entries(photographyData).flatMap(([category, arr]) =>
         arr.map(item => ({ ...item, category }))
     );
-    const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, Math.min(n, arr.length));
     const selected = pickRandom(flattened, count);
     const levels = ["easy", "medium", "hard"];
     const endings = ["에 대해 설명하세요.", "에 대해 말해보세요."];
