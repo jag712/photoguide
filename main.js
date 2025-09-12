@@ -254,76 +254,98 @@ function hideModal() {
 }
 
 async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
-    controller = new AbortController();
-    abortedByUser = false;
+    const MAX_RETRIES = 2;
+    let attempt = 0;
     showModal(title, '', true);
-    try {
-        const payload = {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {},
-        };
-        if (useSchema) {
-            payload.generationConfig.responseMimeType = "application/json";
-            payload.generationConfig.responseSchema = {
-                type: "OBJECT",
-                properties: {
-                    questions: {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                question: { type: "STRING" },
-                                options: { type: "ARRAY", items: { type: "STRING" } },
-                                answer: { type: "STRING" },
-                                explanations: {
-                                    type: "OBJECT",
-                                    additionalProperties: { type: "STRING" },
+    while (attempt <= MAX_RETRIES) {
+        controller = new AbortController();
+        abortedByUser = false;
+        let didTimeout = false;
+        try {
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {},
+            };
+            if (useSchema) {
+                payload.generationConfig.responseMimeType = "application/json";
+                payload.generationConfig.responseSchema = {
+                    type: "OBJECT",
+                    properties: {
+                        questions: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    question: { type: "STRING" },
+                                    options: { type: "ARRAY", items: { type: "STRING" } },
+                                    answer: { type: "STRING" },
+                                    explanations: {
+                                        type: "OBJECT",
+                                        additionalProperties: { type: "STRING" },
+                                    },
                                 },
+                                required: ["question", "options", "answer", "explanations"],
                             },
-                            required: ["question", "options", "answer", "explanations"],
                         },
                     },
-                },
-            };
-        } else {
-            payload.generationConfig.responseMimeType = "text/plain";
-        }
-        const timeoutId = setTimeout(() => {
-            controller.abort();
+                };
+            } else {
+                payload.generationConfig.responseMimeType = "text/plain";
+            }
+            const timeoutId = setTimeout(() => {
+                didTimeout = true;
+                controller.abort();
+            }, 30000);
+            const response = await fetch(PROXY_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
+            }
+            const result = await response.json();
+            let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!text) {
+                throw new Error("API에서 콘텐츠를 받지 못했습니다.");
+            }
+            text = text.trim();
+            if (text.startsWith("```json") && text.endsWith("```")) {
+                text = text.substring(7, text.length - 3).trim();
+            }
+            return text;
+        } catch (error) {
+            if (error.name === "AbortError" && abortedByUser) {
+                return null;
+            }
+            if (didTimeout) {
+                hideModal();
+                const retryBtn = `<button id="retry-btn" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">재시도</button>`;
+                showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>${retryBtn}`, false);
+                document.getElementById('retry-btn').addEventListener('click', () => {
+                    hideModal();
+                    callGemini(prompt, useSchema, title);
+                });
+                return null;
+            }
+            attempt++;
+            if (attempt <= MAX_RETRIES) {
+                clearInterval(iconChangeInterval);
+                showModal(title, `<p class="text-red-500">네트워크 오류가 발생했습니다. 재시도 중... (${attempt}/${MAX_RETRIES})</p>`, true);
+                continue;
+            }
+            console.error("Gemini proxy call error:", error);
             clearInterval(iconChangeInterval);
-            showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`, false);
-        }, 15000);
-        const response = await fetch(PROXY_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-        if (!response.ok) {
-            throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
-        }
-        const result = await response.json();
-        let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!text) {
-            throw new Error("API에서 콘텐츠를 받지 못했습니다.");
-        }
-        text = text.trim();
-        if (text.startsWith("```json") && text.endsWith("```")) {
-            text = text.substring(7, text.length - 3).trim();
-        }
-        return text;
-    } catch (error) {
-        if (error.name === "AbortError" && abortedByUser) {
+            const retryBtn = `<button id="retry-btn" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">재시도</button>`;
+            showModal('오류', `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>${retryBtn}`, false);
+            document.getElementById('retry-btn').addEventListener('click', () => {
+                hideModal();
+                callGemini(prompt, useSchema, title);
+            });
             return null;
         }
-        console.error("Gemini proxy call error:", error);
-        clearInterval(iconChangeInterval);
-        const errorMessage = (error.name === "AbortError")
-            ? "요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요."
-            : "AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
-        showModal('오류', `<p class="text-red-500">${errorMessage}</p>`, false);
-        return null;
     }
 }
 
