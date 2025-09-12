@@ -14,4 +14,15 @@ const partial = calculateScore('Zone', 'Zone System');
 assert.ok(partial >= 2 && partial <= 3);
 assert.strictEqual(calculateScore('aperture', 'banana'), 1);
 
+// ensure answer_short fields exist
+assert.ok(
+  data.structure[0].answer_short &&
+    data.structure[0].answer_short.length < data.structure[0].a.length,
+  'answer_short should be shorter than full answer',
+);
+
+// fuzzy matching and synonyms
+assert.ok(calculateScore('camra', 'camera') >= 4);
+assert.ok(calculateScore('af', 'autofocus') >= 4);
+
 console.log('Tests passed');

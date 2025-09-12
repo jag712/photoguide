@@ -496,7 +496,7 @@ function generatePractice() {
         const metaParts = [`난이도: ${difficultyMap[q.difficulty] || q.difficulty}`];
         if (q.era) metaParts.push(`시대: ${q.era}`);
         return `
-        <div class="mb-4">
+        <div class="mb-4 practice-question">
             <p class="font-semibold">${idx + 1}. ${q.question}</p>
             <input type="text" class="practice-input w-full p-2 mt-1 border rounded" data-answer="${q.answer.replace(/"/g, '&quot;')}">
             <p class="text-xs text-gray-500 mt-1">${metaParts.join(" | ")}</p>
@@ -510,12 +510,17 @@ function generatePractice() {
             hideModal();
             return;
         }
-        modalBody.querySelectorAll(".practice-input").forEach(input => {
+        const inputs = [...modalBody.querySelectorAll(".practice-input")];
+        let total = 0;
+        const wrong = [];
+        inputs.forEach((input, idx) => {
             const userAnswer = input.value;
             const correctAnswer = input.dataset.answer;
             const score = typeof calculateScore === 'function'
                 ? calculateScore(userAnswer, correctAnswer)
                 : 1;
+            total += score;
+            if (score < 4) wrong.push(idx + 1);
             const resultEl = input.parentElement.querySelector(".result");
             resultEl.classList.remove("text-green-600", "text-red-600");
             const highScore = score >= 4;
@@ -524,6 +529,25 @@ function generatePractice() {
             input.classList.toggle("border-green-400", highScore);
             input.classList.toggle("border-red-400", !highScore);
         });
+        const summary = document.createElement('div');
+        summary.id = 'practiceSummary';
+        summary.className = 'p-3 bg-gray-100 rounded mt-2 text-sm';
+        const maxScore = inputs.length * 5;
+        summary.innerHTML = `<p>총점: ${total}/${maxScore}</p><p>오답: ${wrong.length ? wrong.join(', ') : '없음'}</p>`;
+        gradeBtn.parentElement.insertBefore(summary, gradeBtn);
+        if (wrong.length) {
+            const reviewBtn = document.createElement('button');
+            reviewBtn.id = 'reviewPractice';
+            reviewBtn.className = 'w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 mt-2';
+            reviewBtn.textContent = '오답 복습';
+            reviewBtn.addEventListener('click', () => {
+                modalBody.querySelectorAll('.practice-question').forEach((el, idx) => {
+                    if (!wrong.includes(idx + 1)) el.classList.add('hidden');
+                });
+                reviewBtn.remove();
+            });
+            gradeBtn.parentElement.appendChild(reviewBtn);
+        }
         gradeBtn.textContent = "닫기";
         gradeBtn.dataset.state = "graded";
     });
