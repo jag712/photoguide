@@ -437,28 +437,15 @@ function createFallbackQuiz(pool, count = 5) {
 }
 
 async function generateQuiz(quizCount) {
-    const activeLink = document.querySelector(".nav-item.active");
-    const category = activeLink ? activeLink.dataset.category : "all";
     let pool = [];
-    if (["home", "visualization", "all", "cms"].includes(category)) {
-        Object.entries(photographyData).forEach(([cat, arr]) => {
-            const entries = arr.map(item => ({ ...item, _category: cat }));
-            pool.push(...entries);
-            if (cat === "history") {
-                // Give history items a higher weight by duplicating them
-                pool.push(...arr.map(item => ({ ...item, _category: cat })));
-            }
-        });
-    } else if (photographyData[category]) {
-        const entries = photographyData[category].map(item => ({ ...item, _category: category }));
+    Object.entries(photographyData).forEach(([cat, arr]) => {
+        const entries = arr.map(item => ({ ...item, _category: cat }));
         pool.push(...entries);
-        if (category === "history") {
-            pool.push(...photographyData[category].map(item => ({ ...item, _category: category })));
+        if (cat === "history") {
+            // Give history items a higher weight by duplicating them
+            pool.push(...arr.map(item => ({ ...item, _category: cat })));
         }
-    } else {
-        showModal('오류', `<p class="text-red-500">선택된 카테고리에 퀴즈를 만들 데이터가 없습니다.</p>`, false);
-        return;
-    }
+    });
     if (pool.length < 5) {
         showModal('오류', `<p class="text-red-500">퀴즈를 만들 데이터가 부족합니다.</p>`, false);
         return;
