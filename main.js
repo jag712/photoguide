@@ -369,8 +369,9 @@ function createFallbackQuiz(pool, count = 5) {
         [correct, ...wrong].forEach(p => {
             explanations[p.q] = simplify(p.a);
         });
+        const desc = simplify(correct.a).replace(/[.?!]$/, "").trim();
         questions.push({
-            question: ensureFullSentence(`${simplify(correct.a)} 이 설명에 해당하는 용어는 무엇일까요?`),
+            question: ensureFullSentence(`${desc}은(는) 무엇인가요?`),
             options,
             answer: correct.q,
             explanations
