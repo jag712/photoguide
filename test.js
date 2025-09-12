@@ -52,9 +52,9 @@ assert.ok(dom.window.document.getElementById('quizBtn'));
 assert.ok(dom.window.document.getElementById('practiceBtn'));
 
 // encouraging messages
-assert.strictEqual(dom.window.getEncouragementMessage(95), '대단해요!');
-assert.strictEqual(dom.window.getEncouragementMessage(75), '좋은 성과예요!');
-assert.strictEqual(dom.window.getEncouragementMessage(55), '조금만 더 힘내요!');
-assert.strictEqual(dom.window.getEncouragementMessage(30), '시작이 반이에요!');
+assert.strictEqual(dom.window.getPracticeMessage(95), '대단해요!');
+assert.strictEqual(dom.window.getPracticeMessage(75), '좋은 성과예요!');
+assert.strictEqual(dom.window.getPracticeMessage(55), '조금만 더 힘내요!');
+assert.strictEqual(dom.window.getPracticeMessage(30), '시작이 반이에요!');
 
 console.log('Tests passed');

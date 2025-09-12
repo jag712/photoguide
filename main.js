@@ -164,13 +164,14 @@ let quizTimeLimit;
 let timerInterval;
 let quizTotalMs;
 
-function getEncouragementMessage(percentage) {
+function getPracticeMessage(percentage) {
     if (percentage >= 90) return "대단해요!";
     if (percentage >= 70) return "좋은 성과예요!";
     if (percentage >= 50) return "조금만 더 힘내요!";
     return "시작이 반이에요!";
 }
-window.getEncouragementMessage = getEncouragementMessage;
+window.getPracticeMessage = getPracticeMessage;
+window.getEncouragementMessage = getPracticeMessage;
 
 function createCalendar(year, month, events = {}) {
     const today = new Date();
@@ -539,8 +540,8 @@ function generatePractice() {
         summary.id = 'practiceSummary';
         summary.className = 'p-3 bg-gray-100 rounded mt-2 text-sm';
         const maxScore = inputs.length * 5;
-        const percent = (total / maxScore) * 100;
-        const message = getEncouragementMessage(percent);
+        const percentage = (total / maxScore) * 100;
+        const message = getPracticeMessage(percentage);
         summary.innerHTML = `<p>총점: ${total}/${maxScore}</p><p>${message}</p><p>오답: ${wrong.length ? wrong.join(', ') : '없음'}</p>`;
         gradeBtn.parentElement.insertBefore(summary, gradeBtn);
         if (wrong.length) {
