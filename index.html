@@ -128,6 +128,26 @@
           >
             🌸 AI 퀴즈 생성
           </button>
+          <div id="practiceFilters" class="mt-2">
+            <label for="practiceCategory" class="block text-sm mb-1">카테고리</label>
+            <select id="practiceCategory" class="w-full p-2 border rounded mb-2">
+              <option value="">전체</option>
+              <option value="structure">카메라 구조와 원리</option>
+              <option value="exposure">노출</option>
+              <option value="lens">렌즈와 광학</option>
+              <option value="digital">디지털</option>
+              <option value="film">필름 현상 인화</option>
+              <option value="lighting">조명과 필터</option>
+              <option value="history">사진사 & 사조</option>
+            </select>
+            <label for="practiceDifficulty" class="block text-sm mb-1">난이도</label>
+            <select id="practiceDifficulty" class="w-full p-2 border rounded">
+              <option value="">전체</option>
+              <option value="easy">쉬움</option>
+              <option value="medium">보통</option>
+              <option value="hard">어려움</option>
+            </select>
+          </div>
           <button
             id="practiceBtn"
             class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors mt-2"
