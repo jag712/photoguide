@@ -55,7 +55,8 @@ const photographyData = {
         { q: "입사식 노출계", a: "피사체에 도달하는 빛의 양을 직접 측정하는 노출계." },
         { q: "적정 노출", a: "작가의 의도에 맞게 장면의 밝기가 적절히 표현된 노출." },
         { q: "TTL (Through-The-Lens)", a: "렌즈를 통해 들어온 빛을 측정하는 방식." },
-        { q: "역광 인물에서 스팟측광 vs 평가측광?", a: "역광 상황에서 스팟측광은 인물의 얼굴에 노출을 맞춰 밝게 표현하지만 배경은 과노출될 수 있고, 평가측광은 배경과 인물을 평균내어 계산해 인물 얼굴이 어둡게 실루엣처럼 나타날 수 있다.", keywords: "backlight, spot, evaluative" }],
+        { q: "역광 인물에서 스팟측광 vs 평가측광?", a: "역광 상황에서 스팟측광은 인물의 얼굴에 노출을 맞춰 밝게 표현하지만 배경은 과노출될 수 있고, 평가측광은 배경과 인물을 평균내어 계산해 인물 얼굴이 어둡게 실루엣처럼 나타날 수 있다.", keywords: "backlight, spot, evaluative" },
+        { q: "존 시스템 (Zone System)", a: "장면을 10개의 밝기 구역으로 나누어 노출과 현상을 제어하는 체계적인 노출 기법.", importance: 3 }],
 lens: [ { q: "과초점거리", a: "무한대까지 초점이 맞기 시작하는 가장 가까운 거리." },
 { q: "광각렌즈", a: "표준렌즈보다 초점거리가 짧아 넓은 화각과 원근감 왜곡을 만드는 렌즈." },
 { q: "광량 균일성", a: "렌즈를 통해 들어오는 빛이 이미지 센서 전체에 고르게 분포하는 정도." },
@@ -485,3 +486,4 @@ lens: [ { q: "과초점거리", a: "무한대까지 초점이 맞기 시작하�
 };
 
 if (typeof window !== "undefined") { window.photographyData = photographyData; }
+if (typeof module !== "undefined") { module.exports = photographyData; }
