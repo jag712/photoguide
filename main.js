@@ -506,14 +506,11 @@ function generatePractice() {
             return;
         }
         modalBody.querySelectorAll(".practice-input").forEach(input => {
-            const userAnswer = input.value.trim().toLowerCase();
-            const correctAnswer = input.dataset.answer.toLowerCase();
-            const normalize = (str) => str.split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 2);
-            const userWords = normalize(userAnswer);
-            const answerWords = normalize(correctAnswer);
-            const matchCount = answerWords.filter(w => userWords.includes(w)).length;
-            const ratio = answerWords.length ? matchCount / answerWords.length : 0;
-            const score = ratio === 1 ? 5 : ratio >= 0.75 ? 4 : ratio >= 0.5 ? 3 : ratio >= 0.25 ? 2 : 1;
+            const userAnswer = input.value;
+            const correctAnswer = input.dataset.answer;
+            const score = typeof calculateScore === 'function'
+                ? calculateScore(userAnswer, correctAnswer)
+                : 1;
             const resultEl = input.parentElement.querySelector(".result");
             resultEl.classList.remove("text-green-600", "text-red-600");
             const highScore = score >= 4;
