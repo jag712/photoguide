@@ -501,11 +501,11 @@ function generatePractice() {
     modalBody.innerHTML = html;
     const gradeBtn = document.getElementById("gradePractice");
     gradeBtn.addEventListener("click", () => {
-        if (gradeBtn.dataset.state === "graded") {
-            hideModal();
-            return;
-        }
-        modalBody.querySelectorAll(".practice-input").forEach(input => {
+        const inputs = modalBody.querySelectorAll(".practice-input");
+        let totalScore = 0;
+        const incorrect = [];
+
+        inputs.forEach((input, idx) => {
             const userAnswer = input.value.trim().toLowerCase();
             const correctAnswer = input.dataset.answer.toLowerCase();
             const normalize = (str) => str.split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 2);
@@ -521,9 +521,38 @@ function generatePractice() {
             resultEl.classList.remove("hidden");
             input.classList.toggle("border-green-400", highScore);
             input.classList.toggle("border-red-400", !highScore);
+            totalScore += score;
+            if (!highScore) incorrect.push({ input, idx });
         });
-        gradeBtn.textContent = "닫기";
-        gradeBtn.dataset.state = "graded";
+
+        gradeBtn.remove();
+
+        const summary = document.createElement("div");
+        summary.className = "mt-4 p-4 bg-gray-100 rounded";
+        const totalPossible = inputs.length * 5;
+        summary.innerHTML = `
+            <p class="font-bold">총점: ${totalScore}/${totalPossible}</p>
+            ${incorrect.length
+                ? `<p class="text-red-600 mt-1">틀린 문제: ${incorrect.map(i => i.idx + 1).join(', ')}</p>`
+                : '<p class="text-green-600 mt-1">모든 문제를 맞혔습니다!</p>'}
+            <div class="flex gap-2 mt-2">
+                ${incorrect.length ? '<button id="reviewIncorrect" class="flex-1 bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600">틀린 답안 검토</button>' : ''}
+                <button id="closePractice" class="flex-1 bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800">닫기</button>
+            </div>`;
+        modalBody.appendChild(summary);
+
+        document.getElementById("closePractice").addEventListener("click", hideModal);
+
+        const reviewBtn = document.getElementById("reviewIncorrect");
+        if (reviewBtn) {
+            let reviewIndex = 0;
+            reviewBtn.addEventListener("click", () => {
+                const target = incorrect[reviewIndex].input;
+                target.scrollIntoView({ behavior: 'smooth' });
+                target.focus();
+                reviewIndex = (reviewIndex + 1) % incorrect.length;
+            });
+        }
     });
 }
 
