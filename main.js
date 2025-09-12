@@ -525,7 +525,12 @@ function createPracticeQuestions(count = 4) {
 function displayQuizQuestion() {
     const q = currentQuizData.questions[currentQuestionIndex];
     quizTimeLimit = currentQuestionIndex >= 3 ? 20 : 15;
-    const optionsHtml = q.options.map(option => `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${option.replace(/"/g, "&quot;")}">${option}</div>`).join("");
+    const optionsHtml = q.options
+        .map(opt => {
+            const safe = escapeHtml(opt);
+            return `<div class="quiz-option p-4 rounded-lg cursor-pointer mb-2" data-option="${safe}">${safe}</div>`;
+        })
+        .join("");
     const questionHtml = `
         <div class="mb-4">
             <p class="text-sm text-gray-500">문제 ${currentQuestionIndex + 1} / ${currentQuizData.questions.length}</p>
