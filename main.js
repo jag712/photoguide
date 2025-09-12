@@ -404,7 +404,6 @@ async function generateQuiz() {
         .join("\n");
     const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목에는 [카테고리]가 포함되어 있습니다. 이 정보를 바탕으로 난이도 5의 객관식 퀴즈 5문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 같은 카테고리의 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 서로 다른 유형의 단어가 섞이지 않도록, 예를 들어 카메라에 대한 문제에 사람 이름이 보기로 나오면 안 돼. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. question 필드는 물음표로 끝나는 완전한 질문 문장으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
 
-
     let parsed = null;
     const responseText = await callGemini(prompt, true, "퀴즈 생성 중...");
     if (responseText) {
@@ -874,9 +873,14 @@ function setupGeminiButtons() {
     document.querySelectorAll(".gemini-btn").forEach((btn) => {
         btn.addEventListener("click", async (e) => {
             e.stopPropagation();
-            const action = e.target.dataset.action;
-            const question = e.target.dataset.q;
-            const answer = e.target.dataset.a;
+            const { action, q: question, a: answer } = e.currentTarget.dataset;
+            console.log("Question:", question);
+            console.log("Answer:", answer);
+            if (!question || !answer) {
+                console.error("Missing data on Gemini button", e.currentTarget);
+                showModal("오류", `<p class="text-red-500">해당 항목의 데이터를 불러오지 못했습니다.</p>`, false);
+                return;
+            }
             const cacheKey = `${action}-${question}`;
             const resultTitle = `"${question}" ${action === "explain" ? "쉽게 이해하기" : "깊이 알아보기"}`;
             const cachedResponse = localStorage.getItem(cacheKey);
@@ -891,8 +895,7 @@ function setupGeminiButtons() {
                 prompt = `사진학 용어인 "${question}"에 대해 입시생의 암기하기 쉽게 이해하기 쉽고 간결하게 설명해줘. 다음 설명을 참고하여, 중요한 개념을 놓치지 않으면서도 면접에서 자연스럽게 활용할 수 있도록 정리해줘 최대 300자 내외. 참고 설명: ${answer}`;
             } else if (action === "deepen") {
                 loadingTitle = "깊이 알아보기 중... 🧐";
-
-                prompt = `사진학 개념인 "${question}"에 대해 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 간단한 배경과 면접에 쓸만한 추가 정보를 제공해. 사진 작가인 경우에는 촬영 팁 대신 대표작이나 사진집, 또는 전시의 제목 알려줘.. 설명: ${answer}`;
+                prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 역사적 배경과 전공가가 알아야 할 추가 정보를 제공해줘. 사진 작가인 경우에는 촬영 팁 대신 대표작, 대표 사진집 또는 전시의 제목만 나열해 검색할 수 있게 해줘. 설명: ${answer}`;
 
             }
             if (prompt) {
