@@ -540,25 +540,41 @@ function generatePractice() {
         summary.id = 'practiceSummary';
         summary.className = 'p-3 bg-gray-100 rounded mt-2 text-sm';
         const maxScore = inputs.length * 5;
-        const percentage = (total / maxScore) * 100;
-        const message = getPracticeMessage(percentage);
-        summary.innerHTML = `<p>총점: ${total}/${maxScore}</p><p>${message}</p><p>오답: ${wrong.length ? wrong.join(', ') : '없음'}</p>`;
-        gradeBtn.parentElement.insertBefore(summary, gradeBtn);
-        if (wrong.length) {
-            const reviewBtn = document.createElement('button');
-            reviewBtn.id = 'reviewPractice';
-            reviewBtn.className = 'w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 mt-2';
-            reviewBtn.textContent = '오답 복습';
-            reviewBtn.addEventListener('click', () => {
-                modalBody.querySelectorAll('.practice-question').forEach((el, idx) => {
-                    if (!wrong.includes(idx + 1)) el.classList.add('hidden');
-                });
-                reviewBtn.remove();
-            });
-            gradeBtn.parentElement.appendChild(reviewBtn);
-        }
-        gradeBtn.textContent = "닫기";
-        gradeBtn.dataset.state = "graded";
+const percentage = maxScore > 0 ? (total / maxScore) * 100 : 0;
+
+// getPracticeMessage 가 통합 헬퍼라면 그대로, 구버전 호환 이름이 남아있다면 그쪽도 시도
+const getMsg =
+  typeof getPracticeMessage === 'function'
+    ? getPracticeMessage
+    : (typeof getEncouragementMessage === 'function'
+        ? getEncouragementMessage
+        : null);
+
+const message = getMsg ? getMsg(percentage) : '';
+
+summary.innerHTML =
+  `<p>총점: ${total}/${maxScore}${maxScore ? ` (${Math.round(percentage)}%)` : ''}</p>` +
+  (message ? `<p>${message}</p>` : '') +
+  `<p>오답: ${wrong.length ? wrong.join(', ') : '없음'}</p>`;
+
+gradeBtn.parentElement.insertBefore(summary, gradeBtn);
+
+if (wrong.length) {
+  const reviewBtn = document.createElement('button');
+  reviewBtn.id = 'reviewPractice';
+  reviewBtn.className = 'w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 mt-2';
+  reviewBtn.textContent = '오답 복습';
+  reviewBtn.addEventListener('click', () => {
+    modalBody.querySelectorAll('.practice-question').forEach((el, idx) => {
+      if (!wrong.includes(idx + 1)) el.classList.add('hidden');
+    });
+    reviewBtn.remove();
+  });
+  gradeBtn.parentElement.appendChild(reviewBtn);
+}
+
+gradeBtn.textContent = '닫기';
+gradeBtn.dataset.state = 'graded';
     });
 }
 
