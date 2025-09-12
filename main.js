@@ -172,6 +172,63 @@ function shuffleArray(arr) {
     return arr;
 }
 
+const interviewQuizQuestions = [
+    {
+        question: "면접에서 자신의 장점을 말할 때 가장 중요한 태도는 무엇인가요?",
+        options: [
+            "겸손하게 진솔함을 전달하기",
+            "과장되게 표현하기",
+            "긴장된 모습을 보이기",
+            "모르는 척 회피하기",
+            "웃음만 유지하기",
+        ],
+        answer: "겸손하게 진솔함을 전달하기",
+        explanations: {
+            "겸손하게 진솔함을 전달하기": "면접관에게 진정성을 보여주는 것이 핵심입니다.",
+            "과장되게 표현하기": "과장된 표현은 신뢰를 떨어뜨릴 수 있습니다.",
+            "긴장된 모습을 보이기": "긴장감은 자연스럽지만 장점을 어필하기엔 좋지 않습니다.",
+            "모르는 척 회피하기": "질문을 회피하면 성의가 없어 보입니다.",
+            "웃음만 유지하기": "미소는 좋지만 내용 없는 미소만으로는 부족합니다.",
+        },
+    },
+    {
+        question: "대학 면접이 끝난 뒤 올바른 마무리 인사는 무엇인가요?",
+        options: [
+            "감사 인사를 전하고 천천히 일어나기",
+            "눈을 피하며 빠르게 고개 숙이기",
+            "추가 질문을 요구하기",
+            "책상에 기대어 인사하기",
+            "휴대폰을 확인하기",
+        ],
+        answer: "감사 인사를 전하고 천천히 일어나기",
+        explanations: {
+            "감사 인사를 전하고 천천히 일어나기": "예의 바른 마무리로 좋은 인상을 남깁니다.",
+            "눈을 피하며 빠르게 고개 숙이기": "자신감이 없어 보일 수 있습니다.",
+            "추가 질문을 요구하기": "면접관의 진행을 방해할 수 있습니다.",
+            "책상에 기대어 인사하기": "단정한 자세가 아니며 성의 없어 보입니다.",
+            "휴대폰을 확인하기": "무례한 행동으로 비춰집니다.",
+        },
+    },
+    {
+        question: "면접 대기 시간에 가장 바람직한 행동은 무엇인가요?",
+        options: [
+            "준비한 자료를 정리하며 조용히 기다리기",
+            "크게 통화하기",
+            "다른 지원자에게 답을 알려주기",
+            "계속해서 휴대폰 영상을 보기",
+            "자리를 이탈해 산책하기",
+        ],
+        answer: "준비한 자료를 정리하며 조용히 기다리기",
+        explanations: {
+            "준비한 자료를 정리하며 조용히 기다리기": "준비된 태도로 면접에 집중할 수 있습니다.",
+            "크게 통화하기": "주변 사람들에게 방해가 됩니다.",
+            "다른 지원자에게 답을 알려주기": "비윤리적인 행동입니다.",
+            "계속해서 휴대폰 영상을 보기": "집중력을 떨어뜨릴 수 있습니다.",
+            "자리를 이탈해 산책하기": "호출을 놓칠 위험이 있습니다.",
+        },
+    },
+];
+
 function createCalendar(year, month, events = {}) {
     const today = new Date();
     const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
@@ -508,8 +565,8 @@ async function generateQuiz(quizCount) {
     let questions = parsed.questions;
 
     if (quizCount === 20) {
-        const aiQs = await generateAiQuestions(10);
-        questions = questions.concat(aiQs);
+        const aiQs = await generateAiQuestions(7);
+        questions = questions.concat(aiQs, interviewQuizQuestions);
         questions = shuffleArray(questions);
     }
 
