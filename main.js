@@ -154,6 +154,24 @@ let quizTimeLimit;
 let timerInterval;
 let quizTotalMs;
 
+function pickRandom(arr, n) {
+    const copy = [...arr];
+    const result = [];
+    for (let i = 0; i < n && copy.length; i++) {
+        const idx = Math.floor(Math.random() * copy.length);
+        result.push(copy.splice(idx, 1)[0]);
+    }
+    return result;
+}
+
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
 function createCalendar(year, month, events = {}) {
     const today = new Date();
     const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
@@ -412,7 +430,27 @@ function createFallbackQuiz(pool, count = 5) {
     return { questions };
 }
 
-async function generateQuiz() {
+async function generateAiQuestions(count) {
+    const prompt = `사진 및 예술 관련 객관식 퀴즈 ${count}문제를 만들어줘. 각 문제는 하나의 질문과 5개의 보기(정답 1개 포함), 정답, 그리고 각 보기에 대한 간단한 설명을 포함해야 해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘.`;
+    const { result } = callGemini(prompt, true, "퀴즈 생성 중...");
+    const responseText = await result;
+    if (responseText) {
+        try {
+            const parsed = JSON.parse(responseText);
+            if (Array.isArray(parsed.questions)) {
+                parsed.questions.forEach(q => {
+                    q.question = ensureFullSentence(q.question);
+                });
+                return parsed.questions;
+            }
+        } catch (_) {
+            return [];
+        }
+    }
+    return [];
+}
+
+async function generateQuiz(quizCount) {
     const activeLink = document.querySelector(".nav-item.active");
     const category = activeLink ? activeLink.dataset.category : "all";
     let pool = [];
@@ -440,20 +478,13 @@ async function generateQuiz() {
         return;
     }
 
-    const pickRandom = (arr, n) => {
-        const copy = [...arr];
-        const result = [];
-        for (let i = 0; i < n && copy.length; i++) {
-            const idx = Math.floor(Math.random() * copy.length);
-            result.push(copy.splice(idx, 1)[0]);
-        }
-        return result;
-    };
-    const sample = pickRandom(pool, 8);
+    const datasetCount = quizCount === 20 ? 10 : quizCount;
+    const sampleSize = Math.min(pool.length, Math.max(8, datasetCount + 3));
+    const sample = pickRandom(pool, sampleSize);
     const dataLines = sample
         .map(item => `- [${item._category}] ${item.q}: ${simplify(item.a)}`)
         .join("\n");
-    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목에는 [카테고리]가 포함되어 있습니다. 이 정보를 바탕으로 객관식 퀴즈 20문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 같은 카테고리의 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 서로 다른 유형의 단어가 섞이지 않도록 해. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. question 필드는 물음표로 끝나는 완전한 질문 문장으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
+    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목에는 [카테고리]가 포함되어 있습니다. 이 정보를 바탕으로 객관식 퀴즈 ${datasetCount}문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 같은 카테고리의 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 서로 다른 유형의 단어가 섞이지 않도록 해. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. question 필드는 물음표로 끝나는 완전한 질문 문장으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
 
     let parsed = null;
     const { result } = callGemini(prompt, true, "퀴즈 생성 중...");
@@ -471,9 +502,18 @@ async function generateQuiz() {
         });
     }
     if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-        parsed = createFallbackQuiz(pool);
+        parsed = createFallbackQuiz(pool, datasetCount);
     }
-    currentQuizData = parsed;
+
+    let questions = parsed.questions;
+
+    if (quizCount === 20) {
+        const aiQs = await generateAiQuestions(10);
+        questions = questions.concat(aiQs);
+        questions = shuffleArray(questions);
+    }
+
+    currentQuizData = { questions };
     currentQuestionIndex = 0;
     score = 0;
     displayQuizQuestion();
@@ -963,7 +1003,23 @@ function setupGeminiButtons() {
         });
     });
 }
-quizBtn.addEventListener("click", generateQuiz);
+function showQuizCountSelection() {
+    const content = `<div class="flex gap-4 justify-center">
+            <button id="quiz5Btn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">5문제</button>
+            <button id="quiz20Btn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">20문제</button>
+        </div>`;
+    showModal('문제 수 선택', content, false);
+    document.getElementById('quiz5Btn').addEventListener('click', () => {
+        hideModal();
+        generateQuiz(5);
+    });
+    document.getElementById('quiz20Btn').addEventListener('click', () => {
+        hideModal();
+        generateQuiz(20);
+    });
+}
+
+quizBtn.addEventListener("click", showQuizCountSelection);
 practiceBtn.addEventListener("click", generatePractice);
 closeModalBtn.addEventListener("click", hideModal);
 geminiModal.addEventListener("click", (e) => {
