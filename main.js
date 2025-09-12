@@ -193,10 +193,8 @@ function createCalendar(year, month, events = {}) {
 
 const PROXY_URL = "/.netlify/functions/gemini-proxy";
 let iconChangeInterval;
-let controller;
-let abortedByUser = false;
 
-function showModal(title, contentHtml = '', showLoading = false) {
+function showModal(title, contentHtml = '', showLoading = false, onCancel = null) {
     const icons = ["❓", "🤔", "💡", "😊"];
     modalTitle.textContent = title;
     modalBody.innerHTML = contentHtml;
@@ -222,9 +220,7 @@ function showModal(title, contentHtml = '', showLoading = false) {
         cancelBtn.textContent = "취소";
         cancelBtn.className = "mt-4 bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800";
         cancelBtn.addEventListener("click", () => {
-            abortedByUser = true;
-            controller.abort();
-            hideModal();
+            if (onCancel) onCancel();
         });
         modalBody.innerHTML = '';
         modalBody.appendChild(loadingContainer);
@@ -253,15 +249,23 @@ function hideModal() {
     }, 300);
 }
 
-async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
+function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
     const MAX_RETRIES = 2;
     let attempt = 0;
-    showModal(title, '', true);
-    while (attempt <= MAX_RETRIES) {
-        controller = new AbortController();
-        abortedByUser = false;
-        let didTimeout = false;
-        try {
+    let controller = new AbortController();
+    let abortedByUser = false;
+    const abort = () => {
+        abortedByUser = true;
+        controller.abort();
+        hideModal();
+    };
+    showModal(title, '', true, abort);
+
+    const result = (async () => {
+        while (attempt <= MAX_RETRIES) {
+            abortedByUser = false;
+            let didTimeout = false;
+            try {
             const payload = {
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {},
@@ -315,38 +319,42 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
             if (text.startsWith("```json") && text.endsWith("```")) {
                 text = text.substring(7, text.length - 3).trim();
             }
-            return text;
-        } catch (error) {
-            if (error.name === "AbortError" && abortedByUser) {
-                return null;
-            }
-            if (didTimeout) {
-                hideModal();
+                return text;
+            } catch (error) {
+                if (error.name === "AbortError" && abortedByUser) {
+                    return null;
+                }
+                if (didTimeout) {
+                    hideModal();
+                    const retryBtn = `<button id="retry-btn" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">재시도</button>`;
+                    showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>${retryBtn}`, false);
+                    document.getElementById('retry-btn').addEventListener('click', () => {
+                        hideModal();
+                        callGemini(prompt, useSchema, title);
+                    });
+                    return null;
+                }
+                attempt++;
+                if (attempt <= MAX_RETRIES) {
+                    controller = new AbortController();
+                    clearInterval(iconChangeInterval);
+                    showModal(title, `<p class="text-red-500">네트워크 오류가 발생했습니다. 재시도 중... (${attempt}/${MAX_RETRIES})</p>`, true, abort);
+                    continue;
+                }
+                console.error("Gemini proxy call error:", error);
+                clearInterval(iconChangeInterval);
                 const retryBtn = `<button id="retry-btn" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">재시도</button>`;
-                showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>${retryBtn}`, false);
+                showModal('오류', `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>${retryBtn}`, false);
                 document.getElementById('retry-btn').addEventListener('click', () => {
                     hideModal();
                     callGemini(prompt, useSchema, title);
                 });
                 return null;
             }
-            attempt++;
-            if (attempt <= MAX_RETRIES) {
-                clearInterval(iconChangeInterval);
-                showModal(title, `<p class="text-red-500">네트워크 오류가 발생했습니다. 재시도 중... (${attempt}/${MAX_RETRIES})</p>`, true);
-                continue;
-            }
-            console.error("Gemini proxy call error:", error);
-            clearInterval(iconChangeInterval);
-            const retryBtn = `<button id="retry-btn" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">재시도</button>`;
-            showModal('오류', `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>${retryBtn}`, false);
-            document.getElementById('retry-btn').addEventListener('click', () => {
-                hideModal();
-                callGemini(prompt, useSchema, title);
-            });
-            return null;
         }
-    }
+    })();
+
+    return { abort, result };
 }
 
 function simplify(text) {
@@ -440,7 +448,8 @@ async function generateQuiz() {
     const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목에는 [카테고리]가 포함되어 있습니다. 이 정보를 바탕으로 난이도 5의 객관식 퀴즈 5문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 같은 카테고리의 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 서로 다른 유형의 단어가 섞이지 않도록 해. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. question 필드는 물음표로 끝나는 완전한 질문 문장으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
 
     let parsed = null;
-    const responseText = await callGemini(prompt, true, "퀴즈 생성 중...");
+    const { result } = callGemini(prompt, true, "퀴즈 생성 중...");
+    const responseText = await result;
     if (responseText) {
         try {
             parsed = JSON.parse(responseText);
@@ -933,7 +942,8 @@ function setupGeminiButtons() {
                 prompt = `사진학 개념인 "${question}"을(를) 위키 스타일로 정리해줘. 인사말이나 질문 언급 없이,기본 설명을 바탕으로 '개요', '역사', '전공자를 위한 정보', '관련 사진가' 순서로 간결하게 서술해. 단, 역사 외 질문은 작가를 안넣어도 돼. 작가가 들어갈 경우 대표작·대표 사진집·전시 제목만 알려줘. 기본 설명: ${answer}`;
             }
             if (prompt) {
-                const responseText = await callGemini(prompt, false, loadingTitle);
+                const { result } = callGemini(prompt, false, loadingTitle);
+                const responseText = await result;
                 if (responseText) {
                     showModal(resultTitle, `<p>${responseText.replace(/\n/g, "<br>")}</p>`, false);
                     localStorage.setItem(cacheKey, responseText);
