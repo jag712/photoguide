@@ -393,7 +393,7 @@ function createFallbackQuiz(pool, count = 5) {
         });
         const desc = simplify(correct.a).replace(/[.?!]$/, "").trim();
         questions.push({
-            question: ensureFullSentence(`${desc}은(는) 에 관해 설명한것은?`),
+            question: ensureFullSentence(`${desc}은(는) 무엇인가요?`),
             options,
             answer: correct.q,
             explanations
@@ -930,7 +930,7 @@ function setupGeminiButtons() {
                 prompt = `사진학 용어인 "${question}"에 대해 입시생의 암기하기 쉽게 이해하기 쉽고 간결하게 설명해줘. 다음 설명을 참고하여, 중요한 개념을 놓치지 않으면서도 면접에서 자연스럽게 활용할 수 있도록 정리해줘 최대 300자 내외. 참고 설명: ${answer}`;
             } else if (action === "deepen") {
                 loadingTitle = "깊이 알아보기 중... 🧐";
-                prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 역사적 배경과 전공가가 알아야 할 추가 정보를 제공해줘. 사진 작가인 경우에는 촬영 팁 대신 대표작, 대표 사진집 또는 전시의 제목만 나열해 검색할 수 있게 해줘. 설명: ${answer}`;
+                prompt = `사진학 개념인 "${question}"을(를) 위키 스타일로 정리해줘. 인사말이나 질문 언급 없이, 아래 기본 설명을 바탕으로 '개요', '역사', '전공자를 위한 정보', '관련 사진가' 순서로 간결하게 서술해. 사진 작가인 경우 촬영 팁 대신 대표작·대표 사진집·전시 제목만 나열해 검색할 수 있게 해줘. 기본 설명: ${answer}`;
 
             }
             if (prompt) {
