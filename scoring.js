@@ -1,6 +1,7 @@
 const synonyms = {
     photograph: ['photo', 'picture', 'image'],
-    camera: ['cam']
+    camera: ['cam'],
+    autofocus: ['af', 'auto-focus']
 };
 
 function normalize(str) {
