@@ -398,7 +398,19 @@ async function generateQuiz() {
         return;
     }
 
-    const sample = pool.sort(() => Math.random() - 0.5).slice(0, 8);
+    const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, Math.min(n, arr.length));
+    let sample;
+    if (["home", "visualization", "all", "cms"].includes(category)) {
+        const historyItems = pool.filter(item => item._category === "history");
+        const otherItems = pool.filter(item => item._category !== "history");
+        const historyCount = Math.min(historyItems.length, Math.max(2, Math.ceil(0.2 * 8)));
+        sample = [
+            ...pickRandom(historyItems, historyCount),
+            ...pickRandom(otherItems, 8 - historyCount)
+        ].sort(() => Math.random() - 0.5);
+    } else {
+        sample = pickRandom(pool, 8);
+    }
     const dataLines = sample
         .map(item => `- [${item._category}] ${item.q}: ${simplify(item.a)}`)
         .join("\n");
