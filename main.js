@@ -9,7 +9,7 @@ const calendarEvents = {
         { day: 22, title: "1차 프린트(경일)", color: "bg-red-500" },
         { day: 26, title: "경일 실기/면접", color: "bg-purple-500" },
         { day: 27, title: "경일 실기/면접", color: "bg-purple-500" },
-    ],
+    ],  
     10: [
         { day: 3, title: "개천절", color: "bg-gray-500", isHoliday: true },
         { day: 5, title: "추석 연휴", color: "bg-gray-500", isHoliday: true },
@@ -292,7 +292,7 @@ async function callGemini(prompt, useSchema = false, title = "AI 응답 생성 �
             controller.abort();
             clearInterval(iconChangeInterval);
             showModal('오류', `<p class="text-red-500">요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요.</p>`, false);
-        }, 60000);
+        }, 15000);
         const response = await fetch(PROXY_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -756,7 +756,7 @@ function renderContent(category, searchTerm = "") {
         (calendarEvents[10] || []).forEach((e) => {
             (eventsForOct[e.day] = eventsForOct[e.day] || []).push({ ...e });
         });
-        html = `<div class="content-card p-6 md:p-8 mb-6 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">중요한 입시 일정을 확인하세요.</p></div>`;
+        html = `<div class="content-card p-6 md:p-8 mb-6 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">중요 입시 일정</p></div>`;
         html += createCalendar(currentYear, 9, eventsForSept);
         html += createCalendar(currentYear, 10, eventsForOct);
     } else if (category === "visualization") {
@@ -895,7 +895,8 @@ function setupGeminiButtons() {
                 prompt = `사진학 용어인 "${question}"에 대해 입시생의 암기하기 쉽게 이해하기 쉽고 간결하게 설명해줘. 다음 설명을 참고하여, 중요한 개념을 놓치지 않으면서도 면접에서 자연스럽게 활용할 수 있도록 정리해줘 최대 300자 내외. 참고 설명: ${answer}`;
             } else if (action === "deepen") {
                 loadingTitle = "깊이 알아보기 중... 🧐";
-                prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 역사적 배경과 전문가가 알아야 할 추가 정보를 제공해줘. 사진 작가인 경우에는 촬영 팁 대신 대표작, 대표 사진집 또는 전시의 제목만 나열해 검색할 수 있게 해줘. 설명: ${answer}`;
+                prompt = `사진학 개념인 "${question}"에 대해 더 깊이 알고 싶어. 다음 기본 설명을 바탕으로, 관련된 역사적 배경과 전공가가 알아야 할 추가 정보를 제공해줘. 사진 작가인 경우에는 촬영 팁 대신 대표작, 대표 사진집 또는 전시의 제목만 나열해 검색할 수 있게 해줘. 설명: ${answer}`;
+
             }
             if (prompt) {
                 const responseText = await callGemini(prompt, false, loadingTitle);
