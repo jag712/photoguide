@@ -401,7 +401,7 @@ function createFallbackQuiz(pool, count = 5) {
         });
         const desc = simplify(correct.a).replace(/[.?!]$/, "").trim();
         questions.push({
-            question: ensureFullSentence(`${desc}은(는) 에 관해 설명한것은?`),
+            question: ensureFullSentence(`${desc}에 관하여 알맞은 것을 고르시오?`),
             options,
             answer: correct.q,
             explanations
