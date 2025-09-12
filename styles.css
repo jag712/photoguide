@@ -116,6 +116,10 @@ body {
   padding: 1rem; /* 텍스트와 박스 경계 사이에 여백 추가 */
   border-radius: 0.5rem; /* 박스 모서리를 둥글게 */
 }
+.importance-stars {
+  color: #fbbf24;
+  font-size: 0.9rem;
+}
 @keyframes new-animation {
   0% {
     transform: scale(0);

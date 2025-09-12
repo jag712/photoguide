@@ -351,6 +351,23 @@ function escapeHtml(str) {
     }[c] || c));
 }
 
+function weightedSample(arr, n) {
+    const pool = arr.slice();
+    const result = [];
+    while (result.length < n && pool.length) {
+        const total = pool.reduce((sum, item) => sum + (item.importance || 1), 0);
+        let r = Math.random() * total;
+        let idx = 0;
+        for (; idx < pool.length; idx++) {
+            r -= (pool[idx].importance || 1);
+            if (r < 0) break;
+        }
+        result.push(pool[idx]);
+        pool.splice(idx, 1);
+    }
+    return result;
+}
+
 function createFallbackQuiz(pool, count = 5) {
     const byCat = pool.reduce((acc, item) => {
         (acc[item._category] = acc[item._category] || []).push(item);
@@ -360,10 +377,9 @@ function createFallbackQuiz(pool, count = 5) {
     const questions = [];
     while (questions.length < count && validCats.length) {
         const catItems = validCats[Math.floor(Math.random() * validCats.length)];
-        const correct = catItems[Math.floor(Math.random() * catItems.length)];
-        const wrongPool = catItems.filter(p => p !== correct);
-        if (wrongPool.length < 4) continue;
-        const wrong = [...wrongPool].sort(() => Math.random() - 0.5).slice(0, 4);
+        const sampled = weightedSample(catItems, 5);
+        const [correct, ...wrong] = sampled;
+        if (!correct || wrong.length < 4) continue;
         const options = [correct, ...wrong].map(p => p.q).sort(() => Math.random() - 0.5);
         const explanations = {};
         [correct, ...wrong].forEach(p => {
@@ -398,7 +414,7 @@ async function generateQuiz() {
         return;
     }
 
-    const sample = pool.sort(() => Math.random() - 0.5).slice(0, 8);
+    const sample = weightedSample(pool, 8);
     const dataLines = sample
         .map(item => `- [${item._category}] ${item.q}: ${simplify(item.a)}`)
         .join("\n");
@@ -475,8 +491,7 @@ function createPracticeQuestions(count = 4) {
     const flattened = Object.entries(photographyData).flatMap(([category, arr]) =>
         arr.map(item => ({ ...item, category }))
     );
-    const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, Math.min(n, arr.length));
-    const selected = pickRandom(flattened, count);
+    const selected = weightedSample(flattened, count);
     const levels = ["easy", "medium", "hard"];
     const endings = ["에 대해 설명하세요.", "에 대해 말해보세요."];
     return selected.map(item => ({
@@ -788,11 +803,13 @@ function renderContent(category, searchTerm = "") {
                     <div class="quiz-card-inner">
                         <div class="quiz-card-front">
                             <h3 class="quiz-card-question">${item.q}</h3>
+                            <div class="importance-stars">${"⭐".repeat(item.importance || 0)}</div>
                         </div>
                         <div class="quiz-card-back">
                             <div class="quiz-card-answer-text">
                                 <p>${item.a.replace(/\n/g, "<br>")}</p>
                             </div>
+                            <div class="importance-stars mt-2">${"⭐".repeat(item.importance || 0)}</div>
                             <div class="mt-4 flex flex-wrap gap-2 justify-center">
                                 <button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${item.q.replace(/"/g, "&quot;")}" data-a="${item.a.replace(/"/g, "&quot;")}">✨ 쉽게 설명</button>
                                 <button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${item.q.replace(/"/g, "&quot;")}" data-a="${item.a.replace(/"/g, "&quot;")}">✨ 깊이 알아보기</button>
