@@ -195,7 +195,7 @@ const PROXY_URL = "/.netlify/functions/gemini-proxy";
 let iconChangeInterval;
 
 function showModal(title, contentHtml = '', showLoading = false, onCancel = null) {
-    const icons = ["❓", "🤔", "💡", "😊"];
+    const icons = ["❓", "🤔", "💡", "😊","🙏🏻","🤪"];
     modalTitle.textContent = title;
     modalBody.innerHTML = contentHtml;
 
@@ -206,6 +206,8 @@ function showModal(title, contentHtml = '', showLoading = false, onCancel = null
             "친구랑 모의 면접 중... 🗣️",
             "중대 글 쓰는 중... ✍️",
             "촬실한다고 가놓고 폰하는 중... 📱"
+            "향미각 가는 중... 🍜"
+            "맘스터치 가는 중... 🍔"
         ];
         
         const loadingContainer = document.createElement("div");
