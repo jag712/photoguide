@@ -923,8 +923,6 @@ function setupGeminiButtons() {
         btn.addEventListener("click", async (e) => {
             e.stopPropagation();
             const { action, q: question, a: answer } = e.currentTarget.dataset;
-            console.log("Question:", question);
-            console.log("Answer:", answer);
             if (!question || !answer) {
                 console.error("Missing data on Gemini button", e.currentTarget);
                 showModal("오류", `<p class="text-red-500">해당 항목의 데이터를 불러오지 못했습니다.</p>`, false);
