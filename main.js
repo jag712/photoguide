@@ -393,7 +393,7 @@ function createFallbackQuiz(pool, count = 5) {
         });
         const desc = simplify(correct.a).replace(/[.?!]$/, "").trim();
         questions.push({
-            question: ensureFullSentence(`${desc}은(는) 무엇인가요?`),
+            question: ensureFullSentence(`${desc}은(는) 에 관해 설명한것은?`),
             options,
             answer: correct.q,
             explanations
