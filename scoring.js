@@ -58,10 +58,18 @@ function calculateScore(userAnswer, correctAnswer) {
         : 1;
 }
 
+function getPracticeMessage(percentage) {
+    if (percentage >= 90) return "대단해요!";
+    if (percentage >= 70) return "좋은 성과예요!";
+    if (percentage >= 50) return "조금만 더 힘내요!";
+    return "시작이 반이에요!";
+}
+
 if (typeof module !== 'undefined') {
-    module.exports = { calculateScore };
+    module.exports = { calculateScore, getPracticeMessage };
 }
 
 if (typeof window !== 'undefined') {
     window.calculateScore = calculateScore;
+    window.getPracticeMessage = getPracticeMessage;
 }
