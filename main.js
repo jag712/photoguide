@@ -440,6 +440,8 @@ async function generateQuiz() {
         return;
     }
 
+    const quizCount = window.confirm('20문제 퀴즈를 생성하시겠습니까?\n(취소를 누르면 5문제가 생성됩니다.)') ? 20 : 5;
+
     const pickRandom = (arr, n) => {
         const copy = [...arr];
         const result = [];
@@ -449,11 +451,12 @@ async function generateQuiz() {
         }
         return result;
     };
-    const sample = pickRandom(pool, 8);
+    const sampleSize = Math.min(pool.length, Math.max(8, quizCount + 3));
+    const sample = pickRandom(pool, sampleSize);
     const dataLines = sample
         .map(item => `- [${item._category}] ${item.q}: ${simplify(item.a)}`)
         .join("\n");
-    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목에는 [카테고리]가 포함되어 있습니다. 이 정보를 바탕으로 객관식 퀴즈 20문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 같은 카테고리의 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 서로 다른 유형의 단어가 섞이지 않도록 해. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. question 필드는 물음표로 끝나는 완전한 질문 문장으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
+    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목에는 [카테고리]가 포함되어 있습니다. 이 정보를 바탕으로 객관식 퀴즈 ${quizCount}문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 같은 카테고리의 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 서로 다른 유형의 단어가 섞이지 않도록 해. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. question 필드는 물음표로 끝나는 완전한 질문 문장으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
 
     let parsed = null;
     const { result } = callGemini(prompt, true, "퀴즈 생성 중...");
@@ -471,7 +474,7 @@ async function generateQuiz() {
         });
     }
     if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-        parsed = createFallbackQuiz(pool);
+        parsed = createFallbackQuiz(pool, quizCount);
     }
     currentQuizData = parsed;
     currentQuestionIndex = 0;
