@@ -533,7 +533,13 @@ function generatePractice() {
         summary.id = 'practiceSummary';
         summary.className = 'p-3 bg-gray-100 rounded mt-2 text-sm';
         const maxScore = inputs.length * 5;
-        summary.innerHTML = `<p>총점: ${total}/${maxScore}</p><p>오답: ${wrong.length ? wrong.join(', ') : '없음'}</p>`;
+        const percentage = maxScore ? (total / maxScore) * 100 : 0;
+        const message = typeof getPracticeMessage === 'function'
+            ? getPracticeMessage(percentage)
+            : '';
+        summary.innerHTML = `<p>총점: ${total}/${maxScore} (${Math.round(percentage)}%)</p>` +
+            (message ? `<p>${message}</p>` : '') +
+            `<p>오답: ${wrong.length ? wrong.join(', ') : '없음'}</p>`;
         gradeBtn.parentElement.insertBefore(summary, gradeBtn);
         if (wrong.length) {
             const reviewBtn = document.createElement('button');

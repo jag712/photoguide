@@ -1,6 +1,6 @@
 const assert = require('assert');
 const data = require('./photographyData.js');
-const { calculateScore } = require('./scoring.js');
+const { calculateScore, getPracticeMessage } = require('./scoring.js');
 
 assert.ok(
   data.exposure.some((item) => item.q === '존 시스템 (Zone System)'),
@@ -24,5 +24,11 @@ assert.ok(
 // fuzzy matching and synonyms
 assert.ok(calculateScore('camra', 'camera') >= 4);
 assert.ok(calculateScore('af', 'autofocus') >= 4);
+
+// practice message mapping
+assert.strictEqual(getPracticeMessage(95), '대단해요!');
+assert.strictEqual(getPracticeMessage(75), '좋은 성과예요!');
+assert.strictEqual(getPracticeMessage(55), '조금만 더 힘내요!');
+assert.strictEqual(getPracticeMessage(30), '시작이 반이에요!');
 
 console.log('Tests passed');
