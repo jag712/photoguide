@@ -484,7 +484,12 @@ async function generateQuiz(quizCount) {
 }
 
 function generatePractice() {
-    const questions = createPracticeQuestions();
+    const categoryEl = document.getElementById("practiceCategory");
+    const difficultyEl = document.getElementById("practiceDifficulty");
+    const filters = {};
+    if (categoryEl && categoryEl.value) filters.categories = [categoryEl.value];
+    if (difficultyEl && difficultyEl.value) filters.difficulties = [difficultyEl.value];
+    const questions = createPracticeQuestions(4, filters);
     showModal('실전 연습');
     const html = questions.map((q, idx) => {
         const difficultyMap = { easy: "🟢", medium: "🟡", hard: "🔴" };
@@ -527,18 +532,27 @@ function generatePractice() {
     });
 }
 
-function createPracticeQuestions(count = 4) {
-    const flattened = Object.entries(photographyData).flatMap(([category, arr]) =>
-        arr.map(item => ({ ...item, category }))
-    );
+function createPracticeQuestions(count = 4, filters = {}) {
+    const { categories = [], difficulties = [] } = filters;
+    const flattened = Object.entries(photographyData)
+        .flatMap(([category, arr]) =>
+            arr.map(item => {
+                const starCount = ((item.a || "").match(/★/g) || []).length;
+                const difficulty = starCount >= 3 ? "hard" : starCount === 2 ? "medium" : "easy";
+                return { ...item, category, difficulty };
+            })
+        )
+        .filter(item =>
+            (categories.length === 0 || categories.includes(item.category)) &&
+            (difficulties.length === 0 || difficulties.includes(item.difficulty))
+        );
     const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, Math.min(n, arr.length));
     const selected = pickRandom(flattened, count);
-    const levels = ["easy", "medium", "hard"];
     const endings = ["에 대해 설명하세요.", "에 대해 말해보세요."];
     return selected.map(item => ({
         question: `${item.q}${endings[Math.floor(Math.random() * endings.length)]}`,
-        answer: (item.answer_short || item.a || "").trim(),
-        difficulty: levels[Math.floor(Math.random() * levels.length)],
+        answer: (item.answer_short || item.a || "").replace(/\s*[★☆]+/g, "").trim(),
+        difficulty: item.difficulty,
         ...(item.era ? { era: item.era } : {}),
     }));
 }
