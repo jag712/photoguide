@@ -146,10 +146,7 @@ const baseCount = Object.values(photographyData).reduce((acc, arr) => acc + arr.
 const sampleSize = Math.min(baseCount, 23);
 
 const mainContent = document.getElementById("mainContent");
-const navLinks = document.querySelectorAll(".nav-item, #homeLink");
 const searchInput = document.getElementById("searchInput");
-const quizBtn = document.getElementById("quizBtn");
-const practiceBtn = document.getElementById("practiceBtn");
 const geminiModal = document.getElementById("geminiModal");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
@@ -166,6 +163,15 @@ let isTimerPaused = false;
 let quizTimeLimit;
 let timerInterval;
 let quizTotalMs;
+
+function getPracticeMessage(percentage) {
+    if (percentage >= 90) return "대단해요!";
+    if (percentage >= 70) return "좋은 성과예요!";
+    if (percentage >= 50) return "조금만 더 힘내요!";
+    return "시작이 반이에요!";
+}
+window.getPracticeMessage = getPracticeMessage;
+window.getEncouragementMessage = getPracticeMessage;
 
 function createCalendar(year, month, events = {}) {
     const today = new Date();
@@ -427,7 +433,8 @@ function createFallbackQuiz(pool, count = 5) {
 
 async function generateQuiz(quizCount) {
     const activeLink = document.querySelector(".nav-item.active");
-    const category = activeLink ? activeLink.dataset.category : "all";
+    let category = activeLink ? activeLink.dataset.category : "all";
+    if (category === "quiz") category = "all";
     let pool = [];
     if (["home", "visualization", "all", "cms"].includes(category)) {
         Object.entries(photographyData).forEach(([cat, arr]) => {
@@ -533,29 +540,41 @@ function generatePractice() {
         summary.id = 'practiceSummary';
         summary.className = 'p-3 bg-gray-100 rounded mt-2 text-sm';
         const maxScore = inputs.length * 5;
-        const percentage = maxScore ? (total / maxScore) * 100 : 0;
-        const message = typeof getPracticeMessage === 'function'
-            ? getPracticeMessage(percentage)
-            : '';
-        summary.innerHTML = `<p>총점: ${total}/${maxScore} (${Math.round(percentage)}%)</p>` +
-            (message ? `<p>${message}</p>` : '') +
-            `<p>오답: ${wrong.length ? wrong.join(', ') : '없음'}</p>`;
-        gradeBtn.parentElement.insertBefore(summary, gradeBtn);
-        if (wrong.length) {
-            const reviewBtn = document.createElement('button');
-            reviewBtn.id = 'reviewPractice';
-            reviewBtn.className = 'w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 mt-2';
-            reviewBtn.textContent = '오답 복습';
-            reviewBtn.addEventListener('click', () => {
-                modalBody.querySelectorAll('.practice-question').forEach((el, idx) => {
-                    if (!wrong.includes(idx + 1)) el.classList.add('hidden');
-                });
-                reviewBtn.remove();
-            });
-            gradeBtn.parentElement.appendChild(reviewBtn);
-        }
-        gradeBtn.textContent = "닫기";
-        gradeBtn.dataset.state = "graded";
+const percentage = maxScore > 0 ? (total / maxScore) * 100 : 0;
+
+// getPracticeMessage 가 통합 헬퍼라면 그대로, 구버전 호환 이름이 남아있다면 그쪽도 시도
+const getMsg =
+  typeof getPracticeMessage === 'function'
+    ? getPracticeMessage
+    : (typeof getEncouragementMessage === 'function'
+        ? getEncouragementMessage
+        : null);
+
+const message = getMsg ? getMsg(percentage) : '';
+
+summary.innerHTML =
+  `<p>총점: ${total}/${maxScore}${maxScore ? ` (${Math.round(percentage)}%)` : ''}</p>` +
+  (message ? `<p>${message}</p>` : '') +
+  `<p>오답: ${wrong.length ? wrong.join(', ') : '없음'}</p>`;
+
+gradeBtn.parentElement.insertBefore(summary, gradeBtn);
+
+if (wrong.length) {
+  const reviewBtn = document.createElement('button');
+  reviewBtn.id = 'reviewPractice';
+  reviewBtn.className = 'w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 mt-2';
+  reviewBtn.textContent = '오답 복습';
+  reviewBtn.addEventListener('click', () => {
+    modalBody.querySelectorAll('.practice-question').forEach((el, idx) => {
+      if (!wrong.includes(idx + 1)) el.classList.add('hidden');
+    });
+    reviewBtn.remove();
+  });
+  gradeBtn.parentElement.appendChild(reviewBtn);
+}
+
+gradeBtn.textContent = '닫기';
+gradeBtn.dataset.state = 'graded';
     });
 }
 
@@ -873,6 +892,32 @@ function renderContent(category, searchTerm = "") {
             a: `<p class="text-sm text-gray-600 mb-6 text-center max-w-2xl mx-auto">안셀 아담스가 창시한 톤 재현 이론으로, 장면의 밝기를 순수한 검정(Zone 0)부터 순수한 흰색(Zone X)까지 11단계로 나누어 예측하고 제어하는 시스템입니다. 이를 통해 촬영자는 최종 결과물을 미리 상상하고 정확한 노출을 결정할 수 있습니다.</p><div class="grid grid-cols-6 md:grid-cols-11 gap-2 text-xs font-medium"><div class="zone-block flex flex-col items-center justify-between p-2 rounded-lg bg-[#1a1a1a] text-white"><div class="text-2xl font-bold">0</div><div class="border-t border-gray-600 pt-1 mt-1 text-center leading-tight w-full">순수 검정<br>무질감</div></div><div class="zone-block flex flex-col items-center justify-between p-2 rounded-lg bg-[#2d2d2d] text-white"><div class="text-2xl font-bold">I</div><div class="border-t border-gray-500 pt-1 mt-1 text-center leading-tight w-full">거의 검정<br>최소 질감</div></div><div class="zone-block flex flex-col items-center justify-between p-2 rounded-lg bg-[#404040] text-white"><div class="text-2xl font-bold">II</div><div class="border-t border-gray-400 pt-1 mt-1 text-center leading-tight w-full">어두운 섀도우<br>질감 시작</div></div><div class="zone-block flex flex-col items-center justify-between p-2 rounded-lg bg-[#535353] text-white"><div class="text-2xl font-bold">III</div><div class="border-t border-gray-300 pt-1 mt-1 text-center leading-tight w-full">평균 어두운 톤<br>디테일 있음</div></div><div class="zone-block flex flex-col items-center justify-between p-2 rounded-lg bg-[#666666] text-white"><div class="text-2xl font-bold">IV</div><div class="border-t border-gray-200 pt-1 mt-1 text-center leading-tight w-full">어두운 피부톤<br>짙은 그림자</div></div><div class="zone-block flex flex-col items-center justify-between p-2 rounded-lg bg-[#7a7a7a] text-white"><div class="text-2xl font-bold">V</div><div class="border-t border-gray-100 pt-1 mt-1 text-center leading-tight w-full">18% 중간 회색<br>평균 피부톤</div></div><div class="zone-block flex flex-col items-center justify-between p-2 rounded-lg bg-[#8d8d8d] text-gray-800"><div class="text-2xl font-bold">VI</div><div class="border-t border-gray-400 pt-1 mt-1 text-center leading-tight w-full">밝은 피부톤<br>하늘 질감</div></div><div class="zone-block flex flex-col items-center justify-between p-2 rounded-lg bg-[#a0a0a0] text-gray-800"><div class="text-2xl font-bold">VII</div><div class="border-t border-gray-500 pt-1 mt-1 text-center leading-tight w-full">밝은 톤<br>질감 표현 한계</div></div><div class="zone-block flex flex-col items-center justify-between p-2 rounded-lg bg-[#b3b3b3] text-gray-800"><div class="text-2xl font-bold">VIII</div><div class="border-t border-gray-600 pt-1 mt-1 text-center leading-tight w-full">흰색에 가까움<br>약한 디테일</div></div><div class="zone-block flex flex-col items-center justify-between p-2 rounded-lg bg-[#c6c6c6] text-gray-800"><div class="text-2xl font-bold">IX</div><div class="border-t border-gray-700 pt-1 mt-1 text-center leading-tight w-full">순백색 질감<br>디테일 없음</div></div><div class="zone-block flex flex-col items-center justify-between p-2 rounded-lg bg-[#e0e0e0] text-gray-800"><div class="text-2xl font-bold">X</div><div class="border-t border-gray-700 pt-1 mt-1 text-center leading-tight w-full">순수 흰색<br>무질감</div></div></div>`,
         }, ];
         html = visualizationContent.map((item) => `<div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">${item.q}</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6">${item.a}</div></div></div>`).join("");
+    } else if (category === "quiz") {
+        html = `
+          <div class="max-w-md mx-auto">
+            <button id="quizBtn" class="w-full bg-pink-400 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-pink-500 transition transform hover:scale-105">🌸 AI 퀴즈 생성</button>
+            <div id="practiceFilters" class="mt-2">
+              <label for="practiceCategory" class="block text-sm mb-1">카테고리</label>
+              <select id="practiceCategory" class="w-full p-2 border rounded mb-2">
+                <option value="">전체</option>
+                <option value="structure">카메라 구조와 원리</option>
+                <option value="exposure">노출</option>
+                <option value="lens">렌즈와 광학</option>
+                <option value="digital">디지털</option>
+                <option value="film">필름 현상 인화</option>
+                <option value="lighting">조명과 필터</option>
+                <option value="history">사진사 & 사조</option>
+              </select>
+              <label for="practiceDifficulty" class="block text-sm mb-1">난이도</label>
+              <select id="practiceDifficulty" class="w-full p-2 border rounded">
+                <option value="">전체</option>
+                <option value="easy">쉬움</option>
+                <option value="medium">보통</option>
+                <option value="hard">어려움</option>
+              </select>
+            </div>
+            <button id="practiceBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors mt-2">🏃‍♂️ 실전 연습</button>
+          </div>`;
     } else if (category === "cms") {
         html = `<div class="max-w-4xl mx-auto"><header class="text-center mb-8"><h1 class="text-3xl md:text-4xl font-bold text-gray-800">디지털 색 관리 시스템(CMS) 이해하기</h1><p class="text-gray-600 mt-2">카메라부터 모니터, 프린터까지 모든 장비에서 일관된 색상을 유지하는 방법</p></header><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">1. 색 관리 시스템(CMS)이란?</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6"><div class="text-center text-sm text-gray-600 mb-6">카메라, 모니터, 프린터 등 서로 다른 장비들이 각자의 방식으로 색을 표현하기 때문에 발생하는 색상 차이를 최소화하고, 원본의 색을 모든 장비에서 일관되게 보이도록 관리하는 과정입니다.</div><div class="flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0 md:space-x-4 text-center"><div class="diagram-item"><div class="w-24 h-24 bg-gradient-to-br from-red-500 to-yellow-400 rounded-full flex items-center justify-center text-white font-bold mb-2 shadow-lg">현실</div><p class="text-sm font-semibold">원본 색상</p><p class="text-xs text-gray-500">실제 세상의 색</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-camera text-4xl text-blue-600"></i><div class=" bg-blue-100 text-blue-800">입력 프로파일</div></div><p class="text-sm font-semibold">촬영 (색상 정의)</p><p class="text-xs text-gray-500">(sRGB, AdobeRGB)</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-desktop text-4xl text-green-600"></i><div class=" bg-green-100 text-green-800">작업/모니터 프로파일</div></div><p class="text-sm font-semibold">편집 (색상 확인)</p><p class="text-xs text-gray-500">(모니터 프로파일)</p></div><i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i><i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i><div class="diagram-item"><div class="diagram-icon-box"><i class="fas fa-print text-4xl text-purple-600"></i><div class=" bg-purple-100 text-purple-800">출력 프로파일</div></div><p class="text-sm font-semibold">출력 (색상 재현)</p><p class="text-xs text-gray-500">(프린터/용지 프로파일)</p></div></div></div></div></div><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">2. 색 공간(Color Space)의 종류</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6 space-y-6"><p class="text-sm text-gray-600">색 공간은 색상을 수학적으로 표현하는 모델입니다. CMS에서는 이들을 크게 '장치 독립적인 공간'과 '장치 의존적인 공간'으로 나눕니다.</p><div class="grid md:grid-cols-2 gap-6"><div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-globe mr-2 text-sky-500"></i>장치 독립 색 공간 (PCS)</h4><p class="text-sm text-gray-600 mt-2">특정 장비에 구애받지 않는 절대적인 기준 색 공간입니다. 모든 색상 변환의 '중간 다리' 또는 '번역기' 역할을 합니다. 대표적으로 CIELAB, CIEXYZ가 있습니다.</p></div><div class="bg-gray-50 p-4 rounded-lg border"><h4 class="font-bold text-gray-700 flex items-center"><i class="fas fa-cogs mr-2 text-amber-500"></i>장치 의존 색 공간 (ICC Profile)</h4><p class="text-sm text-gray-600 mt-2">카메라, 모니터, 프린터 등 특정 장비가 표현할 수 있는 색상의 범위(Gamut)와 특징을 정의한 데이터 파일입니다.</p></div></div><div><h5 class="font-semibold text-md text-gray-800 mb-2">ICC 프로파일의 세부 종류</h5><div class="space-y-3"><div class="bg-blue-50 p-3 rounded-md border border-blue-200"><p class="font-semibold text-blue-800">범용 (Standard)</p><p class="text-xs text-blue-700">sRGB, Adobe RGB (1998) 처럼 국제 표준으로 널리 사용되는 프로파일입니다. 웹, 일반 사진 등 대부분의 작업에서 기준으로 사용됩니다.<br><span class="font-medium text-gray-600">예: sRGB IEC61966-2.1, AdobeRGB1998.icc</span></p></div><div class="bg-green-50 p-3 rounded-md border border-green-200"><p class="font-semibold text-green-800">제네릭 (Generic)</p><p class="text-xs text-green-700">모니터나 프린터 제조사에서 특정 모델을 위해 제공하는 기본 프로파일입니다. 어느 정도 정확하지만, 개별 장비의 미세한 차이나 노후화는 반영하지 못합니다.<br><span class="font-medium text-gray-600">예: DELL U2723QE.icc, EPSON Stylus Pro 7900 Premium Luster.icc</span></p></div><div class="bg-yellow-50 p-3 rounded-md border border-yellow-200"><p class="font-semibold text-yellow-800">커스텀 (Custom)</p><p class="text-xs text-yellow-700">캘리브레이션 장비(계측기)를 사용하여 현재 내가 사용하는 장비의 상태를 직접 측정하여 생성한, 가장 정확한 맞춤형 프로파일입니다.<br><span class="font-medium text-gray-600">예: My_U2723QE_D65_120cd_231026.icc</span></p></div></div></div></div></div></div><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">3. 캘리브레이션 vs. 프로파일링</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6 space-y-4"><p class="text-sm text-gray-600">두 용어는 자주 혼용되지만 의미가 다릅니다. 캘리브레이션이 선행되어야 정확한 프로파일링이 가능합니다.</p><div class="flex flex-col md:flex-row items-stretch justify-center gap-6"><div class="w-full md:w-1/2 bg-indigo-50 p-4 rounded-lg border border-indigo-200 text-center"><i class="fas fa-sliders-h text-3xl text-indigo-500 mb-2"></i><h4 class="font-bold text-indigo-800">캘리브레이션 (Calibration)</h4><p class="text-sm text-indigo-700 mt-2">장비를 미리 정해진 <span class="font-semibold">표준 상태(밝기, 색온도, 감마 등)로 조정</span>하는 과정입니다. 일관된 결과물을 얻기 위한 사전 준비 작업입니다.</p></div><div class="w-full md:w-1/2 bg-teal-50 p-4 rounded-lg border border-teal-200 text-center"><i class="fas fa-ruler-combined text-3xl text-teal-500 mb-2"></i><h4 class="font-bold text-teal-800">프로파일링 (Profiling)</h4><p class="text-sm text-teal-700 mt-2">캘리브레이션 된 장비가 색상을 어떻게 표현하는지 <span class="font-semibold">정확히 측정하여 그 특성을 파일(ICC Profile)로 기록</span>하는 과정입니다.</p></div></div><div class="mt-4 pt-4 border-t"><h5 class="font-semibold text-md text-gray-800 mb-2">각 장비의 캘리브레이션 & 프로파일링</h5><p class="text-sm text-gray-600 mb-2"><span class="font-semibold text-gray-700">모니터:</span> 전용 센서(계측기)를 모니터에 부착하여 목표한 밝기(Luminance), 백색점(White Point), 감마(Gamma) 값에 맞도록 조정한 후, 측정된 색상 표현 특성을 모니터 프로파일로 저장합니다.</p><p class="text-sm text-gray-600"><span class="font-semibold text-gray-700">프린터:</span> 특정 프린터, 잉크, 용지 조합으로 정해진 색상 패치를 인쇄하고, 분광측색계(Spectrophotometer)로 각 패치의 색상을 정밀하게 측정하여 해당 조합에 맞는 프린터 프로파일을 생성합니다.</p></div></div></div></div><div class="content-card mb-4"><div class="question p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800">4. sRGB와 Display P3 색 공간 비교</h3><i class="fas fa-chevron-down"></i></div><div class="answer border-t border-gray-200"><div class="p-6"><p class="mb-4 text-gray-700">같은 이미지라도 색 공간에 따라 다르게 보일 수 있습니다. 아래 예시는 sRGB와 Display P3 색 공간으로 표현된 동일한 그래픽을 비교합니다.</p><div class="flex flex-col md:flex-row items-center justify-center gap-4"><figure class="text-center"><svg viewBox="0 0 100 100" class="w-48 h-48 rounded-md border"><rect width="100" height="100" fill="rgb(255,0,0)"></rect><polygon points="50,20 61,39 82,39 65,54 71,75 50,63 29,75 35,54 18,39 39,39" fill="rgba(0,0,0,0.2)"></polygon></svg><figcaption class="mt-2 text-sm text-gray-600">sRGB</figcaption></figure><figure class="text-center"><svg viewBox="0 0 100 100" class="w-48 h-48 rounded-md border"><rect width="100" height="100" fill="color(display-p3 1 0 0)"></rect><polygon points="50,20 61,39 82,39 65,54 71,75 50,63 29,75 35,54 18,39 39,39" fill="rgba(0,0,0,0.2)"></polygon></svg><figcaption class="mt-2 text-sm text-gray-600">Display P3</figcaption></figure></div></div></div></div></div>`;
     } else {
@@ -912,6 +957,8 @@ function renderContent(category, searchTerm = "") {
     mainContent.innerHTML = html;
     if (category === "visualization" || category === "cms") {
         setupEventListeners();
+    } else if (category === "quiz") {
+        initQuizPage();
     } else if (category !== "home") {
         setupCardFlipListeners();
     }
@@ -1008,20 +1055,28 @@ function setupGeminiButtons() {
         });
     });
 }
-quizBtn.addEventListener("click", () => {
-    const content = `
-        <div class="text-center">
-            <p class="mb-4">몇 문제로 퀴즈를 풀어볼까요?</p>
-            <div class="flex justify-center space-x-4">
-                <button id="quiz5Btn" class="bg-pink-300 hover:bg-pink-400 text-white font-bold py-2 px-4 rounded-full shadow transform transition hover:scale-105">🐣 5문제</button>
-                <button id="quiz20Btn" class="bg-yellow-300 hover:bg-yellow-400 text-white font-bold py-2 px-4 rounded-full shadow transform transition hover:scale-105">🐥 20문제</button>
-            </div>
-        </div>`;
-    showModal('퀴즈 문제 수 선택', content, false);
-    document.getElementById('quiz5Btn').addEventListener('click', () => generateQuiz(5));
-    document.getElementById('quiz20Btn').addEventListener('click', () => generateQuiz(20));
-});
-practiceBtn.addEventListener("click", generatePractice);
+function initQuizPage() {
+    const quizBtn = document.getElementById("quizBtn");
+    const practiceBtn = document.getElementById("practiceBtn");
+    if (quizBtn) {
+        quizBtn.addEventListener("click", () => {
+            const content = `
+                <div class="text-center">
+                    <p class="mb-4">몇 문제로 퀴즈를 풀어볼까요?</p>
+                    <div class="flex justify-center space-x-4">
+                        <button id="quiz5Btn" class="bg-pink-300 hover:bg-pink-400 text-white font-bold py-2 px-4 rounded-full shadow transform transition hover:scale-105">🐣 5문제</button>
+                        <button id="quiz20Btn" class="bg-yellow-300 hover:bg-yellow-400 text-white font-bold py-2 px-4 rounded-full shadow transform transition hover:scale-105">🐥 20문제</button>
+                    </div>
+                </div>`;
+            showModal('퀴즈 문제 수 선택', content, false);
+            document.getElementById('quiz5Btn').addEventListener('click', () => generateQuiz(5));
+            document.getElementById('quiz20Btn').addEventListener('click', () => generateQuiz(20));
+        });
+    }
+    if (practiceBtn) {
+        practiceBtn.addEventListener("click", generatePractice);
+    }
+}
 closeModalBtn.addEventListener("click", hideModal);
 geminiModal.addEventListener("click", (e) => {
     if (e.target === geminiModal) hideModal();

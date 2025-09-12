@@ -3,6 +3,7 @@
     "test": "node test.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1"
+    "@google/generative-ai": "^0.24.1",
+    "jsdom": "^22.1.0"
   }
 }
