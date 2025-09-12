@@ -132,6 +132,19 @@ const visualizationData = {
     },
 };
 
+const pickRandom = (arr, n) => {
+    const copy = [...arr];
+    const result = [];
+    for (let i = 0; i < n && copy.length; i++) {
+        const idx = Math.floor(Math.random() * copy.length);
+        result.push(copy.splice(idx, 1)[0]);
+    }
+    return result;
+};
+
+const baseCount = Object.values(photographyData).reduce((acc, arr) => acc + arr.length, 0);
+const sampleSize = Math.min(baseCount, 23);
+
 const mainContent = document.getElementById("mainContent");
 const navLinks = document.querySelectorAll(".nav-item, #homeLink");
 const searchInput = document.getElementById("searchInput");
@@ -412,7 +425,7 @@ function createFallbackQuiz(pool, count = 5) {
     return { questions };
 }
 
-async function generateQuiz() {
+async function generateQuiz(quizCount) {
     const activeLink = document.querySelector(".nav-item.active");
     const category = activeLink ? activeLink.dataset.category : "all";
     let pool = [];
@@ -440,19 +453,7 @@ async function generateQuiz() {
         return;
     }
 
-    const quizCount = window.confirm('20문제 퀴즈를 생성하시겠습니까?\n(취소를 누르면 5문제가 생성됩니다.)') ? 20 : 5;
-
-    const pickRandom = (arr, n) => {
-        const copy = [...arr];
-        const result = [];
-        for (let i = 0; i < n && copy.length; i++) {
-            const idx = Math.floor(Math.random() * copy.length);
-            result.push(copy.splice(idx, 1)[0]);
-        }
-        return result;
-    };
-    const sampleSize = Math.min(pool.length, Math.max(8, quizCount + 3));
-    const sample = pickRandom(pool, sampleSize);
+    const sample = pickRandom(pool, Math.min(pool.length, sampleSize));
     const dataLines = sample
         .map(item => `- [${item._category}] ${item.q}: ${simplify(item.a)}`)
         .join("\n");
@@ -966,7 +967,10 @@ function setupGeminiButtons() {
         });
     });
 }
-quizBtn.addEventListener("click", generateQuiz);
+quizBtn.addEventListener("click", () => {
+    const quizCount = window.confirm('20문제 퀴즈를 생성하시겠습니까?\n(취소를 누르면 5문제가 생성됩니다.)') ? 20 : 5;
+    generateQuiz(quizCount);
+});
 practiceBtn.addEventListener("click", generatePractice);
 closeModalBtn.addEventListener("click", hideModal);
 geminiModal.addEventListener("click", (e) => {
