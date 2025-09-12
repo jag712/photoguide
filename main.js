@@ -155,6 +155,17 @@ const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModal");
 
+// Ensure quiz/practice buttons share styling and labels
+if (quizBtn) {
+    quizBtn.textContent = "🌸 퀴즈 생성";
+}
+if (practiceBtn) {
+    practiceBtn.textContent = "🏃‍♂️ 서술형 실전 연습";
+    if (quizBtn) {
+        practiceBtn.className = `${quizBtn.className} mt-2`;
+    }
+}
+
 let charts = {};
 let currentQuizData = null;
 let currentQuestionIndex = 0;
