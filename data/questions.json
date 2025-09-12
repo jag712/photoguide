@@ -2,7 +2,6 @@
   {
     "id": 1,
     "era": "digital",
-    "tags": ["노출", "ISO"],
     "difficulty": "easy",
     "type": "definition",
     "question": "ISO란 무엇인가?",
@@ -13,7 +12,6 @@
   {
     "id": 2,
     "era": "film",
-    "tags": ["구도", "composition"],
     "difficulty": "medium",
     "type": "concept",
     "question": "삼분할 구도는 어떻게 적용하나요?",
@@ -24,7 +22,6 @@
   {
     "id": 3,
     "era": "modern",
-    "tags": ["장비", "렌즈"],
     "difficulty": "hard",
     "type": "application",
     "question": "망원렌즈를 사용할 때 배경 압축 효과는?",
@@ -35,7 +32,6 @@
   {
     "id": 4,
     "era": "digital",
-    "tags": ["노출", "셔터"],
     "difficulty": "easy",
     "type": "definition",
     "question": "셔터 속도가 짧을 때 장점은?",
@@ -46,7 +42,6 @@
   {
     "id": 5,
     "era": "film",
-    "tags": ["현상", "필름"],
     "difficulty": "medium",
     "type": "process",
     "question": "현상액 온도가 낮으면 어떤 영향이 있나요?",
