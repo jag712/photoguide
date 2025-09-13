@@ -490,13 +490,13 @@ async function generateQuiz(quizCount) {
     displayQuizQuestion();
 }
 
-function generatePractice() {
+async function generatePractice() {
     const categoryEl = document.getElementById("practiceCategory");
     const difficultyEl = document.getElementById("practiceDifficulty");
     const filters = {};
     if (categoryEl && categoryEl.value) filters.categories = [categoryEl.value];
     if (difficultyEl && difficultyEl.value) filters.difficulties = [difficultyEl.value];
-    const questions = createPracticeQuestions(4, filters);
+    const questions = await createPracticeQuestions(4, filters);
     showModal('실전 연습');
     const html = questions.map((q, idx) => {
         const difficultyMap = { easy: "🟢", medium: "🟡", hard: "🔴" };
@@ -578,7 +578,7 @@ gradeBtn.dataset.state = 'graded';
     });
 }
 
-function createPracticeQuestions(count = 4, filters = {}) {
+async function createPracticeQuestions(count = 4, filters = {}) {
     const { categories = [], difficulties = [] } = filters;
     const flattened = Object.entries(photographyData)
         .flatMap(([category, arr]) =>
@@ -594,6 +594,33 @@ function createPracticeQuestions(count = 4, filters = {}) {
         );
     const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, Math.min(n, arr.length));
     const selected = pickRandom(flattened, count);
+
+    const dataLines = selected
+        .map(item => `- ${item.q}: ${simplify(item.a)}`)
+        .join("\n");
+    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목을 기반으로 한 질문과 간단한 정답을 생성해줘. ` +
+        `각 문제는 question과 answer 필드를 가진 JSON 배열로만 응답해.\n\n${dataLines}`;
+
+    let parsed = null;
+    try {
+        const { result } = callGemini(prompt, false, "연습 문제 생성 중...");
+        const responseText = await result;
+        if (responseText) {
+            parsed = JSON.parse(responseText);
+        }
+    } catch (_) {
+        parsed = null;
+    }
+
+    if (Array.isArray(parsed) && parsed.length) {
+        return parsed.map((q, idx) => ({
+            question: ensureFullSentence(q.question),
+            answer: (q.answer || "").trim(),
+            difficulty: selected[idx]?.difficulty || "easy",
+            ...(selected[idx]?.era ? { era: selected[idx].era } : {}),
+        }));
+    }
+
     const endings = ["에 대해 설명하세요.", "에 대해 말해보세요."];
     return selected.map(item => ({
         question: `${item.q}${endings[Math.floor(Math.random() * endings.length)]}`,
