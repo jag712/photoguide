@@ -27,9 +27,6 @@ assert.ok(
 assert.ok(calculateScore('camra', 'camera') >= 4);
 assert.ok(calculateScore('af', 'autofocus') >= 4);
 // tests/quiz.test.js
-const fs = require('fs');
-const assert = require('assert');
-const { JSDOM } = require('jsdom');
 
 // --- 1) 내비게이션에 퀴즈 탭 존재 확인 ---
 const html = fs.readFileSync('index.html', 'utf8');
@@ -81,5 +78,12 @@ assert.strictEqual(getMsg(95), '대단해요!');
 assert.strictEqual(getMsg(75), '좋은 성과예요!');
 assert.strictEqual(getMsg(55), '조금만 더 힘내요!');
 assert.strictEqual(getMsg(30), '시작이 반이에요!');
+
+// --- 4) 유틸 함수 동작 확인 ---
+const { prepareForAI, ensureFullSentence, parseJsonResponse } = dom.window;
+assert.strictEqual(prepareForAI('용어(설명) ★★'), '용어');
+assert.strictEqual(ensureFullSentence('이 문장은 질문'), '이 문장은 질문?');
+const parsed = parseJsonResponse('```json\n{"questions":[]}\n```');
+assert.ok(parsed && Array.isArray(parsed.questions) && parsed.questions.length === 0);
 
 console.log('Tests passed');
