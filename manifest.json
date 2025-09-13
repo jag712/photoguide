@@ -1,0 +1,15 @@
+{
+  "name": "쮸쀼의 비밀교실",
+  "short_name": "비밀교실",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/notime.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
