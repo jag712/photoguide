@@ -385,10 +385,32 @@ function simplify(text) {
     return match ? match[0].trim() : cleaned;
 }
 
+// 원본 설명을 AI에 제공할 때 사용할 정제 함수
+function prepareForAI(text) {
+    if (!text) return "";
+    return text
+        .replace(/\([^)]*\)/g, "") // 괄호 제거
+        .replace(/[★☆]/g, "")       // 난이도 기호 제거
+        .trim();
+}
+
 function ensureFullSentence(text) {
     if (!text) return "";
     const trimmed = text.trim();
     return /[.?!]$/.test(trimmed) ? trimmed : `${trimmed}?`;
+}
+
+// 일부 모델이 ```json 코드 블록 형태로 응답하는 경우를 대비해 JSON만 추출
+function parseJsonResponse(text) {
+    if (!text) return null;
+    let cleaned = text.trim();
+    const match = cleaned.match(/```(?:json)?\n([\s\S]*?)```/i);
+    if (match) cleaned = match[1];
+    try {
+        return JSON.parse(cleaned);
+    } catch (_) {
+        return null;
+    }
 }
 
 function escapeHtml(str) {
@@ -438,18 +460,34 @@ async function generateQuiz(quizCount) {
     let pool = [];
     if (["home", "visualization", "all", "cms"].includes(category)) {
         Object.entries(photographyData).forEach(([cat, arr]) => {
-            const entries = arr.map(item => ({ ...item, _category: cat }));
+            const entries = arr.map(item => ({
+                ...item,
+                _category: cat,
+                _difficulty: (item.a.match(/★/g) || []).length,
+            }));
             pool.push(...entries);
             if (cat === "history") {
                 // Give history items a higher weight by duplicating them
-                pool.push(...arr.map(item => ({ ...item, _category: cat })));
+                pool.push(...arr.map(item => ({
+                    ...item,
+                    _category: cat,
+                    _difficulty: (item.a.match(/★/g) || []).length,
+                })));
             }
         });
     } else if (photographyData[category]) {
-        const entries = photographyData[category].map(item => ({ ...item, _category: category }));
+        const entries = photographyData[category].map(item => ({
+            ...item,
+            _category: category,
+            _difficulty: (item.a.match(/★/g) || []).length,
+        }));
         pool.push(...entries);
         if (category === "history") {
-            pool.push(...photographyData[category].map(item => ({ ...item, _category: category })));
+            pool.push(...photographyData[category].map(item => ({
+                ...item,
+                _category: category,
+                _difficulty: (item.a.match(/★/g) || []).length,
+            })));
         }
     } else {
         showModal('오류', `<p class="text-red-500">선택된 카테고리에 퀴즈를 만들 데이터가 없습니다.</p>`, false);
@@ -460,22 +498,20 @@ async function generateQuiz(quizCount) {
         return;
     }
 
+    const highDifficulty = pool.filter(item => item._difficulty >= 2);
+    if (highDifficulty.length >= 5) {
+        pool = highDifficulty;
+    }
+
     const sample = pickRandom(pool, Math.min(pool.length, sampleSize));
     const dataLines = sample
-        .map(item => `- [${item._category}] ${item.q}: ${simplify(item.a)}`)
+        .map(item => `- [${item._category}] ${item.q}: ${prepareForAI(item.a)}`)
         .join("\n");
-    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목에는 [카테고리]가 포함되어 있습니다. 이 정보를 바탕으로 객관식 퀴즈 ${quizCount}문제를 만들어줘. 각 문제는 하나의 설명을 기반으로 하고, 보기에는 정답 1개와 같은 카테고리의 다른 용어 4개를 사용해 총 5개의 선택지를 제공해야 해. 서로 다른 유형의 단어가 섞이지 않도록 해. 각 보기마다 왜 맞거나 틀렸는지 간단히 설명도 포함해줘. question 필드는 물음표로 끝나는 완전한 질문 문장으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
+    const prompt = `다음은 사진 관련 용어와 설명 목록입니다. 각 항목에는 [카테고리]가 포함되어 있습니다. 이 정보를 기반으로 고급 난이도의 객관식 퀴즈 ${quizCount}문제를 만들어줘. 각 문제는 단순 정의가 아니라 짧은 상황이나 응용 예시를 제시해야 하며, 보기에는 정답 1개와 같은 카테고리의 다른 용어 4개를 사용해 총 5개의 선택지를 제공해. 선택지는 모두 그럴듯해야 하며, 각 보기마다 왜 맞거나 틀렸는지를 한 문장으로 설명해 줘. question 필드는 물음표로 끝나는 완전한 질문 문장으로 작성해. 결과는 question, options, answer, explanations 필드를 가진 JSON으로만 응답해줘. explanations는 각 보기 텍스트를 키로 하고 그 이유를 값으로 하는 객체여야 해.\n\n${dataLines}`;
 
-    let parsed = null;
     const { result } = callGemini(prompt, true, "퀴즈 생성 중...");
     const responseText = await result;
-    if (responseText) {
-        try {
-            parsed = JSON.parse(responseText);
-        } catch (_) {
-            parsed = null;
-        }
-    }
+    let parsed = parseJsonResponse(responseText);
     if (parsed && Array.isArray(parsed.questions)) {
         parsed.questions.forEach(q => {
             q.question = ensureFullSentence(q.question);
