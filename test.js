@@ -27,9 +27,6 @@ assert.ok(
 assert.ok(calculateScore('camra', 'camera') >= 4);
 assert.ok(calculateScore('af', 'autofocus') >= 4);
 // tests/quiz.test.js
-const fs = require('fs');
-const assert = require('assert');
-const { JSDOM } = require('jsdom');
 
 // --- 1) 내비게이션에 퀴즈 탭 존재 확인 ---
 const html = fs.readFileSync('index.html', 'utf8');
