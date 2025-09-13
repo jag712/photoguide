@@ -7,7 +7,8 @@
     "question": "ISO란 무엇인가?",
     "answer_short": "빛 감도 조절 수치",
     "answer_long": "ISO는 센서의 빛에 대한 민감도를 나타내는 수치입니다. 수치가 높을수록 어두운 곳에서도 촬영 가능하지만 노이즈가 증가합니다. 예를 들어 실내 촬영에서 ISO 800을 사용하면 플래시 없이도 사진을 찍을 수 있습니다.",
-    "keywords": ["ISO", "감도", "노이즈"]
+    "keywords": ["ISO", "감도", "노이즈"],
+    "source": "Bryan Peterson, Understanding Exposure (Amphoto Books, 2016)"
   },
   {
     "id": 2,
@@ -17,7 +18,8 @@
     "question": "삼분할 구도는 어떻게 적용하나요?",
     "answer_short": "화면을 3등분해 배치",
     "answer_long": "삼분할 구도는 화면을 가로와 세로로 각각 세 부분으로 나누어 주요 피사체를 교차점이나 선 위에 배치하는 방법입니다. 이렇게 하면 자연스럽고 균형 잡힌 사진을 얻을 수 있습니다. 예를 들어, 수평선을 상단 1/3 지점에 두면 하늘과 땅의 비율이 안정적으로 보입니다.",
-    "keywords": ["삼분할", "구도", "비율"]
+    "keywords": ["삼분할", "구도", "비율"],
+    "source": "Michael Freeman, The Photographer's Eye (Focal Press, 2007)"
   },
   {
     "id": 3,
@@ -27,7 +29,8 @@
     "question": "망원렌즈를 사용할 때 배경 압축 효과는?",
     "answer_short": "배경이 가까워 보임",
     "answer_long": "망원렌즈는 좁은 화각으로 인해 원근감이 줄어들어 배경이 피사체에 더 가까워 보이게 합니다. 이 효과는 인물과 배경을 시각적으로 압축해 드라마틱한 느낌을 줍니다. 예를 들어 200mm로 찍은 사람 뒤 건물이 실제보다 더 크게 보입니다.",
-    "keywords": ["망원렌즈", "배경 압축", "원근감"]
+    "keywords": ["망원렌즈", "배경 압축", "원근감"],
+    "source": "Scott Kelby, The Digital Photography Book (Peachpit, 2013)"
   },
   {
     "id": 4,
@@ -37,7 +40,8 @@
     "question": "셔터 속도가 짧을 때 장점은?",
     "answer_short": "움직임을 선명히 포착",
     "answer_long": "셔터 속도를 빠르게 설정하면 움직이는 피사체의 순간을 선명하게 담을 수 있습니다. 이는 스포츠나 야생 동물 촬영에 적합합니다. 예를 들어, 1/1000초로 축구선수를 찍으면 움직임이 거의 흔들리지 않습니다.",
-    "keywords": ["셔터 속도", "동결", "스포츠"]
+    "keywords": ["셔터 속도", "동결", "스포츠"],
+    "source": "Bryan Peterson, Understanding Exposure (Amphoto Books, 2016)"
   },
   {
     "id": 5,
@@ -47,6 +51,29 @@
     "question": "현상액 온도가 낮으면 어떤 영향이 있나요?",
     "answer_short": "현상 속도 느려짐",
     "answer_long": "필름 현상 시 온도가 낮으면 화학 반응이 느려져 전체 현상 시간이 길어지고 사진의 대비가 떨어질 수 있습니다. 따라서 적정 온도를 유지해야 안정적인 결과를 얻습니다. 예를 들어, 18°C에서 현상하면 권장 시간보다 더 오래 기다려야 합니다.",
-    "keywords": ["현상", "온도", "대비"]
+    "keywords": ["현상", "온도", "대비"],
+    "source": "Ansel Adams, The Negative (Little, Brown, 1981)"
+  },
+  {
+    "id": 6,
+    "era": "film",
+    "difficulty": "hard",
+    "type": "analysis",
+    "question": "상반칙불궤 현상이란 무엇이며 어떻게 보정하나요?",
+    "answer_short": "장시간 노출 시 감도 손실 보정",
+    "answer_long": "상반칙불궤(Reciprocity Failure)는 필름이 매우 긴 노출 시간에서 빛에 대한 선형 반응을 잃는 현상입니다. 이때 예상보다 어둡게 기록되므로 추가 노출이나 보정 필터가 필요합니다. 예를 들어, 1분 노출이 필요한 장면에서 상반칙불궤 보정표에 따라 1분 30초 이상 노출을 주어야 적정 밝기를 얻을 수 있습니다.",
+    "keywords": ["상반칙불궤", "장노출", "보정"],
+    "source": "Ilford Photo, Reciprocity Failure Compensation Guide (2017)"
+  },
+  {
+    "id": 7,
+    "era": "digital",
+    "difficulty": "hard",
+    "type": "application",
+    "question": "역광에서 하이라이트와 피사체 노출을 모두 확보하려면?",
+    "answer_short": "노출 브라케팅 후 HDR 합성",
+    "answer_long": "강한 역광에서는 한 번의 촬영으로 하이라이트와 피사체를 모두 적정 노출하기 어렵습니다. 노출 브라케팅으로 여러 밝기의 이미지를 촬영한 뒤 HDR 합성이나 그라데이션 ND 필터를 사용하면 디테일을 유지할 수 있습니다. 예를 들어, -2EV, 0EV, +2EV로 세 장을 찍어 합성하면 역광 실루엣을 피하면서 하늘과 피사체의 밝기를 동시에 잡을 수 있습니다.",
+    "keywords": ["역광", "브라케팅", "HDR"],
+    "source": "Joe McNally, The Hot Shoe Diaries (Peachpit, 2009)"
   }
 ]
