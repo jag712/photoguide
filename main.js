@@ -490,22 +490,30 @@ async function generateQuiz(quizCount) {
     displayQuizQuestion();
 }
 
-function generatePractice() {
+async function generatePractice() {
     const categoryEl = document.getElementById("practiceCategory");
     const difficultyEl = document.getElementById("practiceDifficulty");
     const filters = {};
     if (categoryEl && categoryEl.value) filters.categories = [categoryEl.value];
     if (difficultyEl && difficultyEl.value) filters.difficulties = [difficultyEl.value];
-    const questions = createPracticeQuestions(4, filters);
+    const questions = await createPracticeQuestions(4, filters);
     showModal('실전 연습');
     const html = questions.map((q, idx) => {
         const difficultyMap = { easy: "🟢", medium: "🟡", hard: "🔴" };
         const metaParts = [`난이도: ${difficultyMap[q.difficulty] || q.difficulty}`];
         if (q.era) metaParts.push(`시대: ${q.era}`);
+        const optionsHtml = q.options
+            .map(opt => {
+                const safe = escapeHtml(opt);
+                return `<label class="block"><input type="radio" name="practice${idx}" value="${safe}" class="practice-option"> ${safe}</label>`;
+            })
+            .join("");
         return `
         <div class="mb-4 practice-question">
             <p class="font-semibold">${idx + 1}. ${q.question}</p>
-            <input type="text" class="practice-input w-full p-2 mt-1 border rounded" data-answer="${q.answer.replace(/"/g, '&quot;')}">
+            <div class="mt-1">
+                ${optionsHtml}
+            </div>
             <p class="text-xs text-gray-500 mt-1">${metaParts.join(" | ")}</p>
             <p class="result text-sm mt-1 hidden"></p>
         </div>`;
@@ -517,68 +525,58 @@ function generatePractice() {
             hideModal();
             return;
         }
-        const inputs = [...modalBody.querySelectorAll(".practice-input")];
-        let total = 0;
+        const questionEls = [...modalBody.querySelectorAll(".practice-question")];
+        let correct = 0;
         const wrong = [];
-        inputs.forEach((input, idx) => {
-            const userAnswer = input.value;
-            const correctAnswer = input.dataset.answer;
-            const score = typeof calculateScore === 'function'
-                ? calculateScore(userAnswer, correctAnswer)
-                : 1;
-            total += score;
-            if (score < 4) wrong.push(idx + 1);
-            const resultEl = input.parentElement.querySelector(".result");
-            resultEl.classList.remove("text-green-600", "text-red-600");
-            const highScore = score >= 4;
-            resultEl.innerHTML = `점수: <span class="${highScore ? "text-green-600" : "text-red-600"}">${score}/5</span><br>모범답안: <span class="text-green-600">${input.dataset.answer}</span>`;
+        questionEls.forEach((qEl, idx) => {
+            const selected = qEl.querySelector("input[type=radio]:checked");
+            const resultEl = qEl.querySelector(".result");
+            if (selected && selected.value === questions[idx].answer) {
+                correct++;
+                resultEl.textContent = "정답입니다!";
+                resultEl.classList.add("text-green-600");
+            } else {
+                resultEl.innerHTML = `오답입니다. <span class="text-green-600">정답: ${escapeHtml(questions[idx].answer)}</span>`;
+                resultEl.classList.add("text-red-600");
+                wrong.push(idx + 1);
+            }
             resultEl.classList.remove("hidden");
-            input.classList.toggle("border-green-400", highScore);
-            input.classList.toggle("border-red-400", !highScore);
         });
         const summary = document.createElement('div');
         summary.id = 'practiceSummary';
         summary.className = 'p-3 bg-gray-100 rounded mt-2 text-sm';
-        const maxScore = inputs.length * 5;
-const percentage = maxScore > 0 ? (total / maxScore) * 100 : 0;
-
-// getPracticeMessage 가 통합 헬퍼라면 그대로, 구버전 호환 이름이 남아있다면 그쪽도 시도
-const getMsg =
-  typeof getPracticeMessage === 'function'
-    ? getPracticeMessage
-    : (typeof getEncouragementMessage === 'function'
-        ? getEncouragementMessage
-        : null);
-
-const message = getMsg ? getMsg(percentage) : '';
-
-summary.innerHTML =
-  `<p>총점: ${total}/${maxScore}${maxScore ? ` (${Math.round(percentage)}%)` : ''}</p>` +
-  (message ? `<p>${message}</p>` : '') +
-  `<p>오답: ${wrong.length ? wrong.join(', ') : '없음'}</p>`;
-
-gradeBtn.parentElement.insertBefore(summary, gradeBtn);
-
-if (wrong.length) {
-  const reviewBtn = document.createElement('button');
-  reviewBtn.id = 'reviewPractice';
-  reviewBtn.className = 'w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 mt-2';
-  reviewBtn.textContent = '오답 복습';
-  reviewBtn.addEventListener('click', () => {
-    modalBody.querySelectorAll('.practice-question').forEach((el, idx) => {
-      if (!wrong.includes(idx + 1)) el.classList.add('hidden');
-    });
-    reviewBtn.remove();
-  });
-  gradeBtn.parentElement.appendChild(reviewBtn);
-}
-
-gradeBtn.textContent = '닫기';
-gradeBtn.dataset.state = 'graded';
+        const percentage = questionEls.length ? (correct / questionEls.length) * 100 : 0;
+        const getMsg =
+            typeof getPracticeMessage === 'function'
+                ? getPracticeMessage
+                : typeof getEncouragementMessage === 'function'
+                ? getEncouragementMessage
+                : null;
+        const message = getMsg ? getMsg(percentage) : '';
+        summary.innerHTML =
+            `<p>정답: ${correct}/${questionEls.length} (${Math.round(percentage)}%)</p>` +
+            (message ? `<p>${message}</p>` : '') +
+            `<p>오답: ${wrong.length ? wrong.join(', ') : '없음'}</p>`;
+        gradeBtn.parentElement.insertBefore(summary, gradeBtn);
+        if (wrong.length) {
+            const reviewBtn = document.createElement('button');
+            reviewBtn.id = 'reviewPractice';
+            reviewBtn.className = 'w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 mt-2';
+            reviewBtn.textContent = '오답 복습';
+            reviewBtn.addEventListener('click', () => {
+                modalBody.querySelectorAll('.practice-question').forEach((el, idx) => {
+                    if (!wrong.includes(idx + 1)) el.classList.add('hidden');
+                });
+                reviewBtn.remove();
+            });
+            gradeBtn.parentElement.appendChild(reviewBtn);
+        }
+        gradeBtn.textContent = '닫기';
+        gradeBtn.dataset.state = 'graded';
     });
 }
 
-function createPracticeQuestions(count = 4, filters = {}) {
+async function createPracticeQuestions(count = 4, filters = {}) {
     const { categories = [], difficulties = [] } = filters;
     const flattened = Object.entries(photographyData)
         .flatMap(([category, arr]) =>
@@ -594,13 +592,52 @@ function createPracticeQuestions(count = 4, filters = {}) {
         );
     const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, Math.min(n, arr.length));
     const selected = pickRandom(flattened, count);
-    const endings = ["에 대해 설명하세요.", "에 대해 말해보세요."];
-    return selected.map(item => ({
-        question: `${item.q}${endings[Math.floor(Math.random() * endings.length)]}`,
-        answer: (item.answer_short || item.a || "").replace(/\s*[★☆]+/g, "").trim(),
-        difficulty: item.difficulty,
-        ...(item.era ? { era: item.era } : {}),
-    }));
+
+    const dataLines = selected
+        .map(item => `- ${item.q}: ${simplify(item.a)}`)
+        .join("\n");
+    const prompt = `다음은 사진 관련 용어와 간단한 설명 목록입니다. 각 항목을 기반으로 객관식 연습 문제 ${count}개를 만들어줘. ` +
+        `각 문제는 question, options, answer 필드를 가진 JSON 배열로만 응답해. options는 4개의 선택지를 제공해줘.\n\n${dataLines}`;
+
+    let parsed = null;
+    try {
+        const { result } = callGemini(prompt, false, "연습 문제 생성 중...");
+        const responseText = await result;
+        if (responseText) {
+            parsed = JSON.parse(responseText);
+        }
+    } catch (_) {
+        parsed = null;
+    }
+
+    const arr = Array.isArray(parsed) ? parsed : parsed?.questions;
+    if (Array.isArray(arr) && arr.length) {
+        return arr.map((q, idx) => ({
+            question: ensureFullSentence(q.question),
+            options: Array.isArray(q.options) ? q.options : [],
+            answer: (q.answer || "").trim(),
+            difficulty: selected[idx]?.difficulty || "easy",
+            ...(selected[idx]?.era ? { era: selected[idx].era } : {}),
+        }));
+    }
+
+    return selected.map(item => {
+        const sameCat = flattened.filter(it => it.category === item.category && it.q !== item.q);
+        let distractors = pickRandom(sameCat, 3);
+        if (distractors.length < 3) {
+            const others = flattened.filter(it => it.q !== item.q && !distractors.includes(it));
+            distractors = distractors.concat(pickRandom(others, 3 - distractors.length));
+        }
+        const options = [item.q, ...distractors.map(d => d.q)].sort(() => Math.random() - 0.5);
+        const desc = simplify(item.a).replace(/[.?!]$/, "").trim();
+        return {
+            question: ensureFullSentence(`${desc}에 관하여 알맞은 것은?`),
+            options,
+            answer: item.q,
+            difficulty: item.difficulty,
+            ...(item.era ? { era: item.era } : {}),
+        };
+    });
 }
 
 function displayQuizQuestion() {
