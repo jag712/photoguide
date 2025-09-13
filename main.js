@@ -942,6 +942,8 @@ function renderContent(category, searchTerm = "") {
 
             <button id="quizBtn" class="w-full bg-pink-400 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-pink-500 transition transform hover:scale-105">🌸 AI 퀴즈 생성</button>
 
+            <button id="practiceBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-green-800 transition transform hover:scale-105">🏃‍♂️ 실전 연습</button>
+
             <details id="practiceFilters" class="bg-white p-4 rounded-lg shadow">
 
               <summary class="cursor-pointer font-semibold text-gray-700">⚙️ 실전 연습 필터</summary>
@@ -987,8 +989,6 @@ function renderContent(category, searchTerm = "") {
               </div>
 
             </details>
-
-            <button id="practiceBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-800 transition-colors">🏃‍♂️ 실전 연습</button>
 
           </div>`
 
