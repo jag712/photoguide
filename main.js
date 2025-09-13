@@ -152,6 +152,12 @@ const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModal");
 
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/service-worker.js").catch((err) => console.error("Service worker registration failed:", err));
+    });
+}
+
 let charts = {};
 let currentQuizData = null;
 let currentQuestionIndex = 0;
