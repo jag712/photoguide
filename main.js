@@ -17,6 +17,7 @@ const calendarEvents = {
         { day: 7, title: "추석 연휴", color: "bg-gray-500", isHoliday: true },
         { day: 8, title: "대체공휴일", color: "bg-gray-500", isHoliday: true },
         { day: 9, title: "한글날", color: "bg-gray-500", isHoliday: true },
+        { day: 13, title: "2차프린트(예대및추가컷)", color: "bg-red-500" },
         { day: 18, title: "서울예대 실기(예정)", color: "bg-yellow-500" },
         { day: 20, title: "서울예대 면접(예정)", color: "bg-yellow-500" },
         { day: 21, title: "서울예대 면접(예정)", color: "bg-yellow-500" },
