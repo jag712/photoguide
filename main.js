@@ -184,35 +184,101 @@ function createCalendar(year, month, events = {}) {
     const today = new Date();
     const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
     const todayDate = isCurrentMonth ? today.getDate() : -1;
+    const currentWeekStart = new Date(today);
+    currentWeekStart.setHours(0, 0, 0, 0);
+    currentWeekStart.setDate(today.getDate() - today.getDay());
+
     const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
     const days = ["일", "월", "화", "수", "목", "금", "토"];
     const date = new Date(year, month - 1, 1);
     const firstDay = date.getDay();
     const daysInMonth = new Date(year, month, 0).getDate();
-    let html = `<div class="content-card p-6 w-full max-w-4xl mx-auto mb-8"><h3 class="text-xl font-bold text-center mb-4">${year}년 ${monthNames[month - 1]}</h3><div class="grid grid-cols-7 gap-1 text-center text-sm font-semibold text-gray-600">${days.map((day) => `<div class="${day === "일" ? "text-red-500" : day === "토" ? "text-blue-500" : ""}">${day}</div>`).join("")}</div><div class="grid grid-cols-7 gap-1 mt-2">`;
+
+    const monthEnd = new Date(year, month - 1, daysInMonth);
+    monthEnd.setHours(23, 59, 59, 999);
+
+    if (monthEnd < currentWeekStart) {
+        return "";
+    }
+
+    let startDay = 1;
+    if (isCurrentMonth) {
+        startDay = Math.max(1, todayDate - today.getDay());
+    } else if (currentWeekStart.getFullYear() === year && currentWeekStart.getMonth() + 1 === month) {
+        startDay = currentWeekStart.getDate();
+    }
+
+    const cells = [];
     for (let i = 0; i < firstDay; i++) {
-        html += `<div></div>`;
+        cells.push(null);
     }
     for (let day = 1; day <= daysInMonth; day++) {
         const currentDayOfWeek = new Date(year, month - 1, day).getDay();
         const dayEvents = events[day] || [];
         const isHoliday = dayEvents.some((e) => e.isHoliday);
-        let eventHtml = dayEvents
-            .map((e) => `<div class="text-white p-1 rounded-md ${e.color || "bg-blue-500"} mb-1 truncate" title="${e.title}">${e.title}</div>`)
-            .join("");
-        let dayClass = "";
-        if (currentDayOfWeek === 0 || isHoliday) {
-            dayClass = "text-red-500";
-        } else if (currentDayOfWeek === 6) {
-            dayClass = "text-blue-500";
-        }
-        if (day === todayDate) {
-            dayClass += " today-text";
-            html += `<div class="border p-2 h-28 flex flex-col ${dayEvents.length > 0 ? "bg-gray-50" : ""} today"><span class="font-bold ${dayClass}">${day}</span><div class="text-xs mt-1 text-left overflow-y-auto">${eventHtml}</div></div>`;
-        } else {
-            html += `<div class="border p-2 h-28 flex flex-col ${dayEvents.length > 0 ? "bg-gray-50" : ""}"><span class="font-bold ${dayClass}">${day}</span><div class="text-xs mt-1 text-left overflow-y-auto">${eventHtml}</div></div>`;
+        cells.push({
+            day,
+            dayEvents,
+            currentDayOfWeek,
+            isHoliday,
+            isToday: day === todayDate,
+        });
+    }
+    while (cells.length % 7 !== 0) {
+        cells.push(null);
+    }
+
+    const weeks = [];
+    for (let i = 0; i < cells.length; i += 7) {
+        weeks.push(cells.slice(i, i + 7));
+    }
+
+    let startWeekIndex = 0;
+    if (startDay > 1) {
+        startWeekIndex = weeks.findIndex((week) => week.some((cell) => cell && cell.day >= startDay));
+        if (startWeekIndex === -1) {
+            return "";
         }
     }
+
+    let html = `<div class="content-card p-6 w-full max-w-4xl mx-auto mb-8"><h3 class="text-xl font-bold text-center mb-4">${year}년 ${monthNames[month - 1]}</h3><div class="grid grid-cols-7 gap-1 text-center text-sm font-semibold text-gray-600">${days
+        .map((dayName) => `<div class="${dayName === "일" ? "text-red-500" : dayName === "토" ? "text-blue-500" : ""}">${dayName}</div>`)
+        .join("")}</div><div class="grid grid-cols-7 gap-1 mt-2">`;
+
+    for (let i = startWeekIndex; i < weeks.length; i++) {
+        weeks[i].forEach((cell) => {
+            if (!cell) {
+                html += `<div></div>`;
+                return;
+            }
+
+            const { day, dayEvents, currentDayOfWeek, isHoliday, isToday } = cell;
+            const eventHtml = dayEvents
+                .map((e) => `<div class="text-white p-1 rounded-md ${e.color || "bg-blue-500"} mb-1 truncate" title="${e.title}">${e.title}</div>`)
+                .join("");
+
+            const labelClasses = ["font-bold"];
+            if (currentDayOfWeek === 0 || isHoliday) {
+                labelClasses.push("text-red-500");
+            } else if (currentDayOfWeek === 6) {
+                labelClasses.push("text-blue-500");
+            }
+            if (isToday && isCurrentMonth) {
+                labelClasses.push("today-text");
+            }
+
+            const containerClasses = ["border", "p-2", "h-28", "flex", "flex-col"];
+            if (dayEvents.length > 0) {
+                containerClasses.push("bg-gray-50");
+            }
+            if (isToday && isCurrentMonth) {
+                containerClasses.push("today");
+            }
+
+            html += `<div class="${containerClasses.join(" ")}"><span class="${labelClasses.join(" ")}">${day}</span><div class="text-xs mt-1 text-left overflow-y-auto">${eventHtml}</div></div>`;
+        });
+    }
+
     html += `</div></div>`;
     return html;
 }
