@@ -401,7 +401,7 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
             let didTimeout = false;
             try {
             const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
                 generationConfig: {},
             };
             if (useSchema) {
