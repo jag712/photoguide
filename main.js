@@ -153,6 +153,46 @@ const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModal");
 
+let geminiCache = (() => {
+    if (typeof window === "undefined") {
+        return null;
+    }
+    try {
+        const storage = window.localStorage;
+        if (!storage) {
+            return null;
+        }
+        const testKey = "__photoguide_gemini_cache_test__";
+        storage.setItem(testKey, "1");
+        storage.removeItem(testKey);
+        return storage;
+    } catch (error) {
+        console.warn("로컬 스토리지를 사용할 수 없어 Gemini 응답 캐시를 비활성화합니다.", error);
+        return null;
+    }
+})();
+
+function readGeminiCache(key) {
+    if (!geminiCache) return null;
+    try {
+        return geminiCache.getItem(key);
+    } catch (error) {
+        console.warn("Gemini 캐시를 읽는 중 오류가 발생했습니다. 캐시를 비활성화합니다.", error);
+        geminiCache = null;
+        return null;
+    }
+}
+
+function writeGeminiCache(key, value) {
+    if (!geminiCache) return;
+    try {
+        geminiCache.setItem(key, value);
+    } catch (error) {
+        console.warn("Gemini 캐시를 저장하는 중 오류가 발생했습니다. 캐시를 비활성화합니다.", error);
+        geminiCache = null;
+    }
+}
+
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
         navigator.serviceWorker.register("/service-worker.js").catch((err) => console.error("Service worker registration failed:", err));
@@ -1182,7 +1222,7 @@ function setupGeminiButtons() {
             }
             const cacheKey = `${action}-${question}`;
             const resultTitle = `"${question}" ${action === "explain" ? "쉽게 이해하기" : "깊이 알아보기"}`;
-            const cachedResponse = localStorage.getItem(cacheKey);
+            const cachedResponse = readGeminiCache(cacheKey);
             if (cachedResponse) {
                 showModal(resultTitle, `<p>${cachedResponse.replace(/\n/g, "<br>")}</p>`, false);
                 return;
@@ -1201,7 +1241,7 @@ function setupGeminiButtons() {
                 const responseText = await result;
                 if (responseText) {
                     showModal(resultTitle, `<p>${responseText.replace(/\n/g, "<br>")}</p>`, false);
-                    localStorage.setItem(cacheKey, responseText);
+                    writeGeminiCache(cacheKey, responseText);
                 }
             }
         });
