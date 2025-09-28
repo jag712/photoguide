@@ -5,6 +5,8 @@
 // Netlify는 기본적으로 fetch를 지원합니다.
 // 만약 로컬 테스트 시 에러가 발생하면 `npm install node-fetch`를 실행하세요.
 
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+
 exports.handler = async function(event) {
   // POST 요청만 허용합니다.
   if (event.httpMethod !== 'POST') {
@@ -17,11 +19,15 @@ exports.handler = async function(event) {
     if (!geminiApiKey) {
       throw new Error("Gemini API key is not set in environment variables.");
     }
-    
-    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
+
+    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL}:generateContent?key=${geminiApiKey}`;
 
     // 클라이언트로부터 받은 요청 본문을 그대로 사용합니다.
     const requestBody = JSON.parse(event.body);
+
+    if (!requestBody || !requestBody.contents) {
+      throw new Error("Request body must include contents for the Gemini API.");
+    }
 
     const response = await fetch(GEMINI_API_URL, {
       method: 'POST',
@@ -32,11 +38,26 @@ exports.handler = async function(event) {
     });
 
     if (!response.ok) {
-      const errorBody = await response.text();
-      // Gemini API에서 받은 에러를 클라이언트에 전달합니다.
+      const rawError = await response.text();
+      let details = rawError;
+      try {
+        const parsed = JSON.parse(rawError);
+        details = parsed.error?.message || rawError;
+      } catch (parseError) {
+        // ignore JSON parse errors and use the raw message instead
+      }
+
+      console.error('Gemini API error:', response.status, details);
+
       return {
         statusCode: response.status,
-        body: `Error from Gemini API: ${errorBody}`
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: 'Gemini API request failed.',
+          status: response.status,
+          details,
+          model: DEFAULT_MODEL,
+        }),
       };
     }
 
@@ -51,9 +72,11 @@ exports.handler = async function(event) {
 
   } catch (error) {
     console.error('Proxy Error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: message, model: DEFAULT_MODEL }),
     };
   }
 };
