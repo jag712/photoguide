@@ -803,11 +803,10 @@ function setupInterviewSummaryInteractions() {
     container.querySelectorAll(".interview-data-link").forEach((btn) => {
         btn.addEventListener("click", () => {
             const term = (btn.dataset.search || "").trim();
-            if (!term || !searchInput) return;
-            searchInput.value = term;
-            const event = new Event("input", { bubbles: true });
-            searchInput.dispatchEvent(event);
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            if (!term) return;
+            const targetUrl = new URL(window.location.href);
+            targetUrl.searchParams.set("search", term);
+            window.open(targetUrl.toString(), "_blank", "noopener,noreferrer");
         });
     });
     updateInterviewGradeSummary();
@@ -1731,6 +1730,18 @@ function renderContent(category, searchTerm = "") {
         }, 0);
     }
 }
+function updateSearchParam(value) {
+    if (typeof window === "undefined" || !window.history?.replaceState) {
+        return;
+    }
+    const url = new URL(window.location.href);
+    if (value) {
+        url.searchParams.set("search", value);
+    } else {
+        url.searchParams.delete("search");
+    }
+    window.history.replaceState(null, "", url);
+}
 function handleNavClick(e) {
     e.preventDefault();
     const targetLink = e.target.closest("a");
@@ -1740,6 +1751,7 @@ function handleNavClick(e) {
     document.querySelectorAll("nav a").forEach((link) => link.classList.remove("active"));
     targetLink.classList.add("active");
     renderContent(category);
+    updateSearchParam("");
 }
 document.querySelectorAll("nav a").forEach((link) => link.addEventListener("click", handleNavClick));
 searchInput.addEventListener("input", () => {
@@ -1747,7 +1759,9 @@ searchInput.addEventListener("input", () => {
     if (searchTerm.length > 0) {
         document.querySelectorAll("nav a").forEach((link) => link.classList.remove("active"));
         renderContent(null, searchTerm);
+        updateSearchParam(searchTerm);
     } else {
+        updateSearchParam("");
         const activeOrHomeLink = document.querySelector(".nav-item.active") || document.querySelector('[data-category="home"]');
         if (activeOrHomeLink) {
             activeOrHomeLink.click();
@@ -1841,4 +1855,19 @@ geminiModal.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !geminiModal.classList.contains("hidden")) hideModal();
 });
-renderContent("home");
+function initializeContentFromUrl() {
+    if (typeof window === "undefined") {
+        renderContent("home");
+        return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const initialSearch = params.get("search");
+    if (initialSearch && searchInput) {
+        searchInput.value = initialSearch;
+        document.querySelectorAll("nav a").forEach((link) => link.classList.remove("active"));
+        renderContent(null, initialSearch);
+    } else {
+        renderContent("home");
+    }
+}
+initializeContentFromUrl();
