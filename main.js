@@ -601,11 +601,55 @@ function buildInterviewPool() {
     const source = Array.isArray(window.interviewQuestionBank) ? window.interviewQuestionBank : [];
     const valid = source.filter((item) => item && typeof item.question === "string");
     if (!valid.length) return [];
-    const randomized = shuffleArray(valid);
-    if (randomized.length <= INTERVIEW_SESSION_SIZE) {
-        return randomized;
+
+    const targetSize = Math.min(INTERVIEW_SESSION_SIZE, valid.length);
+    const grouped = valid.reduce((acc, item) => {
+        const category = item.category || "기타";
+        if (!acc[category]) acc[category] = [];
+        acc[category].push(item);
+        return acc;
+    }, {});
+
+    const categoryKeys = shuffleArray(Object.keys(grouped));
+    if (!categoryKeys.length) return shuffleArray(valid).slice(0, targetSize);
+
+    const working = categoryKeys.reduce((acc, key) => {
+        acc[key] = shuffleArray(grouped[key]);
+        return acc;
+    }, {});
+
+    const pool = [];
+    while (pool.length < targetSize) {
+        let addedInRound = false;
+        for (const key of categoryKeys) {
+            const bucket = working[key];
+            if (!bucket || !bucket.length) continue;
+            pool.push(bucket.shift());
+            addedInRound = true;
+            if (pool.length >= targetSize) break;
+        }
+        if (!addedInRound) break;
     }
-    return randomized.slice(0, INTERVIEW_SESSION_SIZE);
+
+    if (pool.length < targetSize) {
+        const leftovers = shuffleArray(
+            categoryKeys.reduce((acc, key) => {
+                const bucket = working[key];
+                if (bucket && bucket.length) acc.push(...bucket);
+                return acc;
+            }, []),
+        );
+        for (const item of leftovers) {
+            pool.push(item);
+            if (pool.length >= targetSize) break;
+        }
+    }
+
+    if (!pool.length) {
+        return shuffleArray(valid).slice(0, targetSize);
+    }
+
+    return pool;
 }
 
 function renderInterviewQuestion() {
@@ -618,6 +662,34 @@ function renderInterviewQuestion() {
     }
     const total = interviewPool.length;
     const current = interviewPool[interviewIndex];
+    const progressHtml = interviewPool.length > 1
+        ? `<div class="mt-4 flex flex-wrap gap-2" role="list" aria-label="면접 진행 상황">
+                ${interviewPool.map((_, idx) => {
+                    const baseClass = "flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold";
+                    if (idx < interviewResponses.length) {
+                        const previous = interviewResponses[idx] || {};
+                        const hasAnswer = previous.answer && previous.answer.trim().length > 0;
+                        const timedOut = Boolean(previous.timedOut);
+                        const statusClass = hasAnswer
+                            ? "border-green-400 bg-green-50 text-green-700"
+                            : timedOut
+                                ? "border-red-400 bg-red-50 text-red-600"
+                                : "border-yellow-400 bg-yellow-50 text-yellow-700";
+                        const icon = hasAnswer ? "✔️" : timedOut ? "⏰" : "…";
+                        const label = hasAnswer
+                            ? `문항 ${idx + 1} 답변 완료`
+                            : timedOut
+                                ? `문항 ${idx + 1} 시간 종료`
+                                : `문항 ${idx + 1} 답변 미작성`;
+                        return `<span role="listitem" class="${baseClass} ${statusClass}" title="${label}">${icon}<span>${idx + 1}</span></span>`;
+                    }
+                    if (idx === interviewIndex) {
+                        return `<span role="listitem" class="${baseClass} border-blue-400 bg-blue-50 text-blue-700" title="문항 ${idx + 1} 진행 중">▶️<span>${idx + 1}</span></span>`;
+                    }
+                    return `<span role="listitem" class="${baseClass} border-gray-300 bg-gray-100 text-gray-500" title="문항 ${idx + 1} 대기 중">•<span>${idx + 1}</span></span>`;
+                }).join("")}
+            </div>`
+        : "";
     container.classList.remove("hidden");
     container.innerHTML = `
         <div class="rounded-lg border border-gray-100 bg-white p-6 shadow-lg">
@@ -636,6 +708,7 @@ function renderInterviewQuestion() {
                     </div>
                 </div>
             </div>
+            ${progressHtml}
             <p class="mt-6 whitespace-pre-wrap text-lg leading-relaxed text-gray-800">${escapeHtml(current.question)}</p>
             <label class="mt-6 block text-sm font-semibold text-gray-700" for="interviewAnswer">나의 답변</label>
             <textarea id="interviewAnswer" class="mt-2 w-full rounded-lg border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-blue-400" rows="6" placeholder="생각을 정리해 보세요..."></textarea>
