@@ -607,15 +607,20 @@ function updateInterviewTimerDisplay() {
     const seconds = Math.max(0, interviewTimeRemaining);
     const timerDisplay = document.getElementById("interviewTimerDisplay");
     if (timerDisplay) {
-        const minutesPart = String(Math.floor(seconds / 60)).padStart(2, "0");
-        const secondsPart = String(seconds % 60).padStart(2, "0");
-        timerDisplay.textContent = `${minutesPart}:${secondsPart}`;
+        timerDisplay.textContent = formatSecondsToClock(seconds);
     }
     const timerBar = document.getElementById("interviewTimerBar");
     if (timerBar) {
         const percent = (seconds / INTERVIEW_TIME_LIMIT_SECONDS) * 100;
         timerBar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
     }
+}
+
+function formatSecondsToClock(totalSeconds) {
+    const seconds = Math.max(0, Math.floor(totalSeconds));
+    const minutesPart = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const secondsPart = String(seconds % 60).padStart(2, "0");
+    return `${minutesPart}:${secondsPart}`;
 }
 
 function startInterviewTimer({ reset = false } = {}) {
@@ -626,7 +631,11 @@ function startInterviewTimer({ reset = false } = {}) {
     ) {
         interviewTimeRemaining = INTERVIEW_TIME_LIMIT_SECONDS;
     }
-    clearInterviewTimer();
+    if (reset && interviewTimerInterval) {
+        clearInterviewTimer();
+    } else if (interviewTimerInterval) {
+        return;
+    }
     updateInterviewTimerDisplay();
     interviewTimerInterval = setInterval(() => {
         interviewTimeRemaining -= 1;
@@ -660,6 +669,18 @@ function handleInterviewSessionTimeout() {
         timedOut: true,
     };
     interviewIndex += 1;
+    for (let i = interviewIndex; i < interviewPool.length; i += 1) {
+        if (!interviewResponses[i]) {
+            const pending = interviewPool[i];
+            interviewResponses[i] = {
+                question: pending.question,
+                category: pending.category || "기타",
+                answer: "",
+                timedOut: true,
+            };
+        }
+    }
+    interviewIndex = interviewPool.length;
     showInterviewSummary();
 }
 
@@ -706,7 +727,6 @@ function buildInterviewPool() {
 function renderInterviewQuestion() {
     const container = getInterviewContainer();
     if (!container) return;
-    clearInterviewTimer();
     if (!interviewPool.length || interviewIndex >= interviewPool.length) {
         showInterviewSummary();
         return;
@@ -723,7 +743,7 @@ function renderInterviewQuestion() {
                 </div>
                 <div class="w-full md:w-56">
                     <div class="flex items-center justify-between text-sm font-semibold text-gray-700">
-                        <span>⏳ 남은 시간 (총 4분)</span>
+                        <span>⏳ 남은 시간 (10문항 합산 4분)</span>
                         <span id="interviewTimerDisplay" class="font-mono text-lg text-blue-600">04:00</span>
                     </div>
                     <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
@@ -752,7 +772,7 @@ function renderInterviewQuestion() {
     }
     updateInterviewProgress();
     updateInterviewTimerDisplay();
-    startInterviewTimer({ reset: true });
+    startInterviewTimer({ reset: interviewIndex === 0 });
 }
 
 function recordInterviewAnswer({ autoAdvance = false, endSession = false } = {}) {
@@ -767,7 +787,6 @@ function recordInterviewAnswer({ autoAdvance = false, endSession = false } = {})
     const answerField = container.querySelector("#interviewAnswer");
     const answerText = answerField ? answerField.value.trim() : "";
     isRecordingInterviewStep = true;
-    clearInterviewTimer();
     interviewResponses[interviewIndex] = {
         question: current.question,
         category: current.category || "기타",
@@ -793,6 +812,11 @@ function showInterviewSummary() {
         (item) => item && item.answer && item.answer.trim().length > 0,
     ).length;
     const timedOutCount = interviewResponses.filter((item) => item && item.timedOut).length;
+    const remainingSeconds = typeof interviewTimeRemaining === "number"
+        ? Math.max(0, Math.min(INTERVIEW_TIME_LIMIT_SECONDS, interviewTimeRemaining))
+        : 0;
+    const elapsedSeconds = INTERVIEW_TIME_LIMIT_SECONDS - remainingSeconds;
+    const timeSummary = `남은 시간 ${formatSecondsToClock(remainingSeconds)} · 경과 ${formatSecondsToClock(elapsedSeconds)}`;
     const summaryItems = interviewPool.length
         ? interviewPool
               .map((question, idx) => {
@@ -822,6 +846,10 @@ function showInterviewSummary() {
                     </div>
                     <p class="mt-2 whitespace-pre-wrap text-sm font-medium text-gray-700">${escapeHtml(question.question)}</p>
                     ${answerContent}
+                    <div class="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-gray-600">
+                        <button class="interview-score-btn rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-indigo-600 transition hover:border-indigo-300 hover:bg-indigo-100" data-index="${idx}">채점 도우미</button>
+                        <button class="interview-reference-btn rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-600 transition hover:border-emerald-300 hover:bg-emerald-100" data-index="${idx}">관련 자료 찾기</button>
+                    </div>
                 </li>
             `;
               })
@@ -832,17 +860,234 @@ function showInterviewSummary() {
         <div class="rounded-lg border border-gray-100 bg-white p-6 shadow-lg">
             <h3 class="text-2xl font-bold text-gray-800">면접 연습 결과</h3>
             <p class="mt-2 text-gray-600">총 ${total}문항 중 ${completedCount}문항을 진행했고, ${answeredCount}문항에 답변을 작성했습니다.${timedOutCount ? ` <span class="text-red-500">(${timedOutCount}문항은 시간 종료)</span>` : ""}</p>
+            <p class="mt-1 text-sm text-gray-500">${timeSummary}</p>
             <ul class="mt-6 space-y-4">${summaryItems}</ul>
             <div class="mt-6 flex flex-col gap-3 md:flex-row md:justify-end">
                 <button id="restartInterviewBtn" class="w-full rounded-full bg-green-600 px-4 py-2 font-semibold text-white transition hover:bg-green-700 md:w-auto">다시 연습하기</button>
             </div>
         </div>
     `;
+    attachInterviewSummaryActions(container);
     const restartBtn = container.querySelector("#restartInterviewBtn");
     if (restartBtn) {
         restartBtn.addEventListener("click", startInterviewPractice);
     }
     container.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function attachInterviewSummaryActions(container) {
+    if (!container) return;
+    const scoreButtons = container.querySelectorAll(".interview-score-btn");
+    scoreButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const idx = Number(btn.dataset.index);
+            if (!Number.isNaN(idx)) {
+                openInterviewScoringModal(idx);
+            }
+        });
+    });
+    const referenceButtons = container.querySelectorAll(".interview-reference-btn");
+    referenceButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const idx = Number(btn.dataset.index);
+            if (!Number.isNaN(idx)) {
+                openInterviewReferenceModal(idx);
+            }
+        });
+    });
+}
+
+function openInterviewScoringModal(index) {
+    if (!interviewPool.length) return;
+    const question = interviewPool[index];
+    if (!question) return;
+    const response = interviewResponses[index] || {};
+    const userAnswer = response?.answer || "";
+    const timedOut = Boolean(response?.timedOut);
+    const hasAnswer = userAnswer.trim().length > 0;
+    const answerHeader = timedOut
+        ? '내 답변 <span class="ml-1 text-xs text-red-500">(시간 종료)</span>'
+        : '내 답변';
+    const answerBody = hasAnswer
+        ? `<p class="mt-2 whitespace-pre-wrap rounded-md bg-gray-50 p-3 text-sm text-gray-800">${escapeHtml(userAnswer)}</p>`
+        : `<p class="mt-2 italic text-sm text-gray-500">기록된 답변이 없습니다.</p>`;
+    showModal(
+        `문항 ${index + 1} 채점 도우미`,
+        `
+        <div class="space-y-4">
+            <div>
+                <h4 class="text-sm font-semibold text-gray-700">질문</h4>
+                <p class="mt-1 whitespace-pre-wrap text-base font-medium text-gray-800">${escapeHtml(question.question)}</p>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-gray-700">${answerHeader}</h4>
+                ${answerBody}
+            </div>
+            <div>
+                <label for="interviewReferenceAnswer" class="text-sm font-semibold text-gray-700">비교할 모범답안 또는 키워드</label>
+                <textarea id="interviewReferenceAnswer" class="mt-2 w-full rounded-md border border-gray-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" rows="4" placeholder="모범답안을 입력하면 유사도 기반으로 5점 만점의 점수를 계산해 드려요."></textarea>
+                <p class="mt-2 text-xs text-gray-500">채점 기준은 <span class="font-semibold">calculateScore</span> 알고리즘(유사도 기반 1~5점)과 연동되어 있어요.</p>
+            </div>
+            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <button id="interviewScoreRun" class="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600 md:w-auto">채점하기</button>
+                <p id="interviewScoreResult" class="text-sm text-gray-500 md:text-right"></p>
+            </div>
+        </div>
+        `,
+        false,
+    );
+    const runBtn = document.getElementById("interviewScoreRun");
+    const referenceInput = document.getElementById("interviewReferenceAnswer");
+    const resultEl = document.getElementById("interviewScoreResult");
+    if (!runBtn || !referenceInput || !resultEl) {
+        return;
+    }
+    runBtn.addEventListener("click", () => {
+        const reference = referenceInput.value.trim();
+        if (!reference) {
+            resultEl.textContent = "모범답안을 입력해 주세요.";
+            resultEl.className = "text-sm font-semibold text-red-500";
+            return;
+        }
+        if (typeof calculateScore !== "function") {
+            resultEl.textContent = "채점 도구를 사용할 수 없습니다.";
+            resultEl.className = "text-sm font-semibold text-red-500";
+            return;
+        }
+        const scoreValue = calculateScore(userAnswer || "", reference);
+        const percentage = Math.round((scoreValue / 5) * 100);
+        const colorClass = scoreValue >= 4 ? "text-green-600" : scoreValue >= 3 ? "text-amber-600" : "text-red-600";
+        const feedbackSource = typeof getPracticeMessage === "function"
+            ? getPracticeMessage
+            : typeof getEncouragementMessage === "function"
+                ? getEncouragementMessage
+                : null;
+        const hints = [];
+        if (!hasAnswer) {
+            hints.push("답변이 비어 있어 점수가 낮게 계산될 수 있어요.");
+        }
+        if (feedbackSource) {
+            hints.push(feedbackSource(percentage));
+        }
+        const hintText = hints
+            .filter(Boolean)
+            .map((text) => escapeHtml(text))
+            .join(" · ");
+        resultEl.className = `text-sm font-semibold ${colorClass}`;
+        resultEl.innerHTML = `예상 점수: <span class="${colorClass}">${scoreValue} / 5</span> (${percentage}%)` +
+            (hintText ? `<br><span class="text-gray-600">${hintText}</span>` : "");
+    });
+}
+
+function openInterviewReferenceModal(index) {
+    if (!interviewPool.length) return;
+    const question = interviewPool[index];
+    if (!question) return;
+    const defaultQuery = question.question;
+    showModal(
+        `문항 ${index + 1} 관련 자료 찾기`,
+        `
+        <div class="space-y-4">
+            <div>
+                <h4 class="text-sm font-semibold text-gray-700">질문</h4>
+                <p class="mt-1 whitespace-pre-wrap text-base font-medium text-gray-800">${escapeHtml(question.question)}</p>
+            </div>
+            <div>
+                <label for="interviewReferenceQuery" class="text-sm font-semibold text-gray-700">검색어</label>
+                <input id="interviewReferenceQuery" type="text" value="${escapeHtml(defaultQuery)}" class="mt-2 w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+                <p class="mt-1 text-xs text-gray-500">면접 질문과 연결된 사진학 데이터(photographyData)를 빠르게 찾아볼 수 있도록 도와드려요.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button id="interviewReferenceSearch" class="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600">검색 업데이트</button>
+                <button id="interviewReferenceSearchAll" class="rounded-full border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-600 transition hover:border-emerald-300 hover:bg-emerald-50">전체 화면에서 검색</button>
+            </div>
+            <div id="interviewReferenceResults" class="space-y-3"></div>
+        </div>
+        `,
+        false,
+    );
+    const queryInput = document.getElementById("interviewReferenceQuery");
+    const resultsContainer = document.getElementById("interviewReferenceResults");
+    const searchBtn = document.getElementById("interviewReferenceSearch");
+    const openSearchBtn = document.getElementById("interviewReferenceSearchAll");
+    if (!queryInput || !resultsContainer) {
+        return;
+    }
+    const renderResults = () => {
+        const query = queryInput.value.trim();
+        const resources = findRelatedStudyMaterials(query, 6);
+        resultsContainer.innerHTML = renderReferenceResults(resources, query);
+    };
+    renderResults();
+    if (searchBtn) {
+        searchBtn.addEventListener("click", renderResults);
+    }
+    if (openSearchBtn) {
+        openSearchBtn.addEventListener("click", () => {
+            const keyword = queryInput.value.trim();
+            if (searchInput) {
+                searchInput.value = keyword;
+                const event = new Event("input", { bubbles: true });
+                searchInput.dispatchEvent(event);
+            }
+            hideModal();
+        });
+    }
+}
+
+function findRelatedStudyMaterials(query, limit = 6) {
+    if (!query) return [];
+    const normalized = query
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    if (!normalized) return [];
+    const keywords = normalized.split(" ").filter((word) => word.length >= 2);
+    if (!keywords.length) {
+        keywords.push(normalized);
+    }
+    const scored = [];
+    Object.entries(photographyData || {}).forEach(([category, items]) => {
+        items.forEach((item) => {
+            const haystack = `${item.q} ${item.a}`.toLowerCase();
+            let score = 0;
+            keywords.forEach((word) => {
+                if (haystack.includes(word)) {
+                    score += word.length >= 4 ? 2 : 1;
+                }
+            });
+            if (score > 0) {
+                scored.push({
+                    category,
+                    question: item.q,
+                    answer: item.a,
+                    score,
+                });
+            }
+        });
+    });
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, limit);
+}
+
+function renderReferenceResults(items, query) {
+    if (!query) {
+        return '<p class="text-sm text-gray-500">검색어를 입력하면 관련 자료를 추천해 드립니다.</p>';
+    }
+    if (!items.length) {
+        return '<p class="text-sm text-gray-500">관련 자료를 찾지 못했습니다. "전체 화면에서 검색" 버튼으로 더 넓게 찾아보세요.</p>';
+    }
+    const listItems = items
+        .map((item) => `
+            <li class="rounded-lg border border-gray-200 bg-gray-50 p-3 shadow-sm">
+                <div class="text-xs font-semibold text-emerald-600">[${escapeHtml(item.category)}]</div>
+                <p class="mt-1 text-sm font-semibold text-gray-800">${escapeHtml(item.question)}</p>
+                <p class="mt-1 text-sm text-gray-600">${escapeHtml(simplify(item.answer))}</p>
+            </li>
+        `)
+        .join("");
+    return `<ul class="space-y-2">${listItems}</ul>`;
 }
 
 function startInterviewPractice() {
@@ -860,6 +1105,8 @@ function startInterviewPractice() {
     interviewPool = pool;
     interviewIndex = 0;
     interviewResponses = Array(pool.length).fill(null);
+    interviewTimeRemaining = INTERVIEW_TIME_LIMIT_SECONDS;
+    clearInterviewTimer();
     renderInterviewQuestion();
 }
 
