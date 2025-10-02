@@ -596,6 +596,130 @@ function updateInterviewProgress() {
     container.innerHTML = buildInterviewProgressMarkup();
 }
 
+function getInterviewGradeStats() {
+    return interviewResponses.reduce(
+        (acc, response) => {
+            if (!response || !response.grade) {
+                return acc;
+            }
+            if (response.grade === "pass") {
+                acc.pass += 1;
+            } else if (response.grade === "review") {
+                acc.review += 1;
+            }
+            return acc;
+        },
+        { pass: 0, review: 0 },
+    );
+}
+
+function updateInterviewGradeSummary() {
+    const summaryEl = document.getElementById("interviewGradeSummary");
+    if (!summaryEl) return;
+    const { pass, review } = getInterviewGradeStats();
+    const total = interviewPool.length;
+    const graded = pass + review;
+    const waiting = Math.max(0, total - graded);
+    summaryEl.textContent = `셀프 채점: 합격 ${pass} · 복습 ${review}${total ? ` · 미평가 ${waiting}` : ""}`;
+}
+
+function refreshInterviewGradeUI(index) {
+    const container = getInterviewContainer();
+    if (!container) return;
+    const response = interviewResponses[index];
+    const grade = response ? response.grade : undefined;
+    const badge = container.querySelector(`#interviewGradeBadge-${index}`);
+    if (badge) {
+        badge.classList.remove(
+            "bg-green-100",
+            "border-green-400",
+            "text-green-700",
+            "bg-amber-100",
+            "border-amber-400",
+            "text-amber-700",
+            "bg-gray-100",
+            "border-gray-200",
+            "text-gray-600",
+        );
+        if (grade === "pass") {
+            badge.textContent = "⭕ 합격";
+            badge.classList.add("bg-green-100", "border-green-400", "text-green-700");
+        } else if (grade === "review") {
+            badge.textContent = "🔄 복습";
+            badge.classList.add("bg-amber-100", "border-amber-400", "text-amber-700");
+        } else {
+            badge.textContent = "셀프 채점 대기";
+            badge.classList.add("bg-gray-100", "border-gray-200", "text-gray-600");
+        }
+    }
+    const buttons = container.querySelectorAll(`[data-grade-group="${index}"]`);
+    buttons.forEach((btn) => {
+        btn.classList.remove(
+            "bg-green-100",
+            "border-green-400",
+            "text-green-700",
+            "bg-amber-100",
+            "border-amber-400",
+            "text-amber-700",
+        );
+        btn.classList.add("bg-white", "border-gray-300", "text-gray-600");
+        const targetGrade = btn.dataset.grade;
+        if (grade && targetGrade === grade) {
+            btn.classList.remove("bg-white", "border-gray-300", "text-gray-600");
+            if (grade === "pass") {
+                btn.classList.add("bg-green-100", "border-green-400", "text-green-700");
+            } else if (grade === "review") {
+                btn.classList.add("bg-amber-100", "border-amber-400", "text-amber-700");
+            }
+        }
+    });
+}
+
+function setupInterviewSummaryInteractions() {
+    const container = getInterviewContainer();
+    if (!container) return;
+    container.querySelectorAll(".interview-grade-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const idx = Number(btn.dataset.index);
+            if (Number.isNaN(idx)) return;
+            const selectedGrade = btn.dataset.grade;
+            const poolItem = interviewPool[idx] || {};
+            const current = interviewResponses[idx] || {
+                question: poolItem.question || "",
+                category: poolItem.category || "기타",
+                answer: "",
+                timedOut: false,
+            };
+            const nextGrade = current.grade === selectedGrade ? null : selectedGrade;
+            const updated = {
+                ...current,
+                question: current.question || poolItem.question || "",
+                category: current.category || poolItem.category || "기타",
+            };
+            if (nextGrade) {
+                updated.grade = nextGrade;
+            } else {
+                delete updated.grade;
+            }
+            interviewResponses[idx] = updated;
+            refreshInterviewGradeUI(idx);
+            updateInterviewGradeSummary();
+        });
+    });
+    container.querySelectorAll(".interview-data-link").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const term = btn.dataset.search;
+            if (!term || !searchInput) return;
+            searchInput.value = term;
+            const event = new Event("input", { bubbles: true });
+            searchInput.dispatchEvent(event);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+    });
+    updateInterviewGradeSummary();
+    interviewPool.forEach((_, idx) => refreshInterviewGradeUI(idx));
+}
+
 function clearInterviewTimer() {
     if (interviewTimerInterval) {
         clearInterval(interviewTimerInterval);
@@ -628,6 +752,12 @@ function startInterviewTimer({ reset = false } = {}) {
     }
     clearInterviewTimer();
     updateInterviewTimerDisplay();
+    if (interviewTimeRemaining <= 0) {
+        interviewTimeRemaining = 0;
+        updateInterviewTimerDisplay();
+        handleInterviewSessionTimeout();
+        return;
+    }
     interviewTimerInterval = setInterval(() => {
         interviewTimeRemaining -= 1;
         if (interviewTimeRemaining <= 0) {
@@ -723,7 +853,7 @@ function renderInterviewQuestion() {
                 </div>
                 <div class="w-full md:w-56">
                     <div class="flex items-center justify-between text-sm font-semibold text-gray-700">
-                        <span>⏳ 남은 시간 (총 4분)</span>
+                        <span>⏳ 남은 시간 (10문항 총 4분)</span>
                         <span id="interviewTimerDisplay" class="font-mono text-lg text-blue-600">04:00</span>
                     </div>
                     <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
@@ -752,7 +882,7 @@ function renderInterviewQuestion() {
     }
     updateInterviewProgress();
     updateInterviewTimerDisplay();
-    startInterviewTimer({ reset: true });
+    startInterviewTimer({ reset: interviewIndex === 0 });
 }
 
 function recordInterviewAnswer({ autoAdvance = false, endSession = false } = {}) {
@@ -796,7 +926,16 @@ function showInterviewSummary() {
     const summaryItems = interviewPool.length
         ? interviewPool
               .map((question, idx) => {
-                  const response = interviewResponses[idx];
+                  let response = interviewResponses[idx];
+                  if (!response) {
+                      response = {
+                          question: question.question,
+                          category: question.category || "기타",
+                          answer: "",
+                          timedOut: false,
+                      };
+                      interviewResponses[idx] = response;
+                  }
                   const hasAnswer = response && response.answer && response.answer.trim().length > 0;
                   const timedOut = response?.timedOut;
                   const statusBadge = response
@@ -806,6 +945,13 @@ function showInterviewSummary() {
                               ? `<span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">✅ 작성 완료</span>`
                               : `<span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">🗒️ 답변 미작성</span>`
                       : `<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">⏳ 진행 전</span>`;
+                  const grade = response.grade;
+                  const gradeBadgeText = grade === "pass" ? "⭕ 합격" : grade === "review" ? "🔄 복습" : "셀프 채점 대기";
+                  const gradeBadgeClass = grade === "pass"
+                      ? "bg-green-100 border-green-400 text-green-700"
+                      : grade === "review"
+                          ? "bg-amber-100 border-amber-400 text-amber-700"
+                          : "bg-gray-100 border-gray-200 text-gray-600";
                   const answerContent = hasAnswer
                       ? `<p class="mt-2 whitespace-pre-wrap text-gray-800">${escapeHtml(response.answer)}</p>`
                       : `<p class="mt-2 italic text-gray-500">${response
@@ -819,9 +965,15 @@ function showInterviewSummary() {
                         <h4 class="text-base font-semibold text-gray-800">문항 ${idx + 1}</h4>
                         <span class="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600">${escapeHtml(question.category || "기타")}</span>
                         ${statusBadge}
+                        <span id="interviewGradeBadge-${idx}" class="rounded-full border px-2 py-0.5 text-xs font-semibold ${gradeBadgeClass}">${gradeBadgeText}</span>
                     </div>
                     <p class="mt-2 whitespace-pre-wrap text-sm font-medium text-gray-700">${escapeHtml(question.question)}</p>
                     ${answerContent}
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <button class="interview-grade-btn rounded-full border border-gray-300 bg-white px-3 py-1 text-sm font-semibold text-gray-600 transition hover:bg-gray-50" data-index="${idx}" data-grade="pass" data-grade-group="${idx}">⭕ 합격</button>
+                        <button class="interview-grade-btn rounded-full border border-gray-300 bg-white px-3 py-1 text-sm font-semibold text-gray-600 transition hover:bg-gray-50" data-index="${idx}" data-grade="review" data-grade-group="${idx}">🔄 복습</button>
+                        <button class="interview-data-link rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100" data-search="${escapeHtml(question.question)}">📚 데이터에서 찾아보기</button>
+                    </div>
                 </li>
             `;
               })
@@ -832,6 +984,7 @@ function showInterviewSummary() {
         <div class="rounded-lg border border-gray-100 bg-white p-6 shadow-lg">
             <h3 class="text-2xl font-bold text-gray-800">면접 연습 결과</h3>
             <p class="mt-2 text-gray-600">총 ${total}문항 중 ${completedCount}문항을 진행했고, ${answeredCount}문항에 답변을 작성했습니다.${timedOutCount ? ` <span class="text-red-500">(${timedOutCount}문항은 시간 종료)</span>` : ""}</p>
+            <div id="interviewGradeSummary" class="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700"></div>
             <ul class="mt-6 space-y-4">${summaryItems}</ul>
             <div class="mt-6 flex flex-col gap-3 md:flex-row md:justify-end">
                 <button id="restartInterviewBtn" class="w-full rounded-full bg-green-600 px-4 py-2 font-semibold text-white transition hover:bg-green-700 md:w-auto">다시 연습하기</button>
@@ -842,6 +995,7 @@ function showInterviewSummary() {
     if (restartBtn) {
         restartBtn.addEventListener("click", startInterviewPractice);
     }
+    setupInterviewSummaryInteractions();
     container.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -860,6 +1014,8 @@ function startInterviewPractice() {
     interviewPool = pool;
     interviewIndex = 0;
     interviewResponses = Array(pool.length).fill(null);
+    clearInterviewTimer();
+    interviewTimeRemaining = INTERVIEW_TIME_LIMIT_SECONDS;
     renderInterviewQuestion();
 }
 
