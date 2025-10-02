@@ -804,9 +804,26 @@ function setupInterviewSummaryInteractions() {
         btn.addEventListener("click", () => {
             const term = (btn.dataset.search || "").trim();
             if (!term) return;
-            const targetUrl = new URL(window.location.href);
-            targetUrl.searchParams.set("search", term);
-            window.open(targetUrl.toString(), "_blank", "noopener,noreferrer");
+
+            const baseUrl = new URL(window.location.origin + window.location.pathname);
+            baseUrl.searchParams.set("search", term);
+
+            const features = [
+                "width=1024",
+                "height=768",
+                "noopener",
+                "noreferrer",
+                "resizable=yes",
+                "scrollbars=yes",
+            ].join(",");
+
+            const popup = window.open(baseUrl.toString(), "photoguideDataLookup", features);
+            if (popup) {
+                popup.opener = null;
+                popup.focus();
+            } else {
+                window.open(baseUrl.toString(), "_blank", "noopener,noreferrer");
+            }
         });
     });
     updateInterviewGradeSummary();
@@ -1598,18 +1615,45 @@ function renderContent(category, searchTerm = "") {
     if (category === "home") {
         const today = new Date();
         const currentYear = today.getFullYear();
-        const currentMonth = today.getMonth() + 1;
-        const eventsForSept = {};
-        (calendarEvents[9] || []).forEach((e) => {
-            (eventsForSept[e.day] = eventsForSept[e.day] || []).push({ ...e });
-        });
-        const eventsForOct = {};
-        (calendarEvents[10] || []).forEach((e) => {
-            (eventsForOct[e.day] = eventsForOct[e.day] || []).push({ ...e });
-        });
-        html = `<div class="content-card p-6 md:p-8 mb-6 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">중요 입시 일정</p></div>`;
-        html += createCalendar(currentYear, 9, eventsForSept);
-        html += createCalendar(currentYear, 10, eventsForOct);
+        let month = today.getMonth() + 1;
+        const maxMonthsToTry = 6;
+        let rendered = "";
+
+        const toEventMap = (list = []) => {
+            const mapped = {};
+            list.forEach((event) => {
+                (mapped[event.day] = mapped[event.day] || []).push({ ...event });
+            });
+            return mapped;
+        };
+
+        let shown = 0;
+        for (let i = 0; i < maxMonthsToTry && shown < 2; i++) {
+            const year = currentYear + Math.floor((month - 1) / 12);
+            const normalizedMonth = ((month - 1) % 12) + 1;
+            const eventsList = calendarEvents[normalizedMonth] || [];
+            const monthHtml = createCalendar(year, normalizedMonth, toEventMap(eventsList));
+            if (monthHtml) {
+                rendered += monthHtml;
+                shown += 1;
+            }
+            month += 1;
+        }
+
+        if (!rendered) {
+            const fallbackSept = toEventMap(calendarEvents[9] || []);
+            const fallbackOct = toEventMap(calendarEvents[10] || []);
+            rendered += createCalendar(currentYear, 9, fallbackSept);
+            rendered += createCalendar(currentYear, 10, fallbackOct);
+        }
+
+        html = `
+      <div class="content-card p-6 md:p-8 mb-6 text-center">
+        <h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2>
+        <p class="text-gray-600">중요 입시 일정</p>
+      </div>
+      ${rendered}
+    `;
     } else if (category === "visualization") {
         const visualizationContent = [{
             q: "노출의 이해: 조리개와 셔터 속도",
