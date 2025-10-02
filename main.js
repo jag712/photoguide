@@ -557,21 +557,33 @@ function shuffleArray(items) {
 function buildInterviewProgressMarkup() {
     if (!interviewPool.length) return "";
     const total = interviewPool.length;
-    const answeredCount = interviewResponses.length;
-    const badges = interviewPool.map((_, idx) => {
-        if (idx < answeredCount) {
-            return `<span class="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">✅ <span>${idx + 1}번 완료</span></span>`;
-        }
-        if (idx === interviewIndex) {
-            return `<span class="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">📝 <span>${idx + 1}번 진행 중</span></span>`;
-        }
-        return `<span class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">⏳ <span>${idx + 1}번 대기</span></span>`;
-    }).join("");
+    const completedCount = interviewResponses.filter(Boolean).length;
+    const answeredCount = interviewResponses.filter(
+        (item) => item && item.answer && item.answer.trim().length > 0,
+    ).length;
+    const badges = interviewPool
+        .map((_, idx) => {
+            const response = interviewResponses[idx];
+            if (response && response.answer && response.answer.trim().length > 0) {
+                return `<span class="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">✅ <span>${idx + 1}번 작성</span></span>`;
+            }
+            if (response && response.timedOut) {
+                return `<span class="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-100 px-3 py-1 text-xs font-semibold text-red-600">⏰ <span>${idx + 1}번 시간 종료</span></span>`;
+            }
+            if (response) {
+                return `<span class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-600">🗒️ <span>${idx + 1}번 미작성</span></span>`;
+            }
+            if (idx === interviewIndex) {
+                return `<span class="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">📝 <span>${idx + 1}번 진행 중</span></span>`;
+            }
+            return `<span class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">⏳ <span>${idx + 1}번 대기</span></span>`;
+        })
+        .join("");
     return `
         <div class="rounded-lg bg-gray-50 p-4">
             <div class="flex items-center justify-between text-sm font-semibold text-gray-700">
                 <span>답변 현황</span>
-                <span>${answeredCount} / ${total}</span>
+                <span>작성 ${answeredCount} · 완료 ${completedCount}/${total}</span>
             </div>
             <div class="mt-3 flex flex-wrap gap-2">${badges}</div>
         </div>
@@ -582,6 +594,64 @@ function updateInterviewProgress() {
     const container = document.getElementById("interviewProgress");
     if (!container) return;
     container.innerHTML = buildInterviewProgressMarkup();
+}
+
+function buildInterviewAnswerPreviewMarkup() {
+    if (!interviewPool.length || !interviewResponses.some(Boolean)) {
+        return "";
+    }
+    const savedCount = interviewResponses.filter(Boolean).length;
+    const items = interviewResponses
+        .map((response, idx) => {
+            if (!response) return "";
+            const question = interviewPool[idx];
+            const hasAnswer = response.answer && response.answer.trim().length > 0;
+            const statusIcon = response.timedOut ? "⏰" : hasAnswer ? "✍️" : "🗒️";
+            const statusLabel = response.timedOut
+                ? "시간 종료"
+                : hasAnswer
+                    ? "작성 완료"
+                    : "미작성";
+            const answerContent = hasAnswer
+                ? `<p class="mt-2 whitespace-pre-wrap text-gray-800">${escapeHtml(response.answer)}</p>`
+                : `<p class="mt-2 italic text-gray-500">${response.timedOut ? "시간 종료로 입력된 답변이 없습니다." : "기록된 답변이 없습니다."}</p>`;
+            return `
+                <details class="group rounded-lg border border-gray-200 bg-white/80 p-3">
+                    <summary class="flex cursor-pointer items-center justify-between text-sm font-semibold text-gray-700">
+                        <span class="flex flex-1 items-center gap-2 pr-2">
+                            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">문항 ${idx + 1}</span>
+                            <span class="flex-1 truncate text-left text-gray-800">${escapeHtml(question.question)}</span>
+                        </span>
+                        <span class="ml-3 flex items-center gap-1 text-xs text-gray-500">
+                            <span>${statusIcon}</span>
+                            <span>${statusLabel}</span>
+                        </span>
+                    </summary>
+                    <div class="mt-3 space-y-2 text-sm text-gray-700">
+                        <div class="inline-flex items-center rounded bg-gray-50 px-2 py-1 text-xs font-medium text-gray-500">${escapeHtml(question.category || "기타")}</div>
+                        ${answerContent}
+                    </div>
+                </details>
+            `;
+        })
+        .filter(Boolean)
+        .join("");
+    if (!items) return "";
+    return `
+        <div class="rounded-lg border border-gray-200 bg-white/60 p-4">
+            <div class="flex items-center justify-between text-sm font-semibold text-gray-700">
+                <span>작성 답변 미리보기</span>
+                <span>${savedCount}개 저장됨</span>
+            </div>
+            <div class="mt-3 space-y-2">${items}</div>
+        </div>
+    `;
+}
+
+function updateInterviewAnswerPreview() {
+    const container = document.getElementById("interviewAnswerPreview");
+    if (!container) return;
+    container.innerHTML = buildInterviewAnswerPreviewMarkup();
 }
 
 function clearInterviewTimer() {
@@ -693,6 +763,7 @@ function renderInterviewQuestion() {
             </div>
             <p class="mt-6 whitespace-pre-wrap text-lg leading-relaxed text-gray-800">${escapeHtml(current.question)}</p>
             <div id="interviewProgress" class="mt-6"></div>
+            <div id="interviewAnswerPreview" class="mt-4"></div>
             <label class="mt-6 block text-sm font-semibold text-gray-700" for="interviewAnswer">나의 답변</label>
             <textarea id="interviewAnswer" class="mt-2 w-full rounded-lg border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-blue-400" rows="6" placeholder="생각을 정리해 보세요..."></textarea>
             <div class="mt-6 flex flex-col-reverse gap-3 md:flex-row md:justify-end">
@@ -711,6 +782,7 @@ function renderInterviewQuestion() {
         finishBtn.addEventListener("click", () => recordInterviewAnswer({ endSession: true }));
     }
     updateInterviewProgress();
+    updateInterviewAnswerPreview();
     startInterviewTimer();
 }
 
@@ -727,12 +799,12 @@ function recordInterviewAnswer({ autoAdvance = false, endSession = false } = {})
     const answerText = answerField ? answerField.value.trim() : "";
     isRecordingInterviewStep = true;
     clearInterviewTimer();
-    interviewResponses.push({
+    interviewResponses[interviewIndex] = {
         question: current.question,
         category: current.category || "기타",
         answer: answerText,
         timedOut: autoAdvance,
-    });
+    };
     interviewIndex += 1;
     if (endSession || interviewIndex >= interviewPool.length) {
         showInterviewSummary();
@@ -746,35 +818,51 @@ function showInterviewSummary() {
     const container = getInterviewContainer();
     if (!container) return;
     clearInterviewTimer();
-    const total = interviewResponses.length;
-    const answeredCount = interviewResponses.filter((item) => item.answer && item.answer.trim().length > 0).length;
-    const summaryItems = interviewResponses.length
-        ? interviewResponses.map((item, idx) => {
-            const hasAnswer = item.answer && item.answer.trim().length > 0;
-            const answerContent = hasAnswer
-                ? `<p class="mt-2 whitespace-pre-wrap text-gray-800">${escapeHtml(item.answer)}</p>`
-                : `<p class="mt-2 italic text-gray-500">${item.timedOut ? "시간 종료로 답변하지 못했습니다." : "작성한 답변이 없습니다."}</p>`;
-            const timeoutBadge = item.timedOut
-                ? `<span class="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600">⏰ 시간 종료</span>`
-                : "";
-            return `
+    const total = interviewPool.length;
+    const completedCount = interviewResponses.filter(Boolean).length;
+    const answeredCount = interviewResponses.filter(
+        (item) => item && item.answer && item.answer.trim().length > 0,
+    ).length;
+    const timedOutCount = interviewResponses.filter((item) => item && item.timedOut).length;
+    const summaryItems = interviewPool.length
+        ? interviewPool
+              .map((question, idx) => {
+                  const response = interviewResponses[idx];
+                  const hasAnswer = response && response.answer && response.answer.trim().length > 0;
+                  const timedOut = response?.timedOut;
+                  const statusBadge = response
+                      ? timedOut
+                          ? `<span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600">⏰ 시간 종료</span>`
+                          : hasAnswer
+                              ? `<span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">✅ 작성 완료</span>`
+                              : `<span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">🗒️ 답변 미작성</span>`
+                      : `<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">⏳ 진행 전</span>`;
+                  const answerContent = hasAnswer
+                      ? `<p class="mt-2 whitespace-pre-wrap text-gray-800">${escapeHtml(response.answer)}</p>`
+                      : `<p class="mt-2 italic text-gray-500">${response
+                          ? timedOut
+                              ? "시간 종료로 답변하지 못했습니다."
+                              : "기록된 답변이 없습니다."
+                          : "이 문항은 진행하지 않았습니다."}</p>`;
+                  return `
                 <li class="rounded-lg border border-gray-200 p-4 shadow-sm">
                     <div class="flex flex-wrap items-center gap-2">
                         <h4 class="text-base font-semibold text-gray-800">문항 ${idx + 1}</h4>
-                        <span class="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600">${escapeHtml(item.category)}</span>
-                        ${timeoutBadge}
+                        <span class="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600">${escapeHtml(question.category || "기타")}</span>
+                        ${statusBadge}
                     </div>
-                    <p class="mt-2 whitespace-pre-wrap text-sm font-medium text-gray-700">${escapeHtml(item.question)}</p>
+                    <p class="mt-2 whitespace-pre-wrap text-sm font-medium text-gray-700">${escapeHtml(question.question)}</p>
                     ${answerContent}
                 </li>
             `;
-        }).join("")
+              })
+              .join("")
         : `<p class="text-gray-600">기록된 답변이 없습니다.</p>`;
     container.classList.remove("hidden");
     container.innerHTML = `
         <div class="rounded-lg border border-gray-100 bg-white p-6 shadow-lg">
             <h3 class="text-2xl font-bold text-gray-800">면접 연습 결과</h3>
-            <p class="mt-2 text-gray-600">총 ${total}문항 중 ${answeredCount}문항에 답변했습니다.</p>
+            <p class="mt-2 text-gray-600">총 ${total}문항 중 ${completedCount}문항을 진행했고, ${answeredCount}문항에 답변을 작성했습니다.${timedOutCount ? ` <span class="text-red-500">(${timedOutCount}문항은 시간 종료)</span>` : ""}</p>
             <ul class="mt-6 space-y-4">${summaryItems}</ul>
             <div class="mt-6 flex flex-col gap-3 md:flex-row md:justify-end">
                 <button id="restartInterviewBtn" class="w-full rounded-full bg-green-600 px-4 py-2 font-semibold text-white transition hover:bg-green-700 md:w-auto">다시 연습하기</button>
@@ -802,7 +890,7 @@ function startInterviewPractice() {
     }
     interviewPool = pool;
     interviewIndex = 0;
-    interviewResponses = [];
+    interviewResponses = Array(pool.length).fill(null);
     renderInterviewQuestion();
 }
 
