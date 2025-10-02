@@ -752,6 +752,88 @@ function createPracticeQuestions(count = 4, filters = {}) {
     }));
 }
 
+function showInterviewQuestions() {
+    const data = Array.isArray(window.interviewQuestions) ? window.interviewQuestions : [];
+    if (!data.length) {
+        showModal('면접 기출 질문집', '<p class="text-red-500">면접 기출 데이터를 불러오지 못했습니다.</p>', false);
+        return;
+    }
+
+    const flattened = data.flatMap(section =>
+        (section.questions || []).map(q => ({
+            category: section.category || '기타',
+            question: q
+        }))
+    );
+    const totalCount = flattened.length;
+
+    const categoryOptions = ['전체', ...data.map(section => section.category)].map(cat =>
+        `<option value="${escapeHtml(cat === '전체' ? '' : cat)}">${escapeHtml(cat)}</option>`
+    ).join('');
+
+    showModal('면접 기출 질문집');
+    modalBody.innerHTML = `
+        <div class="space-y-4">
+            <div class="grid md:grid-cols-2 gap-2">
+                <input id="interviewSearch" type="text" class="border rounded px-3 py-2" placeholder="질문 검색 (예: 노출, 색온도)" />
+                <select id="interviewCategory" class="border rounded px-3 py-2">
+                    ${categoryOptions}
+                </select>
+            </div>
+            <p class="text-sm text-gray-500">총 ${totalCount}문항에서 조건에 맞는 질문을 확인할 수 있어요.</p>
+            <div id="interviewList" class="max-h-96 overflow-y-auto divide-y divide-gray-200"></div>
+        </div>`;
+
+    const searchInput = modalBody.querySelector('#interviewSearch');
+    const categorySelect = modalBody.querySelector('#interviewCategory');
+    const listEl = modalBody.querySelector('#interviewList');
+
+    const normalize = (str) => (str || '').toString().toLowerCase();
+
+    const render = () => {
+        const term = normalize(searchInput.value);
+        const selectedCategory = categorySelect.value;
+        const filtered = flattened.filter(item => {
+            if (selectedCategory && item.category !== selectedCategory) return false;
+            return !term || normalize(item.question).includes(term);
+        });
+        if (!filtered.length) {
+            listEl.innerHTML = '<p class="py-6 text-sm text-gray-500 text-center">조건에 맞는 질문이 없습니다.</p>';
+            return;
+        }
+        listEl.innerHTML = filtered.map((item, idx) => `
+            <div class="py-3 flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs text-gray-500">${escapeHtml(item.category)}</p>
+                    <p class="font-medium text-gray-800 mt-1">${escapeHtml(item.question)}</p>
+                </div>
+                <button class="copy-interview text-sm text-indigo-600 hover:text-indigo-800" data-question="${escapeHtml(item.question)}" aria-label="질문 복사">복사</button>
+            </div>
+        `).join('');
+    };
+
+    listEl.addEventListener('click', (e) => {
+        const target = e.target.closest('.copy-interview');
+        if (!target) return;
+        const text = target.dataset.question || '';
+        navigator.clipboard.writeText(text)
+            .then(() => {
+                const original = target.textContent;
+                target.textContent = '복사됨';
+                setTimeout(() => { target.textContent = original; }, 1200);
+            })
+            .catch(() => {
+                target.textContent = '복사 실패';
+                setTimeout(() => { target.textContent = '복사'; }, 1500);
+            });
+    });
+
+    searchInput.addEventListener('input', render);
+    categorySelect.addEventListener('change', render);
+
+    render();
+}
+
 function displayQuizQuestion() {
     const q = currentQuizData.questions[currentQuestionIndex];
     quizTimeLimit = currentQuestionIndex >= 3 ? 20 : 15;
@@ -1053,6 +1135,8 @@ function renderContent(category, searchTerm = "") {
 
               <button id="practiceBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-green-800 transition transform hover:scale-105">🏃‍♂️ 실전 연습</button>
 
+              <button id="interviewBtn" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">🗂️ 면접 기출 보기</button>
+
               <details id="practiceFilters" class="w-full bg-white p-4 rounded-lg shadow">
 
                 <summary class="cursor-pointer font-semibold text-gray-700">⚙️ 실전 연습 필터</summary>
@@ -1250,6 +1334,7 @@ function setupGeminiButtons() {
 function initQuizPage() {
     const quizBtn = document.getElementById("quizBtn");
     const practiceBtn = document.getElementById("practiceBtn");
+    const interviewBtn = document.getElementById("interviewBtn");
     if (quizBtn) {
         quizBtn.addEventListener("click", () => {
             const content = `
@@ -1267,6 +1352,9 @@ function initQuizPage() {
     }
     if (practiceBtn) {
         practiceBtn.addEventListener("click", generatePractice);
+    }
+    if (interviewBtn) {
+        interviewBtn.addEventListener("click", showInterviewQuestions);
     }
 }
 closeModalBtn.addEventListener("click", hideModal);
