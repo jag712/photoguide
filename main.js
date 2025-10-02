@@ -596,64 +596,6 @@ function updateInterviewProgress() {
     container.innerHTML = buildInterviewProgressMarkup();
 }
 
-function buildInterviewAnswerPreviewMarkup() {
-    if (!interviewPool.length || !interviewResponses.some(Boolean)) {
-        return "";
-    }
-    const savedCount = interviewResponses.filter(Boolean).length;
-    const items = interviewResponses
-        .map((response, idx) => {
-            if (!response) return "";
-            const question = interviewPool[idx];
-            const hasAnswer = response.answer && response.answer.trim().length > 0;
-            const statusIcon = response.timedOut ? "⏰" : hasAnswer ? "✍️" : "🗒️";
-            const statusLabel = response.timedOut
-                ? "시간 종료"
-                : hasAnswer
-                    ? "작성 완료"
-                    : "미작성";
-            const answerContent = hasAnswer
-                ? `<p class="mt-2 whitespace-pre-wrap text-gray-800">${escapeHtml(response.answer)}</p>`
-                : `<p class="mt-2 italic text-gray-500">${response.timedOut ? "시간 종료로 입력된 답변이 없습니다." : "기록된 답변이 없습니다."}</p>`;
-            return `
-                <details class="group rounded-lg border border-gray-200 bg-white/80 p-3">
-                    <summary class="flex cursor-pointer items-center justify-between text-sm font-semibold text-gray-700">
-                        <span class="flex flex-1 items-center gap-2 pr-2">
-                            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">문항 ${idx + 1}</span>
-                            <span class="flex-1 truncate text-left text-gray-800">${escapeHtml(question.question)}</span>
-                        </span>
-                        <span class="ml-3 flex items-center gap-1 text-xs text-gray-500">
-                            <span>${statusIcon}</span>
-                            <span>${statusLabel}</span>
-                        </span>
-                    </summary>
-                    <div class="mt-3 space-y-2 text-sm text-gray-700">
-                        <div class="inline-flex items-center rounded bg-gray-50 px-2 py-1 text-xs font-medium text-gray-500">${escapeHtml(question.category || "기타")}</div>
-                        ${answerContent}
-                    </div>
-                </details>
-            `;
-        })
-        .filter(Boolean)
-        .join("");
-    if (!items) return "";
-    return `
-        <div class="rounded-lg border border-gray-200 bg-white/60 p-4">
-            <div class="flex items-center justify-between text-sm font-semibold text-gray-700">
-                <span>작성 답변 미리보기</span>
-                <span>${savedCount}개 저장됨</span>
-            </div>
-            <div class="mt-3 space-y-2">${items}</div>
-        </div>
-    `;
-}
-
-function updateInterviewAnswerPreview() {
-    const container = document.getElementById("interviewAnswerPreview");
-    if (!container) return;
-    container.innerHTML = buildInterviewAnswerPreviewMarkup();
-}
-
 function clearInterviewTimer() {
     if (interviewTimerInterval) {
         clearInterval(interviewTimerInterval);
@@ -676,21 +618,45 @@ function updateInterviewTimerDisplay() {
     }
 }
 
-function startInterviewTimer() {
+function startInterviewTimer({ reset = false } = {}) {
+    if (reset || typeof interviewTimeRemaining !== "number" || interviewTimeRemaining > INTERVIEW_TIME_LIMIT_SECONDS) {
+        interviewTimeRemaining = INTERVIEW_TIME_LIMIT_SECONDS;
+    }
     clearInterviewTimer();
-    interviewTimeRemaining = INTERVIEW_TIME_LIMIT_SECONDS;
     updateInterviewTimerDisplay();
     interviewTimerInterval = setInterval(() => {
         interviewTimeRemaining -= 1;
         if (interviewTimeRemaining <= 0) {
-            clearInterviewTimer();
             interviewTimeRemaining = 0;
             updateInterviewTimerDisplay();
-            recordInterviewAnswer({ autoAdvance: true });
+            clearInterviewTimer();
+            handleInterviewSessionTimeout();
         } else {
             updateInterviewTimerDisplay();
         }
     }, 1000);
+}
+
+function handleInterviewSessionTimeout() {
+    if (!interviewPool.length) {
+        return;
+    }
+    if (interviewIndex >= interviewPool.length) {
+        showInterviewSummary();
+        return;
+    }
+    const container = getInterviewContainer();
+    const answerField = container ? container.querySelector("#interviewAnswer") : null;
+    const answerText = answerField ? answerField.value.trim() : "";
+    const current = interviewPool[interviewIndex];
+    interviewResponses[interviewIndex] = {
+        question: current.question,
+        category: current.category || "기타",
+        answer: answerText,
+        timedOut: true,
+    };
+    interviewIndex += 1;
+    showInterviewSummary();
 }
 
 function getInterviewContainer() {
@@ -753,7 +719,7 @@ function renderInterviewQuestion() {
                 </div>
                 <div class="w-full md:w-56">
                     <div class="flex items-center justify-between text-sm font-semibold text-gray-700">
-                        <span>⏳ 4분 타이머</span>
+                        <span>⏳ 남은 시간 (총 4분)</span>
                         <span id="interviewTimerDisplay" class="font-mono text-lg text-blue-600">04:00</span>
                     </div>
                     <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
@@ -763,7 +729,6 @@ function renderInterviewQuestion() {
             </div>
             <p class="mt-6 whitespace-pre-wrap text-lg leading-relaxed text-gray-800">${escapeHtml(current.question)}</p>
             <div id="interviewProgress" class="mt-6"></div>
-            <div id="interviewAnswerPreview" class="mt-4"></div>
             <label class="mt-6 block text-sm font-semibold text-gray-700" for="interviewAnswer">나의 답변</label>
             <textarea id="interviewAnswer" class="mt-2 w-full rounded-lg border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-blue-400" rows="6" placeholder="생각을 정리해 보세요..."></textarea>
             <div class="mt-6 flex flex-col-reverse gap-3 md:flex-row md:justify-end">
@@ -782,8 +747,7 @@ function renderInterviewQuestion() {
         finishBtn.addEventListener("click", () => recordInterviewAnswer({ endSession: true }));
     }
     updateInterviewProgress();
-    updateInterviewAnswerPreview();
-    startInterviewTimer();
+    updateInterviewTimerDisplay();
 }
 
 function recordInterviewAnswer({ autoAdvance = false, endSession = false } = {}) {
@@ -798,7 +762,6 @@ function recordInterviewAnswer({ autoAdvance = false, endSession = false } = {})
     const answerField = container.querySelector("#interviewAnswer");
     const answerText = answerField ? answerField.value.trim() : "";
     isRecordingInterviewStep = true;
-    clearInterviewTimer();
     interviewResponses[interviewIndex] = {
         question: current.question,
         category: current.category || "기타",
@@ -892,6 +855,7 @@ function startInterviewPractice() {
     interviewIndex = 0;
     interviewResponses = Array(pool.length).fill(null);
     renderInterviewQuestion();
+    startInterviewTimer({ reset: true });
 }
 
 function createFallbackQuiz(pool, count = 5) {
