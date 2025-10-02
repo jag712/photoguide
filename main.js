@@ -1263,7 +1263,7 @@ function renderContent(category, searchTerm = "") {
 
         html = `
         <div class="mx-auto max-w-4xl">
-            <div class="space-y-4 md:flex md:items-start md:space-x-4 md:space-y-0">
+            <div class="space-y-4 md:flex md:items-start md:gap-4 md:space-y-0">
                 <button id="quizBtn" class="w-full md:flex-1 bg-pink-400 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-pink-500 transition transform hover:scale-105">🌸 AI 퀴즈 생성</button>
                 <div class="w-full md:flex-1 space-y-4">
                     <button id="practiceBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-green-800 transition transform hover:scale-105">🏃‍♂️ 실전 연습</button>
@@ -1295,7 +1295,9 @@ function renderContent(category, searchTerm = "") {
                         </div>
                     </details>
                 </div>
-                <button id="interviewBtn" class="w-full md:flex-1 bg-indigo-500 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-indigo-600 transition transform hover:scale-105">📝 면접 시뮬레이션</button>
+                <div class="w-full md:w-auto md:ml-auto md:self-stretch md:flex md:items-start">
+                    <button id="interviewBtn" class="w-full md:w-auto bg-indigo-500 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-indigo-600 transition transform hover:scale-105">📝 면접 시뮬레이션</button>
+                </div>
             </div>
             <div id="interviewSession" class="mt-6 hidden"></div>
         </div>`
