@@ -1104,21 +1104,79 @@ const interviewQuestions = [
   }
 ];
 
+const FOLLOW_UP_PREFIX = /^[-–—]\s*/;
+
+function buildInterviewSearchKeywords(text) {
+  if (!text) return '';
+  let processed = String(text)
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[^0-9a-zA-Z가-힣\s]/g, ' ');
+
+  processed = processed
+    .replace(/([A-Za-z0-9])([가-힣])/g, '$1 $2')
+    .replace(/([가-힣])([A-Za-z0-9])/g, '$1 $2');
+
+  processed = processed
+    .replace(/([가-힣]+)(이|가|은|는|을|를|과|와|으로|로)(?=\s|$)/g, '$1')
+    .replace(/뭐야|뭐예요|뭐에요|뭐죠|무엇인가요|무엇이야|무엇이에요/g, ' ');
+
+  processed = processed
+    .replace(/\b(뭐|무엇|어떻게|왜|어디|언제|어때|어떤|누가|누굴|누구|인가요|인가|거야|거니|거죠|거예요)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (processed.length < 2) {
+    return String(text).toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+
+  return processed;
+}
+
+function updateEntryKeywords(entry) {
+  const followUps = Array.isArray(entry.followUps) ? entry.followUps : [];
+  const base = [entry.question, ...followUps].filter(Boolean).join(' ');
+  entry.searchKeywords = buildInterviewSearchKeywords(base || entry.question || '');
+}
+
 const interviewQuestionBank = (() => {
   const seen = new Set();
+  const entryMap = new Map();
   const bank = [];
 
   (interviewQuestions || []).forEach((section) => {
     if (!section || !Array.isArray(section.questions)) return;
     const category = section.category || '기타';
+    let lastEntry = null;
+
     section.questions.forEach((question) => {
       if (typeof question !== 'string') return;
-      const cleaned = question.replace(/\s+/g, ' ').trim();
+      const compact = question.replace(/\s+/g, ' ').trim();
+      if (!compact) return;
+      const isFollowUp = FOLLOW_UP_PREFIX.test(compact);
+      const cleaned = isFollowUp ? compact.replace(FOLLOW_UP_PREFIX, '').trim() : compact;
       if (!cleaned) return;
+
+      if (isFollowUp && lastEntry) {
+        lastEntry.followUps = lastEntry.followUps || [];
+        if (!lastEntry.followUps.includes(cleaned)) {
+          lastEntry.followUps.push(cleaned);
+          updateEntryKeywords(lastEntry);
+        }
+        return;
+      }
+
       const key = `${category}|${cleaned.toLowerCase()}`;
-      if (seen.has(key)) return;
+      if (seen.has(key)) {
+        lastEntry = entryMap.get(key) || lastEntry;
+        return;
+      }
       seen.add(key);
-      bank.push({ category, question: cleaned });
+      const entry = { category, question: cleaned };
+      updateEntryKeywords(entry);
+      bank.push(entry);
+      entryMap.set(key, entry);
+      lastEntry = entry;
     });
   });
 
