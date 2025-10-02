@@ -172,6 +172,12 @@ let geminiCache = (() => {
     }
 })();
 
+let modalCleanupHandler = null;
+
+function registerModalCleanup(handler) {
+    modalCleanupHandler = typeof handler === "function" ? handler : null;
+}
+
 function readGeminiCache(key) {
     if (!geminiCache) return null;
     try {
@@ -327,6 +333,7 @@ const PROXY_URL = "/.netlify/functions/gemini-proxy";
 let iconChangeInterval;
 
 function showModal(title, contentHtml = '', showLoading = false, onCancel = null) {
+    registerModalCleanup(null);
     const icons = ["❓", "🤔", "💡", "😊","🙏🏻","🤪"];
     modalTitle.textContent = title;
     modalBody.innerHTML = contentHtml;
@@ -374,6 +381,13 @@ function showModal(title, contentHtml = '', showLoading = false, onCancel = null
 }
 
 function hideModal() {
+    if (typeof modalCleanupHandler === "function") {
+        try {
+            modalCleanupHandler();
+        } finally {
+            modalCleanupHandler = null;
+        }
+    }
     clearInterval(iconChangeInterval);
     geminiModal.classList.add("opacity-0");
     geminiModal.querySelector(".modal-content").classList.add("scale-95");
@@ -752,6 +766,366 @@ function createPracticeQuestions(count = 4, filters = {}) {
     }));
 }
 
+function showInterviewQuestions() {
+    const bankSource = Array.isArray(window.interviewQuestionBank) && window.interviewQuestionBank.length
+        ? window.interviewQuestionBank
+        : Array.isArray(window.interviewQuestions) ? window.interviewQuestions : [];
+
+    const seen = new Set();
+    const bank = [];
+
+    bankSource.forEach((entry) => {
+        if (!entry) return;
+        if (typeof entry.question === "string") {
+            const cleaned = entry.question.replace(/\s+/g, " ").trim();
+            if (!cleaned) return;
+            const key = `${(entry.category || '기타')}|${cleaned.toLowerCase()}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            bank.push({ category: entry.category || '기타', question: cleaned });
+            return;
+        }
+        if (Array.isArray(entry.questions)) {
+            const category = entry.category || '기타';
+            entry.questions.forEach((question) => {
+                if (typeof question !== "string") return;
+                const cleaned = question.replace(/\s+/g, " ").trim();
+                if (!cleaned) return;
+                const key = `${category}|${cleaned.toLowerCase()}`;
+                if (seen.has(key)) return;
+                seen.add(key);
+                bank.push({ category, question: cleaned });
+            });
+        }
+    });
+
+    if (!bank.length) {
+        showModal('면접 문제 은행', '<p class="text-red-500">면접 기출 데이터를 불러오지 못했습니다.</p>', false);
+        return;
+    }
+
+    const categories = Array.from(new Set(bank.map((item) => item.category))).sort((a, b) => a.localeCompare(b, 'ko'));
+    const categoryOptions = ['전체', ...categories]
+        .map((cat) => {
+            const value = cat === '전체' ? '' : cat;
+            return `<option value="${escapeHtml(value)}">${escapeHtml(cat)}</option>`;
+        })
+        .join('');
+
+    showModal('면접 문제 은행');
+    modalBody.innerHTML = `
+        <div class="space-y-6">
+            <div id="interviewSetup" class="space-y-4">
+                <p class="text-sm text-gray-600 leading-relaxed">
+                    총 <span class="font-semibold">${bank.length}</span>개의 면접 기출 질문이 문제 은행에 저장되어 있어요.
+                    질문은 한 번에 하나씩 제공되며, 각 문항당 4분의 연습 시간이 주어집니다.
+                </p>
+                <label class="block">
+                    <span class="text-sm font-medium text-gray-700">카테고리 선택</span>
+                    <select id="interviewCategory" class="mt-1 w-full border rounded px-3 py-2">
+                        ${categoryOptions}
+                    </select>
+                </label>
+                <p id="interviewSetupError" class="hidden text-sm text-red-500"></p>
+                <button id="startInterviewBtn" class="w-full bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition">
+                    연습 시작
+                </button>
+            </div>
+            <div id="interviewSession" class="hidden space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">카테고리</p>
+                        <p id="interviewQuestionCategory" class="mt-1 text-sm font-semibold text-gray-800"></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">남은 시간</p>
+                        <p id="interviewTimer" class="text-2xl font-mono font-bold text-gray-900">04:00</p>
+                    </div>
+                </div>
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div id="interviewTimerBar" class="h-full bg-indigo-500" style="width: 100%;"></div>
+                </div>
+                <div class="bg-white border rounded-lg p-4 shadow-sm min-h-[96px] flex items-center">
+                    <p id="interviewQuestionText" class="text-base leading-relaxed text-gray-900"></p>
+                </div>
+                <p id="interviewStatus" class="hidden text-sm text-indigo-600"></p>
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-500">문항 <span id="interviewProgress">0 / 0</span></p>
+                    <div class="flex gap-2">
+                        <button id="interviewPauseBtn" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">일시정지</button>
+                        <button id="interviewNextBtn" class="px-4 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700">다음 질문</button>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400">타이머가 0이 되면 다음 질문으로 자동 이동합니다.</p>
+            </div>
+            <div id="interviewComplete" class="hidden text-center space-y-4 py-6">
+                <p id="interviewCompleteMessage" class="text-gray-700 font-medium"></p>
+                <button id="interviewRestartBtn" class="px-4 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700">다시 선택하기</button>
+            </div>
+        </div>`;
+
+    const setupEl = modalBody.querySelector('#interviewSetup');
+    const sessionEl = modalBody.querySelector('#interviewSession');
+    const completeEl = modalBody.querySelector('#interviewComplete');
+    const categorySelect = modalBody.querySelector('#interviewCategory');
+    const startBtn = modalBody.querySelector('#startInterviewBtn');
+    const errorEl = modalBody.querySelector('#interviewSetupError');
+    const questionTextEl = modalBody.querySelector('#interviewQuestionText');
+    const questionCategoryEl = modalBody.querySelector('#interviewQuestionCategory');
+    const progressEl = modalBody.querySelector('#interviewProgress');
+    const timerEl = modalBody.querySelector('#interviewTimer');
+    const timerBarEl = modalBody.querySelector('#interviewTimerBar');
+    const pauseBtn = modalBody.querySelector('#interviewPauseBtn');
+    const nextBtn = modalBody.querySelector('#interviewNextBtn');
+    const statusEl = modalBody.querySelector('#interviewStatus');
+    const completeMessageEl = modalBody.querySelector('#interviewCompleteMessage');
+    const restartBtn = modalBody.querySelector('#interviewRestartBtn');
+
+    const TIMER_DURATION = 4 * 60 * 1000;
+
+    const formatTime = (ms) => {
+        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+        return `${minutes}:${seconds}`;
+    };
+
+    const shuffle = (arr) => {
+        const copy = [...arr];
+        for (let i = copy.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
+    };
+
+    const setStatus = (message = '') => {
+        if (!statusEl) return;
+        if (!message) {
+            statusEl.classList.add('hidden');
+            statusEl.textContent = '';
+        } else {
+            statusEl.textContent = message;
+            statusEl.classList.remove('hidden');
+        }
+    };
+
+    let sessionState = null;
+
+    const stopTimer = () => {
+        if (!sessionState) return;
+        if (sessionState.timerId) {
+            clearTimeout(sessionState.timerId);
+            sessionState.timerId = null;
+        }
+        if (sessionState.intervalId) {
+            clearInterval(sessionState.intervalId);
+            sessionState.intervalId = null;
+        }
+        sessionState.endTime = null;
+    };
+
+    const updateTimerUI = () => {
+        if (!sessionState) return;
+        if (timerEl) {
+            timerEl.textContent = formatTime(sessionState.remainingMs);
+        }
+        if (timerBarEl) {
+            const ratio = Math.max(0, Math.min(1, sessionState.remainingMs / TIMER_DURATION));
+            timerBarEl.style.width = `${ratio * 100}%`;
+        }
+    };
+
+    const startTimer = (reset = true) => {
+        if (!sessionState) return;
+        stopTimer();
+        if (reset) {
+            sessionState.remainingMs = TIMER_DURATION;
+        }
+        sessionState.paused = false;
+        if (pauseBtn) {
+            pauseBtn.textContent = '일시정지';
+        }
+        sessionState.endTime = Date.now() + sessionState.remainingMs;
+        updateTimerUI();
+        sessionState.timerId = setTimeout(() => {
+            sessionState.remainingMs = 0;
+            updateTimerUI();
+            advanceQuestion(true);
+        }, sessionState.remainingMs);
+        sessionState.intervalId = setInterval(() => {
+            const remain = Math.max(0, sessionState.endTime - Date.now());
+            sessionState.remainingMs = remain;
+            updateTimerUI();
+            if (remain <= 0) {
+                clearInterval(sessionState.intervalId);
+                sessionState.intervalId = null;
+            }
+        }, 250);
+    };
+
+    const pauseTimer = () => {
+        if (!sessionState || sessionState.paused) return;
+        sessionState.remainingMs = Math.max(0, sessionState.endTime - Date.now());
+        sessionState.paused = true;
+        stopTimer();
+        updateTimerUI();
+        if (pauseBtn) {
+            pauseBtn.textContent = '재개';
+        }
+        setStatus('타이머가 일시정지되었습니다.');
+    };
+
+    const resumeTimer = () => {
+        if (!sessionState || !sessionState.paused) return;
+        sessionState.paused = false;
+        if (pauseBtn) {
+            pauseBtn.textContent = '일시정지';
+        }
+        setStatus('');
+        startTimer(false);
+    };
+
+    const showCurrentQuestion = (statusMessage = '') => {
+        if (!sessionState) return;
+        const current = sessionState.questions[sessionState.index];
+        if (!current) {
+            finishSession();
+            return;
+        }
+        if (questionTextEl) {
+            questionTextEl.textContent = current.question;
+        }
+        if (questionCategoryEl) {
+            questionCategoryEl.textContent = current.category;
+        }
+        if (progressEl) {
+            progressEl.textContent = `${sessionState.index + 1} / ${sessionState.questions.length}`;
+        }
+        if (nextBtn) {
+            nextBtn.textContent = sessionState.index === sessionState.questions.length - 1 ? '마무리' : '다음 질문';
+            nextBtn.disabled = false;
+        }
+        if (pauseBtn) {
+            pauseBtn.disabled = false;
+        }
+        setStatus(statusMessage);
+        startTimer(true);
+    };
+
+    const finishSession = () => {
+        if (!sessionState) return;
+        const total = sessionState.questions.length;
+        const label = sessionState.selectedLabel || '전체';
+        stopTimer();
+        sessionState = null;
+        if (sessionEl) sessionEl.classList.add('hidden');
+        if (setupEl) setupEl.classList.add('hidden');
+        if (completeEl) completeEl.classList.remove('hidden');
+        if (completeMessageEl) {
+            const prefix = label && label !== '전체' ? `${label} 카테고리의 ` : '전체 ';
+            completeMessageEl.textContent = `${prefix}${total}문항을 모두 확인했어요.`;
+        }
+        setStatus('');
+    };
+
+    const advanceQuestion = (auto = false) => {
+        if (!sessionState) return;
+        stopTimer();
+        if (sessionState.index < sessionState.questions.length - 1) {
+            sessionState.index += 1;
+            const message = auto ? '⏰ 시간이 종료되어 다음 질문으로 넘어갑니다.' : '';
+            showCurrentQuestion(message);
+        } else {
+            finishSession();
+        }
+    };
+
+    if (pauseBtn) {
+        pauseBtn.disabled = true;
+        pauseBtn.addEventListener('click', () => {
+            if (!sessionState) return;
+            if (sessionState.paused) {
+                resumeTimer();
+            } else {
+                pauseTimer();
+            }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.disabled = true;
+        nextBtn.addEventListener('click', () => {
+            if (!sessionState) return;
+            const timeLeft = sessionState.remainingMs > 0 && !sessionState.paused;
+            if (timeLeft) {
+                const shouldSkip = window.confirm('아직 시간이 남아있어요. 다음 질문으로 넘어갈까요?');
+                if (!shouldSkip) return;
+            }
+            advanceQuestion(false);
+        });
+    }
+
+    if (restartBtn) {
+        restartBtn.addEventListener('click', () => {
+            stopTimer();
+            sessionState = null;
+            if (completeEl) completeEl.classList.add('hidden');
+            if (setupEl) setupEl.classList.remove('hidden');
+            if (sessionEl) sessionEl.classList.add('hidden');
+            setStatus('');
+            if (pauseBtn) pauseBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+            if (errorEl) {
+                errorEl.classList.add('hidden');
+                errorEl.textContent = '';
+            }
+        });
+    }
+
+    if (startBtn) {
+        startBtn.addEventListener('click', () => {
+            const selectedValue = categorySelect ? categorySelect.value : '';
+            const selectedLabel = categorySelect && categorySelect.selectedOptions.length
+                ? categorySelect.selectedOptions[0].textContent.trim()
+                : '전체';
+            const pool = selectedValue
+                ? bank.filter((item) => item.category === selectedValue)
+                : bank;
+            if (!pool.length) {
+                if (errorEl) {
+                    errorEl.textContent = '선택한 카테고리에 해당하는 질문이 아직 없습니다.';
+                    errorEl.classList.remove('hidden');
+                }
+                return;
+            }
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.classList.add('hidden');
+            }
+            sessionState = {
+                questions: shuffle(pool),
+                index: 0,
+                timerId: null,
+                intervalId: null,
+                remainingMs: TIMER_DURATION,
+                endTime: null,
+                paused: false,
+                selectedLabel,
+            };
+            if (setupEl) setupEl.classList.add('hidden');
+            if (completeEl) completeEl.classList.add('hidden');
+            if (sessionEl) sessionEl.classList.remove('hidden');
+            showCurrentQuestion('준비가 되면 답변을 시작해보세요!');
+        });
+    }
+
+    registerModalCleanup(() => {
+        stopTimer();
+        sessionState = null;
+    });
+}
+
 function displayQuizQuestion() {
     const q = currentQuizData.questions[currentQuestionIndex];
     quizTimeLimit = currentQuestionIndex >= 3 ? 20 : 15;
@@ -1053,6 +1427,8 @@ function renderContent(category, searchTerm = "") {
 
               <button id="practiceBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-green-800 transition transform hover:scale-105">🏃‍♂️ 실전 연습</button>
 
+              <button id="interviewBtn" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">🗂️ 면접 기출 보기</button>
+
               <details id="practiceFilters" class="w-full bg-white p-4 rounded-lg shadow">
 
                 <summary class="cursor-pointer font-semibold text-gray-700">⚙️ 실전 연습 필터</summary>
@@ -1250,6 +1626,7 @@ function setupGeminiButtons() {
 function initQuizPage() {
     const quizBtn = document.getElementById("quizBtn");
     const practiceBtn = document.getElementById("practiceBtn");
+    const interviewBtn = document.getElementById("interviewBtn");
     if (quizBtn) {
         quizBtn.addEventListener("click", () => {
             const content = `
@@ -1267,6 +1644,9 @@ function initQuizPage() {
     }
     if (practiceBtn) {
         practiceBtn.addEventListener("click", generatePractice);
+    }
+    if (interviewBtn) {
+        interviewBtn.addEventListener("click", showInterviewQuestions);
     }
 }
 closeModalBtn.addEventListener("click", hideModal);
