@@ -210,6 +210,14 @@ let isTimerPaused = false;
 let quizTimeLimit;
 let timerInterval;
 let quizTotalMs;
+const INTERVIEW_TIME_LIMIT_SECONDS = 240;
+const INTERVIEW_SESSION_SIZE = 10;
+let interviewPool = [];
+let interviewIndex = 0;
+let interviewResponses = [];
+let interviewTimerInterval = null;
+let interviewTimeRemaining = INTERVIEW_TIME_LIMIT_SECONDS;
+let isRecordingInterviewStep = false;
 
 function getPracticeMessage(percentage) {
     if (percentage >= 90) return "대단해요!";
@@ -535,6 +543,267 @@ function escapeHtml(str) {
         '"': '&quot;',
         "'": '&#39;',
     }[c] || c));
+}
+
+function shuffleArray(items) {
+    const arr = Array.isArray(items) ? [...items] : [];
+    for (let i = arr.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function buildInterviewProgressMarkup() {
+    if (!interviewPool.length) return "";
+    const total = interviewPool.length;
+    const answeredCount = interviewResponses.length;
+    const badges = interviewPool.map((_, idx) => {
+        if (idx < answeredCount) {
+            return `<span class="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">✅ <span>${idx + 1}번 완료</span></span>`;
+        }
+        if (idx === interviewIndex) {
+            return `<span class="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">📝 <span>${idx + 1}번 진행 중</span></span>`;
+        }
+        return `<span class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">⏳ <span>${idx + 1}번 대기</span></span>`;
+    }).join("");
+    return `
+        <div class="rounded-lg bg-gray-50 p-4">
+            <div class="flex items-center justify-between text-sm font-semibold text-gray-700">
+                <span>답변 현황</span>
+                <span>${answeredCount} / ${total}</span>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">${badges}</div>
+        </div>
+    `;
+}
+
+function updateInterviewProgress() {
+    const container = document.getElementById("interviewProgress");
+    if (!container) return;
+    container.innerHTML = buildInterviewProgressMarkup();
+}
+
+function clearInterviewTimer() {
+    if (interviewTimerInterval) {
+        clearInterval(interviewTimerInterval);
+        interviewTimerInterval = null;
+    }
+}
+
+function updateInterviewTimerDisplay() {
+    const seconds = Math.max(0, interviewTimeRemaining);
+    const timerDisplay = document.getElementById("interviewTimerDisplay");
+    if (timerDisplay) {
+        const minutesPart = String(Math.floor(seconds / 60)).padStart(2, "0");
+        const secondsPart = String(seconds % 60).padStart(2, "0");
+        timerDisplay.textContent = `${minutesPart}:${secondsPart}`;
+    }
+    const timerBar = document.getElementById("interviewTimerBar");
+    if (timerBar) {
+        const percent = (seconds / INTERVIEW_TIME_LIMIT_SECONDS) * 100;
+        timerBar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+    }
+}
+
+function startInterviewTimer() {
+    clearInterviewTimer();
+    interviewTimeRemaining = INTERVIEW_TIME_LIMIT_SECONDS;
+    updateInterviewTimerDisplay();
+    interviewTimerInterval = setInterval(() => {
+        interviewTimeRemaining -= 1;
+        if (interviewTimeRemaining <= 0) {
+            clearInterviewTimer();
+            interviewTimeRemaining = 0;
+            updateInterviewTimerDisplay();
+            recordInterviewAnswer({ autoAdvance: true });
+        } else {
+            updateInterviewTimerDisplay();
+        }
+    }, 1000);
+}
+
+function getInterviewContainer() {
+    return document.getElementById("interviewSession");
+}
+
+function buildInterviewPool() {
+    const source = Array.isArray(window.interviewQuestionBank) ? window.interviewQuestionBank : [];
+    const valid = source.filter((item) => item && typeof item.question === "string");
+    if (!valid.length) return [];
+    const byCategory = valid.reduce((acc, item) => {
+        const key = item.category || "기타";
+        (acc[key] = acc[key] || []).push(item);
+        return acc;
+    }, {});
+    let categoryEntries = Object.entries(byCategory)
+        .map(([category, items]) => [category, shuffleArray(items)])
+        .filter(([, items]) => items.length > 0);
+    if (!categoryEntries.length) return [];
+    categoryEntries = shuffleArray(categoryEntries);
+    const pool = [];
+    let index = 0;
+    while (pool.length < INTERVIEW_SESSION_SIZE && categoryEntries.length) {
+        const entryIndex = index % categoryEntries.length;
+        const [, items] = categoryEntries[entryIndex];
+        const next = items.shift();
+        if (next) {
+            pool.push(next);
+        }
+        if (!items.length) {
+            categoryEntries.splice(entryIndex, 1);
+            continue;
+        }
+        index += 1;
+    }
+    if (pool.length) {
+        return pool;
+    }
+    const fallback = shuffleArray(valid);
+    return fallback.slice(0, Math.min(fallback.length, INTERVIEW_SESSION_SIZE));
+}
+
+function renderInterviewQuestion() {
+    const container = getInterviewContainer();
+    if (!container) return;
+    clearInterviewTimer();
+    if (!interviewPool.length || interviewIndex >= interviewPool.length) {
+        showInterviewSummary();
+        return;
+    }
+    const total = interviewPool.length;
+    const current = interviewPool[interviewIndex];
+    container.classList.remove("hidden");
+    container.innerHTML = `
+        <div class="rounded-lg border border-gray-100 bg-white p-6 shadow-lg">
+            <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">${escapeHtml(current.category || "기타")}</p>
+                    <h3 class="mt-1 text-xl font-bold text-gray-800">질문 ${interviewIndex + 1} / ${total}</h3>
+                </div>
+                <div class="w-full md:w-56">
+                    <div class="flex items-center justify-between text-sm font-semibold text-gray-700">
+                        <span>⏳ 4분 타이머</span>
+                        <span id="interviewTimerDisplay" class="font-mono text-lg text-blue-600">04:00</span>
+                    </div>
+                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
+                        <div id="interviewTimerBar" class="h-full bg-blue-500" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <p class="mt-6 whitespace-pre-wrap text-lg leading-relaxed text-gray-800">${escapeHtml(current.question)}</p>
+            <div id="interviewProgress" class="mt-6"></div>
+            <label class="mt-6 block text-sm font-semibold text-gray-700" for="interviewAnswer">나의 답변</label>
+            <textarea id="interviewAnswer" class="mt-2 w-full rounded-lg border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-blue-400" rows="6" placeholder="생각을 정리해 보세요..."></textarea>
+            <div class="mt-6 flex flex-col-reverse gap-3 md:flex-row md:justify-end">
+                <button id="interviewFinishBtn" class="w-full rounded-full border border-gray-300 px-4 py-2 text-gray-600 transition hover:bg-gray-100 md:w-auto">연습 종료</button>
+                <button id="interviewNextBtn" class="w-full rounded-full bg-blue-500 px-4 py-2 font-semibold text-white transition hover:bg-blue-600 md:w-auto">${interviewIndex === total - 1 ? "결과 보기" : "다음 질문"}</button>
+            </div>
+        </div>
+    `;
+    container.scrollIntoView({ behavior: "smooth", block: "start" });
+    const nextBtn = container.querySelector("#interviewNextBtn");
+    const finishBtn = container.querySelector("#interviewFinishBtn");
+    if (nextBtn) {
+        nextBtn.addEventListener("click", () => recordInterviewAnswer());
+    }
+    if (finishBtn) {
+        finishBtn.addEventListener("click", () => recordInterviewAnswer({ endSession: true }));
+    }
+    updateInterviewProgress();
+    startInterviewTimer();
+}
+
+function recordInterviewAnswer({ autoAdvance = false, endSession = false } = {}) {
+    if (isRecordingInterviewStep) return;
+    if (!interviewPool.length || interviewIndex >= interviewPool.length) {
+        if (endSession) showInterviewSummary();
+        return;
+    }
+    const container = getInterviewContainer();
+    if (!container) return;
+    const current = interviewPool[interviewIndex];
+    const answerField = container.querySelector("#interviewAnswer");
+    const answerText = answerField ? answerField.value.trim() : "";
+    isRecordingInterviewStep = true;
+    clearInterviewTimer();
+    interviewResponses.push({
+        question: current.question,
+        category: current.category || "기타",
+        answer: answerText,
+        timedOut: autoAdvance,
+    });
+    interviewIndex += 1;
+    if (endSession || interviewIndex >= interviewPool.length) {
+        showInterviewSummary();
+    } else {
+        renderInterviewQuestion();
+    }
+    isRecordingInterviewStep = false;
+}
+
+function showInterviewSummary() {
+    const container = getInterviewContainer();
+    if (!container) return;
+    clearInterviewTimer();
+    const total = interviewResponses.length;
+    const answeredCount = interviewResponses.filter((item) => item.answer && item.answer.trim().length > 0).length;
+    const summaryItems = interviewResponses.length
+        ? interviewResponses.map((item, idx) => {
+            const hasAnswer = item.answer && item.answer.trim().length > 0;
+            const answerContent = hasAnswer
+                ? `<p class="mt-2 whitespace-pre-wrap text-gray-800">${escapeHtml(item.answer)}</p>`
+                : `<p class="mt-2 italic text-gray-500">${item.timedOut ? "시간 종료로 답변하지 못했습니다." : "작성한 답변이 없습니다."}</p>`;
+            const timeoutBadge = item.timedOut
+                ? `<span class="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600">⏰ 시간 종료</span>`
+                : "";
+            return `
+                <li class="rounded-lg border border-gray-200 p-4 shadow-sm">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h4 class="text-base font-semibold text-gray-800">문항 ${idx + 1}</h4>
+                        <span class="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600">${escapeHtml(item.category)}</span>
+                        ${timeoutBadge}
+                    </div>
+                    <p class="mt-2 whitespace-pre-wrap text-sm font-medium text-gray-700">${escapeHtml(item.question)}</p>
+                    ${answerContent}
+                </li>
+            `;
+        }).join("")
+        : `<p class="text-gray-600">기록된 답변이 없습니다.</p>`;
+    container.classList.remove("hidden");
+    container.innerHTML = `
+        <div class="rounded-lg border border-gray-100 bg-white p-6 shadow-lg">
+            <h3 class="text-2xl font-bold text-gray-800">면접 연습 결과</h3>
+            <p class="mt-2 text-gray-600">총 ${total}문항 중 ${answeredCount}문항에 답변했습니다.</p>
+            <ul class="mt-6 space-y-4">${summaryItems}</ul>
+            <div class="mt-6 flex flex-col gap-3 md:flex-row md:justify-end">
+                <button id="restartInterviewBtn" class="w-full rounded-full bg-green-600 px-4 py-2 font-semibold text-white transition hover:bg-green-700 md:w-auto">다시 연습하기</button>
+            </div>
+        </div>
+    `;
+    const restartBtn = container.querySelector("#restartInterviewBtn");
+    if (restartBtn) {
+        restartBtn.addEventListener("click", startInterviewPractice);
+    }
+    container.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function startInterviewPractice() {
+    const container = getInterviewContainer();
+    if (!container) return;
+    const pool = buildInterviewPool();
+    if (!pool.length) {
+        showModal(
+            "면접 질문을 불러오지 못했습니다.",
+            '<p class="text-gray-700">면접 질문 데이터가 비어 있어요. 관리자에게 문의해 주세요.</p>',
+            false,
+        );
+        return;
+    }
+    interviewPool = pool;
+    interviewIndex = 0;
+    interviewResponses = [];
+    renderInterviewQuestion();
 }
 
 function createFallbackQuiz(pool, count = 5) {
@@ -1013,6 +1282,12 @@ function setupCardFlipListeners() {
 }
 
 function renderContent(category, searchTerm = "") {
+    if (category !== "quiz") {
+        clearInterviewTimer();
+        interviewPool = [];
+        interviewResponses = [];
+        interviewIndex = 0;
+    }
     let html = "";
     if (category === "home") {
         const today = new Date();
@@ -1044,63 +1319,42 @@ function renderContent(category, searchTerm = "") {
             } else if (category === "quiz") {
 
         html = `
-
-          <div class="mx-auto space-y-4 max-w-md md:max-w-2xl md:flex md:items-start md:space-x-4 md:space-y-0">
-
-            <button id="quizBtn" class="w-full md:w-auto md:flex-1 bg-pink-400 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-pink-500 transition transform hover:scale-105">🌸 AI 퀴즈 생성</button>
-
-            <div class="w-full md:w-auto md:flex-1 space-y-4">
-
-              <button id="practiceBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-green-800 transition transform hover:scale-105">🏃‍♂️ 실전 연습</button>
-
-              <details id="practiceFilters" class="w-full bg-white p-4 rounded-lg shadow">
-
-                <summary class="cursor-pointer font-semibold text-gray-700">⚙️ 실전 연습 필터</summary>
-
-                <div class="mt-2">
-
-                <label for="practiceCategory" class="block text-sm mb-1">카테고리</label>
-
-                <select id="practiceCategory" class="w-full p-2 border rounded mb-2">
-
-                  <option value="">전체</option>
-
-                  <option value="structure">카메라 구조와 원리</option>
-
-                  <option value="exposure">노출</option>
-
-                  <option value="lens">렌즈와 광학</option>
-
-                  <option value="digital">디지털</option>
-
-                  <option value="film">필름 현상 인화</option>
-
-                  <option value="lighting">조명과 필터</option>
-
-                  <option value="history">사진사 & 사조</option>
-
-                </select>
-
-                <label for="practiceDifficulty" class="block text-sm mb-1">난이도</label>
-
-                <select id="practiceDifficulty" class="w-full p-2 border rounded">
-
-                  <option value="">전체</option>
-
-                  <option value="easy">쉬움</option>
-
-                  <option value="medium">보통</option>
-
-                  <option value="hard">어려움</option>
-
-                </select>
-
-              </div>
-
-            </details>
-
-          </div>
-
+        <div class="mx-auto max-w-4xl">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <button id="quizBtn" class="w-full self-start bg-pink-400 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-pink-500 transition transform hover:scale-105">🌸 AI 퀴즈 생성</button>
+                <div class="w-full flex flex-col space-y-4">
+                    <button id="practiceBtn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-green-800 transition transform hover:scale-105">🏃‍♂️ 실전 연습</button>
+                    <details id="practiceFilters" class="w-full rounded-lg bg-white p-4 shadow">
+                        <summary class="cursor-pointer font-semibold text-gray-700">⚙️ 실전 연습 필터</summary>
+                        <div class="mt-2 space-y-4">
+                            <div>
+                                <label for="practiceCategory" class="mb-1 block text-sm">카테고리</label>
+                                <select id="practiceCategory" class="w-full rounded border p-2">
+                                    <option value="">전체</option>
+                                    <option value="structure">카메라 구조와 원리</option>
+                                    <option value="exposure">노출</option>
+                                    <option value="lens">렌즈와 광학</option>
+                                    <option value="digital">디지털</option>
+                                    <option value="film">필름 현상 인화</option>
+                                    <option value="lighting">조명과 필터</option>
+                                    <option value="history">사진사 & 사조</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="practiceDifficulty" class="mb-1 block text-sm">난이도</label>
+                                <select id="practiceDifficulty" class="w-full rounded border p-2">
+                                    <option value="">전체</option>
+                                    <option value="easy">쉬움</option>
+                                    <option value="medium">보통</option>
+                                    <option value="hard">어려움</option>
+                                </select>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+                <button id="interviewBtn" class="w-full self-start bg-indigo-500 text-white font-bold py-3 px-4 rounded-full shadow-lg hover:bg-indigo-600 transition transform hover:scale-105">📝 면접 시뮬레이션</button>
+            </div>
+            <div id="interviewSession" class="mt-6 hidden"></div>
         </div>`
 
 
@@ -1250,6 +1504,7 @@ function setupGeminiButtons() {
 function initQuizPage() {
     const quizBtn = document.getElementById("quizBtn");
     const practiceBtn = document.getElementById("practiceBtn");
+    const interviewBtn = document.getElementById("interviewBtn");
     if (quizBtn) {
         quizBtn.addEventListener("click", () => {
             const content = `
@@ -1267,6 +1522,9 @@ function initQuizPage() {
     }
     if (practiceBtn) {
         practiceBtn.addEventListener("click", generatePractice);
+    }
+    if (interviewBtn) {
+        interviewBtn.addEventListener("click", startInterviewPractice);
     }
 }
 closeModalBtn.addEventListener("click", hideModal);
