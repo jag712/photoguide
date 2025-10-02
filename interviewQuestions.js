@@ -1190,5 +1190,31 @@ const interviewQuestions = [
     ]
   }
 ];
-if (typeof window !== 'undefined') { window.interviewQuestions = interviewQuestions; }
-if (typeof module !== 'undefined') { module.exports = interviewQuestions; }
+const interviewQuestionBank = (() => {
+  const seen = new Set();
+  const bank = [];
+
+  (interviewQuestions || []).forEach((section) => {
+    if (!section || !Array.isArray(section.questions)) return;
+    const category = section.category || '기타';
+    section.questions.forEach((question) => {
+      if (typeof question !== 'string') return;
+      const cleaned = question.replace(/\s+/g, ' ').trim();
+      if (!cleaned) return;
+      const key = `${category}|${cleaned.toLowerCase()}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      bank.push({ category, question: cleaned });
+    });
+  });
+
+  return bank;
+})();
+
+if (typeof window !== 'undefined') {
+  window.interviewQuestionBank = interviewQuestionBank;
+  window.interviewQuestions = interviewQuestionBank;
+}
+if (typeof module !== 'undefined') {
+  module.exports = interviewQuestionBank;
+}
