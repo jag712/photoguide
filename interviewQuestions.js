@@ -1185,8 +1185,11 @@ const interviewQuestionBank = (() => {
 
 if (typeof window !== 'undefined') {
   window.interviewQuestionBank = interviewQuestionBank;
-  window.interviewQuestions = interviewQuestionBank;
+  window.interviewQuestions = interviewQuestions;
+  window.interviewQuestionsFlat = interviewQuestionBank;
 }
 if (typeof module !== 'undefined') {
   module.exports = interviewQuestionBank;
+  module.exports.interviewQuestionBank = interviewQuestionBank;
+  module.exports.interviewQuestions = interviewQuestions;
 }

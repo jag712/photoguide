@@ -212,6 +212,7 @@ let timerInterval;
 let quizTotalMs;
 const INTERVIEW_TIME_LIMIT_SECONDS = 240;
 const INTERVIEW_SESSION_SIZE = 10;
+const INTERVIEW_FOLLOW_UP_PREFIX = /^[-–—]\s*/;
 let interviewPool = [];
 let interviewIndex = 0;
 let interviewResponses = [];
@@ -554,6 +555,60 @@ function shuffleArray(items) {
     return arr;
 }
 
+function normalizeInterviewSections(sections) {
+    const normalized = [];
+    const entryMap = new Map();
+    if (!Array.isArray(sections)) return normalized;
+    sections.forEach((section) => {
+        if (!section || !Array.isArray(section.questions)) return;
+        const category = section.category || "기타";
+        let lastEntry = null;
+        section.questions.forEach((raw) => {
+            if (typeof raw !== "string") return;
+            const compact = raw.replace(/\s+/g, " ").trim();
+            if (!compact) return;
+            const isFollowUp = INTERVIEW_FOLLOW_UP_PREFIX.test(compact);
+            const cleaned = isFollowUp ? compact.replace(INTERVIEW_FOLLOW_UP_PREFIX, "").trim() : compact;
+            if (!cleaned) return;
+            if (isFollowUp && lastEntry) {
+                lastEntry.followUps = lastEntry.followUps || [];
+                if (!lastEntry.followUps.includes(cleaned)) {
+                    lastEntry.followUps.push(cleaned);
+                }
+                return;
+            }
+            const key = `${category}|${cleaned.toLowerCase()}`;
+            if (entryMap.has(key)) {
+                lastEntry = entryMap.get(key);
+                return;
+            }
+            const entry = { category, question: cleaned };
+            normalized.push(entry);
+            entryMap.set(key, entry);
+            lastEntry = entry;
+        });
+    });
+    return normalized;
+}
+
+function getInterviewQuestionSource() {
+    if (typeof window === "undefined") return [];
+    if (Array.isArray(window.interviewQuestionBank) && window.interviewQuestionBank.length) {
+        return window.interviewQuestionBank;
+    }
+    if (Array.isArray(window.interviewQuestionsFlat) && window.interviewQuestionsFlat.length) {
+        return window.interviewQuestionsFlat;
+    }
+    if (Array.isArray(window.interviewQuestions) && window.interviewQuestions.length) {
+        const raw = window.interviewQuestions;
+        if (raw.every((item) => item && typeof item.question === "string")) {
+            return raw;
+        }
+        return normalizeInterviewSections(raw);
+    }
+    return [];
+}
+
 function getInterviewFollowUps(question) {
     if (!question) return [];
     const followUps = Array.isArray(question.followUps) ? question.followUps : [];
@@ -837,7 +892,7 @@ function getInterviewContainer() {
 }
 
 function buildInterviewPool() {
-    const source = Array.isArray(window.interviewQuestionBank) ? window.interviewQuestionBank : [];
+    const source = getInterviewQuestionSource();
     const valid = source.filter((item) => item && typeof item.question === "string");
     if (!valid.length) return [];
     const byCategory = valid.reduce((acc, item) => {
