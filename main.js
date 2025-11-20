@@ -453,11 +453,18 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
 
             const parseErrorDetail = (bodyText) => {
                 if (!bodyText) return "";
+                const asString = typeof bodyText === "string" ? bodyText : JSON.stringify(bodyText);
+                const parseCandidate = typeof bodyText === "string" ? bodyText : asString;
                 try {
-                    const parsed = JSON.parse(bodyText);
-                    return parsed.error || parsed.message || bodyText;
+                    const parsed = JSON.parse(parseCandidate);
+                    if (typeof parsed === "string") return parsed;
+                    if (typeof parsed?.error === "string") return parsed.error;
+                    if (typeof parsed?.error?.message === "string") return parsed.error.message;
+                    if (typeof parsed?.message === "string") return parsed.message;
+                    return asString;
                 } catch (_) {
-                    return bodyText;
+                    if (typeof bodyText?.message === "string") return bodyText.message;
+                    return asString;
                 }
             };
 
