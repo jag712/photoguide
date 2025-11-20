@@ -450,7 +450,10 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
             });
             clearTimeout(timeoutId);
             if (!response.ok) {
-                throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
+                const errorBody = await response.text().catch(() => "");
+                const error = new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
+                error.details = errorBody;
+                throw error;
             }
             const result = await response.json();
             let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -486,7 +489,13 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
                 console.error("Gemini proxy call error:", error);
                 clearInterval(iconChangeInterval);
                 const retryBtn = `<button id="retry-btn" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">재시도</button>`;
-                showModal('오류', `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>${retryBtn}`, false);
+                const rawMessage = `${error?.message || ""} ${error?.details || ""}`.toLowerCase();
+                let userMessage = "AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+                if (/gemini api key|api key not configured|gemini_api_key/i.test(rawMessage)) {
+                    userMessage = "AI 기능을 사용할 수 없습니다. 서버의 GEMINI_API_KEY 환경 변수를 설정한 뒤 다시 시도해 주세요.";
+                }
+                const detail = error?.details ? `<p class=\"text-sm text-gray-600 mt-2 break-words\">원인: ${escapeHtml(error.details)}</p>` : "";
+                showModal('오류', `<p class="text-red-500">${userMessage}</p>${detail}${retryBtn}`, false);
                 document.getElementById('retry-btn').addEventListener('click', () => {
                     hideModal();
                     callGemini(prompt, useSchema, title);
