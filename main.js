@@ -448,11 +448,42 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
                 body: JSON.stringify(payload),
                 signal: controller.signal,
             });
+            const rawBody = await response.text();
             clearTimeout(timeoutId);
+
+            const parseErrorDetail = (bodyText) => {
+                if (!bodyText) return "";
+                try {
+                    const parsed = JSON.parse(bodyText);
+                    return parsed.error || parsed.message || bodyText;
+                } catch (_) {
+                    return bodyText;
+                }
+            };
+
             if (!response.ok) {
-                throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
+                const detail = parseErrorDetail(rawBody);
+                const keyMissing =
+                    detail &&
+                    (detail.includes("Gemini API key is not set") || detail.includes("API Key not configured"));
+                if (keyMissing) {
+                    throw new Error("백엔드에 GEMINI_API_KEY가 설정되어 있지 않아 AI 기능을 사용할 수 없습니다.");
+                }
+                throw new Error(`프록시 호출 실패 (${response.status}): ${detail || "응답 본문이 없습니다."}`);
             }
-            const result = await response.json();
+
+            let result;
+            try {
+                result = JSON.parse(rawBody);
+            } catch (_) {
+                throw new Error("프록시 응답을 해석하지 못했습니다. JSON 형식을 확인하세요.");
+            }
+
+            if (result.error) {
+                const detail = parseErrorDetail(result.error.message || result.error.error || result.error);
+                throw new Error(`Gemini API 오류: ${detail}`);
+            }
+
             let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!text) {
                 throw new Error("API에서 콘텐츠를 받지 못했습니다.");
@@ -461,7 +492,7 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
             if (text.startsWith("```json") && text.endsWith("```")) {
                 text = text.substring(7, text.length - 3).trim();
             }
-                return text;
+            return text;
             } catch (error) {
                 if (error.name === "AbortError" && abortedByUser) {
                     return null;
@@ -485,8 +516,9 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
                 }
                 console.error("Gemini proxy call error:", error);
                 clearInterval(iconChangeInterval);
-                const retryBtn = `<button id="retry-btn" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">재시도</button>`;
-                showModal('오류', `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>${retryBtn}`, false);
+                const retryBtn = `<button id=\"retry-btn\" class=\"mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600\">재시도</button>`;
+                const safeMessage = escapeHtml(error?.message || "AI 기능을 호출하는 중 오류가 발생했습니다.");
+                showModal('오류', `<p class="text-red-500 whitespace-pre-wrap">${safeMessage}</p>${retryBtn}`, false);
                 document.getElementById('retry-btn').addEventListener('click', () => {
                     hideModal();
                     callGemini(prompt, useSchema, title);
