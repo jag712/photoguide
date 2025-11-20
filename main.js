@@ -453,19 +453,58 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
 
             const parseErrorDetail = (bodyText) => {
                 if (!bodyText) return "";
-                const asString = typeof bodyText === "string" ? bodyText : JSON.stringify(bodyText);
-                const parseCandidate = typeof bodyText === "string" ? bodyText : asString;
-                try {
-                    const parsed = JSON.parse(parseCandidate);
-                    if (typeof parsed === "string") return parsed;
-                    if (typeof parsed?.error === "string") return parsed.error;
-                    if (typeof parsed?.error?.message === "string") return parsed.error.message;
-                    if (typeof parsed?.message === "string") return parsed.message;
-                    return asString;
-                } catch (_) {
-                    if (typeof bodyText?.message === "string") return bodyText.message;
-                    return asString;
+
+                const toStringValue = (value) =>
+                    typeof value === "string" ? value : JSON.stringify(value);
+
+                const tryParseStructured = (candidate) => {
+                    if (!candidate) return null;
+                    try {
+                        const parsed = JSON.parse(candidate);
+                        if (typeof parsed === "string") return parsed;
+                        if (typeof parsed?.error?.message === "string") return parsed.error.message;
+                        if (typeof parsed?.error === "string") return parsed.error;
+                        if (typeof parsed?.message === "string") return parsed.message;
+                        return JSON.stringify(parsed);
+                    } catch (_) {
+                        return null;
+                    }
+                };
+
+                const parseFromString = (text) => {
+                    if (!text || typeof text !== "string") return null;
+
+                    const direct = tryParseStructured(text);
+                    if (direct) return direct;
+
+                    const firstBrace = text.indexOf("{");
+                    const lastBrace = text.lastIndexOf("}");
+                    if (firstBrace !== -1 && lastBrace > firstBrace) {
+                        const jsonSlice = text.slice(firstBrace, lastBrace + 1);
+                        const sliceParsed = tryParseStructured(jsonSlice);
+                        if (sliceParsed) return sliceParsed;
+                    }
+
+                    const colonIndex = text.indexOf(":");
+                    if (colonIndex !== -1) {
+                        const tail = text.slice(colonIndex + 1).trim();
+                        const tailParsed = tryParseStructured(tail);
+                        if (tailParsed) return tailParsed;
+                    }
+
+                    return null;
+                };
+
+                if (typeof bodyText === "string") {
+                    const parsed = parseFromString(bodyText);
+                    if (parsed) return parsed;
                 }
+
+                if (typeof bodyText?.message === "string") return bodyText.message;
+
+                const stringValue = toStringValue(bodyText);
+                const parsedFallback = parseFromString(stringValue) || tryParseStructured(stringValue);
+                return parsedFallback || stringValue;
             };
 
             if (!response.ok) {
