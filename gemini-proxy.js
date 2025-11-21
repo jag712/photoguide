@@ -6,7 +6,9 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: 'API Key not configured.' };
   }
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  // Gemini API 모델명이 업데이트되면서 더 이상 사용되지 않는 값으로 인해 오류가 발생할 수 있어
+  // 안정적으로 제공되는 최신 플래시 모델로 교체합니다.
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
   try {
     const { contents, generationConfig } = JSON.parse(event.body);
     const request = {
