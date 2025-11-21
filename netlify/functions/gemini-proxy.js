@@ -18,7 +18,9 @@ exports.handler = async function(event) {
       throw new Error("Gemini API key is not set in environment variables.");
     }
     
-    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
+    // Gemini API가 갱신되면서 이전 프리뷰 모델이 제공되지 않아 오류가 발생할 수 있으므로
+    // 안정적으로 제공되는 최신 플래시 모델로 교체합니다.
+    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
 
     // 클라이언트로부터 받은 요청 본문을 그대로 사용합니다.
     const requestBody = JSON.parse(event.body);
