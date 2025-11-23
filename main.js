@@ -450,7 +450,24 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
             });
             clearTimeout(timeoutId);
             if (!response.ok) {
-                throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
+                const errorText = await response.text();
+                let errorMessage = errorText;
+                try {
+                    const parsed = JSON.parse(errorText);
+                    errorMessage = parsed.error || errorMessage;
+                } catch (_) {
+                    // 응답이 JSON이 아니면 원문 그대로 사용
+                }
+                if (errorMessage && errorMessage.includes("GEMINI_API_KEY")) {
+                    hideModal();
+                    showModal(
+                        "환경 변수 설정 필요",
+                        `<p class="text-red-500">GEMINI_API_KEY가 설정되지 않아 AI 기능을 사용할 수 없습니다.<br>Netlify 환경 변수나 로컬 .env에 키를 추가한 뒤 다시 시도해 주세요.</p>`,
+                        false
+                    );
+                    return null;
+                }
+                throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}. ${errorMessage}`);
             }
             const result = await response.json();
             let text = result.candidates?.[0]?.content?.parts?.[0]?.text;

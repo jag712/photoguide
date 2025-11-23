@@ -3,7 +3,11 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 exports.handler = async (event) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return { statusCode: 500, body: 'API Key not configured.' };
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "GEMINI_API_KEY가 설정되지 않았습니다. Netlify 환경 변수나 로컬 .env에 키를 넣어주세요." }),
+    };
   }
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-pro" });
