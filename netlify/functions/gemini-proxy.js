@@ -11,13 +11,17 @@ exports.handler = async function(event) {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
+  // Netlify 환경 변수에서 API 키를 안전하게 불러옵니다.
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'GEMINI_API_KEY가 설정되지 않았습니다. Netlify 환경 변수나 로컬 .env에 키를 넣어주세요.' })
+    };
+  }
+
   try {
-    // Netlify 환경 변수에서 API 키를 안전하게 불러옵니다.
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (!geminiApiKey) {
-      throw new Error("Gemini API key is not set in environment variables.");
-    }
-    
     const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
 
     // 클라이언트로부터 받은 요청 본문을 그대로 사용합니다.
@@ -53,7 +57,8 @@ exports.handler = async function(event) {
     console.error('Proxy Error:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Gemini 프록시 처리 중 오류가 발생했습니다.', detail: error.message }),
     };
   }
 };
