@@ -333,6 +333,32 @@ function createCalendar(year, month, events = {}) {
 
 const PROXY_URL = "/.netlify/functions/gemini-proxy";
 let iconChangeInterval;
+const aiHealthStatus = { checked: false, healthy: false };
+
+async function checkAIConnection(controller = null) {
+    if (aiHealthStatus.checked && aiHealthStatus.healthy) {
+        return true;
+    }
+    const abortController = controller || new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 5000);
+    try {
+        const response = await fetch(`${PROXY_URL}?health=1`, { method: "GET", signal: abortController.signal });
+        clearTimeout(timeoutId);
+        if (!response.ok) {
+            throw new Error(`Health check failed with status ${response.status}`);
+        }
+        const data = await response.json().catch(() => ({}));
+        aiHealthStatus.checked = true;
+        aiHealthStatus.healthy = data?.ok !== false;
+        return aiHealthStatus.healthy;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        console.error("AI health check failed:", error);
+        aiHealthStatus.checked = true;
+        aiHealthStatus.healthy = false;
+        return false;
+    }
+}
 
 function showModal(title, contentHtml = '', showLoading = false, onCancel = null) {
     const icons = ["❓", "🤔", "💡", "😊","🙏🏻","🤪"];
@@ -394,16 +420,36 @@ function hideModal() {
 function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
     const MAX_RETRIES = 2;
     let attempt = 0;
-    let controller = new AbortController();
+    let activeControllers = [];
+    const registerController = () => {
+        const ctrl = new AbortController();
+        activeControllers.push(ctrl);
+        return ctrl;
+    };
+    const unregisterController = (ctrl) => {
+        activeControllers = activeControllers.filter((c) => c !== ctrl);
+    };
+
+    let controller = registerController();
     let abortedByUser = false;
     const abort = () => {
         abortedByUser = true;
-        controller.abort();
+        activeControllers.forEach((ctrl) => ctrl.abort());
+        activeControllers = [];
         hideModal();
     };
     showModal(title, '', true, abort);
 
     const result = (async () => {
+        const healthController = registerController();
+        const isHealthy = await checkAIConnection(healthController);
+        unregisterController(healthController);
+        if (!isHealthy) {
+            hideModal();
+            showModal('AI 연결 오류', '<p class="text-red-500">AI 서버와 연결할 수 없습니다. 네트워크 상태나 API 키 설정을 확인해 주세요.</p>', false);
+            return null;
+        }
+
         while (attempt <= MAX_RETRIES) {
             abortedByUser = false;
             let didTimeout = false;
@@ -438,6 +484,7 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
             } else {
                 payload.generationConfig.responseMimeType = "text/plain";
             }
+            controller = registerController();
             const timeoutId = setTimeout(() => {
                 didTimeout = true;
                 controller.abort();
@@ -449,6 +496,7 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
                 signal: controller.signal,
             });
             clearTimeout(timeoutId);
+            unregisterController(controller);
             if (!response.ok) {
                 throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
             }
@@ -463,6 +511,7 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
             }
                 return text;
             } catch (error) {
+                unregisterController(controller);
                 if (error.name === "AbortError" && abortedByUser) {
                     return null;
                 }
