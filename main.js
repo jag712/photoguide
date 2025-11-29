@@ -1582,7 +1582,18 @@ function renderContent(category, searchTerm = "") {
             const key = `${year}-${month}`;
             html += createCalendar(year, month, monthlyEvents[key] || {});
         });
-    } else if (category === "visualization") {
+} else if (category === "studyNotes") { 
+        const notionEmbedUrl = "https://lapis-pufferfish-855.notion.site/ebd/22707014e3fd807a8ea9dbabbf29bb14";
+        html = `
+        <div class="content-card p-6 md:p-8 mb-6">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2 text-center">학습 노트</h2>
+            <p class="text-gray-600 text-center mb-4">쮸쀼의 학습 노트를 바로 확인해 보세요.</p>
+            <div class="w-full overflow-hidden rounded-xl shadow-lg border border-gray-200" style="height: 80vh;">
+                <iframe src="${notionEmbedUrl}" title="학습 노트" allowfullscreen frameborder="0" style="width: 100%; height: 100%;"></iframe>
+            </div>
+        </div>`;
+
+    } else if (category === "visualization") {
         const visualizationContent = [{
             q: "노출의 이해: 조리개와 셔터 속도",
             a: `<p class="text-sm text-gray-600 mb-6">노출의 세 가지 요소 중 조리개와 셔터 속도의 관계를 시각적으로 확인해 보세요. 각 막대 위로 마우스를 올리면 해당 설정 값에 대한 설명을 볼 수 있습니다.</p><div class="grid grid-cols-1 lg:grid-cols-2 gap-8"><div><div class="flex justify-center items-center mb-4"><h3 class="text-xl font-bold text-center mr-4">조리개 (Aperture)</h3><div class="flex rounded-lg bg-gray-200 p-1 text-sm"><button class="stop-btn active px-3 py-1 rounded-md" data-chart="aperture" data-stop="fullStop">1 스톱</button><button class="stop-btn px-3 py-1 rounded-md" data-chart="aperture" data-stop="thirdStop">1/3 스톱</button></div></div><div class="chart-container"><canvas id="apertureChart"></canvas></div><div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md"><p>• <strong>심도와 빛의 양:</strong> 조리개 값(f-number)이 낮을수록 배경이 흐려지고(얕은 심도), 빛을 많이 받아들입니다.</p><p>• <strong>회절:</strong> 일반적으로 f/16 이상으로 조이면 심도는 깊어지지만, 빛의 회절 현상으로 이미지의 선명도가 저하될 수 있습니다.</p></div></div><div><div class="flex justify-center items-center mb-4"><h3 class="text-xl font-bold text-center mr-4">셔터 속도 (Shutter Speed)</h3><div class="flex rounded-lg bg-gray-200 p-1 text-sm"><button class="stop-btn active px-3 py-1 rounded-md" data-chart="shutter" data-stop="fullStop">1 스톱</button><button class="stop-btn px-3 py-1 rounded-md" data-chart="shutter" data-stop="thirdStop">1/3 스톱</button></div></div><div class="chart-container"><canvas id="shutterChart"></canvas></div><div class="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded-md"><p>• <strong>움직임 표현:</strong> 셔터 속도가 느릴수록 움직임이 흐릿하게(Motion Blur) 표현되고, 빠를수록 움직임이 정지됩니다.</p><p>• <strong>카메라 흔들림:</strong> 일반적으로 '1/초점거리'초 보다 느린 속도에서는 삼각대 없이는 사진이 흔들리기 쉽습니다.</p></div></div></div>`,
@@ -1677,6 +1688,21 @@ function renderContent(category, searchTerm = "") {
         setupEventListeners();
     } else if (category === "quiz") {
         initQuizPage();
+    } else if (category === "studyNotes") {
+        const frame = document.getElementById("studyNotesFrame");
+        const toggles = document.querySelectorAll(".note-toggle");
+        toggles.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                toggles.forEach((b) => b.classList.remove("active", "bg-gray-800", "text-white", "shadow-md"));
+                btn.classList.add("active", "bg-gray-800", "text-white", "shadow-md");
+                if (frame && btn.dataset.src) {
+                    frame.src = btn.dataset.src;
+                    if (btn.dataset.title) {
+                        frame.title = btn.dataset.title;
+                    }
+                }
+            });
+        });
     } else if (category !== "home") {
         setupCardFlipListeners();
     }
