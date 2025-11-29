@@ -1,59 +1,54 @@
-// 이 파일은 프로젝트의 'netlify/functions' 폴더 안에 'gemini-proxy.js'라는 이름으로 저장해야 합니다.
-// 이 서버리스 함수는 클라이언트(브라우저) 대신 Gemini API를 안전하게 호출하는 중계 서버 역할을 합니다.
+// 클라이언트 대신 Gemini API를 호출하는 Netlify Functions 프록시입니다.
+// 최신 안정 모델(gemini-1.5-flash-latest)을 사용하도록 갱신했습니다.
 
-// Node.js 환경에서 fetch를 사용하기 위해 'node-fetch'가 필요할 수 있습니다.
-// Netlify는 기본적으로 fetch를 지원합니다.
-// 만약 로컬 테스트 시 에러가 발생하면 `npm install node-fetch`를 실행하세요.
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-exports.handler = async function(event) {
-  // POST 요청만 허용합니다.
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+exports.handler = async function (event) {
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Gemini API key is not set in environment variables." }),
+    };
   }
 
   try {
-    // Netlify 환경 변수에서 API 키를 안전하게 불러옵니다.
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (!geminiApiKey) {
-      throw new Error("Gemini API key is not set in environment variables.");
-    }
-    
-    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
-    // 클라이언트로부터 받은 요청 본문을 그대로 사용합니다.
-    const requestBody = JSON.parse(event.body);
+    const { contents, generationConfig } = JSON.parse(event.body || "{}");
 
-    const response = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody) // 클라이언트의 payload를 그대로 전달
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      // Gemini API에서 받은 에러를 클라이언트에 전달합니다.
+    if (!contents) {
       return {
-        statusCode: response.status,
-        body: `Error from Gemini API: ${errorBody}`
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Request body must include contents." }),
       };
     }
 
-    const data = await response.json();
+    const request = { contents };
+    if (generationConfig) {
+      request.generationConfig = generationConfig;
+    }
 
-    // 성공적인 응답을 클라이언트에 전달합니다.
+    const result = await model.generateContent(request);
+
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(result.response),
     };
-
   } catch (error) {
-    console.error('Proxy Error:', error);
+    console.error("Gemini proxy error:", error);
+    const message = error?.message || "Failed to call Gemini API.";
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: message }),
     };
   }
 };
