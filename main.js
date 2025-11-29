@@ -262,29 +262,12 @@ function createCalendar(year, month, events = {}) {
     const today = new Date();
     const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
     const todayDate = isCurrentMonth ? today.getDate() : -1;
-    const currentWeekStart = new Date(today);
-    currentWeekStart.setHours(0, 0, 0, 0);
-    currentWeekStart.setDate(today.getDate() - today.getDay());
 
     const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
     const days = ["일", "월", "화", "수", "목", "금", "토"];
     const date = new Date(year, month - 1, 1);
     const firstDay = date.getDay();
     const daysInMonth = new Date(year, month, 0).getDate();
-
-    const monthEnd = new Date(year, month - 1, daysInMonth);
-    monthEnd.setHours(23, 59, 59, 999);
-
-    if (monthEnd < currentWeekStart) {
-        return "";
-    }
-
-    let startDay = 1;
-    if (isCurrentMonth) {
-        startDay = Math.max(1, todayDate - today.getDay());
-    } else if (currentWeekStart.getFullYear() === year && currentWeekStart.getMonth() + 1 === month) {
-        startDay = currentWeekStart.getDate();
-    }
 
     const cells = [];
     for (let i = 0; i < firstDay; i++) {
@@ -311,19 +294,11 @@ function createCalendar(year, month, events = {}) {
         weeks.push(cells.slice(i, i + 7));
     }
 
-    let startWeekIndex = 0;
-    if (startDay > 1) {
-        startWeekIndex = weeks.findIndex((week) => week.some((cell) => cell && cell.day >= startDay));
-        if (startWeekIndex === -1) {
-            return "";
-        }
-    }
-
     let html = `<div class="content-card p-6 w-full max-w-4xl mx-auto mb-8"><h3 class="text-xl font-bold text-center mb-4">${year}년 ${monthNames[month - 1]}</h3><div class="grid grid-cols-7 gap-1 text-center text-sm font-semibold text-gray-600">${days
         .map((dayName) => `<div class="${dayName === "일" ? "text-red-500" : dayName === "토" ? "text-blue-500" : ""}">${dayName}</div>`)
         .join("")}</div><div class="grid grid-cols-7 gap-1 mt-2">`;
 
-    for (let i = startWeekIndex; i < weeks.length; i++) {
+    for (let i = 0; i < weeks.length; i++) {
         weeks[i].forEach((cell) => {
             if (!cell) {
                 html += `<div></div>`;
