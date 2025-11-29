@@ -1566,20 +1566,39 @@ function setupCardFlipListeners() {
     });
 }
 
+const studyNoteStorage = (() => {
+    if (typeof window === "undefined") return null;
+    try {
+        const storage = window.localStorage;
+        const testKey = "__photoguide_study_notes_test__";
+        storage.setItem(testKey, "1");
+        storage.removeItem(testKey);
+        return storage;
+    } catch (err) {
+        console.warn("LocalStorage unavailable for study notes", err);
+        return null;
+    }
+})();
+
+const STUDY_NOTE_STORAGE_KEY = "photoguide_study_note";
+
+const toNotionEmbedUrl = (pageUrl) =>
+    `https://www.notion.so/embed?url=${encodeURIComponent(pageUrl)}`;
+
 const studyNoteSources = [
     {
         key: "default",
         label: "기존 학습 노트",
         title: "학습 노트 (기본)",
-        src: "https://www.notion.so/embed/22707014e3fd807a8ea9dbabbf29bb14",
+        pageUrl: "https://lapis-pufferfish-855.notion.site/ebd/22707014e3fd807a8ea9dbabbf29bb14",
     },
     {
         key: "supplement",
         label: "추가 학습 노트",
         title: "학습 노트 (추가)",
-        src: "https://www.notion.so/embed/22407014e3fd8032bb15c18cd6f82ec3",
+        pageUrl: "https://lapis-pufferfish-855.notion.site/ebd/22407014e3fd8032bb15c18cd6f82ec3",
     },
-];
+].map((note) => ({ ...note, src: toNotionEmbedUrl(note.pageUrl) }));
 
 function renderContent(category, searchTerm = "") {
     if (category !== "quiz") {
@@ -1598,16 +1617,18 @@ function renderContent(category, searchTerm = "") {
             html += createCalendar(year, month, monthlyEvents[key] || {});
         });
     } else if (category === "studyNotes") {
-        const defaultNote = studyNoteSources[0];
+        const savedKey = studyNoteStorage?.getItem(STUDY_NOTE_STORAGE_KEY);
+        const selectedNote =
+            studyNoteSources.find((note) => note.key === savedKey) || studyNoteSources[0];
         const togglesHtml = studyNoteSources
             .map(
-                (note, idx) => `
+                (note) => `
                 <button
-                    class="note-toggle ${idx === 0 ? "active bg-gray-800 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-100"} px-4 py-2 rounded-full font-semibold border border-gray-200"
+                    class="note-toggle ${note.key === selectedNote.key ? "active bg-gray-800 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-100"} px-4 py-2 rounded-full font-semibold border border-gray-200"
                     data-src="${note.src}"
                     data-title="${note.title}"
                     data-key="${note.key}"
-                    aria-pressed="${idx === 0}"
+                    aria-pressed="${note.key === selectedNote.key}"
                 >${note.label}</button>`,
             )
             .join("");
@@ -1621,12 +1642,13 @@ function renderContent(category, searchTerm = "") {
             <div class="w-full overflow-hidden rounded-xl shadow-lg border border-gray-200" style="position: relative; padding-top: 56.25%;">
                 <iframe
                     id="studyNotesFrame"
-                    src="${defaultNote.src}"
-                    title="${defaultNote.title}"
+                    src="${selectedNote.src}"
+                    title="${selectedNote.title}"
                     allowfullscreen
                     frameborder="0"
                     style="position: absolute; inset: 0; width: 100%; height: 100%;"
                     loading="lazy"
+                    aria-label="${selectedNote.title}"
                     referrerpolicy="no-referrer"
                 ></iframe>
             </div>
@@ -1744,6 +1766,9 @@ function renderContent(category, searchTerm = "") {
                     if (btn.dataset.title) {
                         frame.title = btn.dataset.title;
                         frame.setAttribute("aria-label", btn.dataset.title);
+                    }
+                    if (btn.dataset.key && studyNoteStorage) {
+                        studyNoteStorage.setItem(STUDY_NOTE_STORAGE_KEY, btn.dataset.key);
                     }
                 }
             });
