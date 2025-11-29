@@ -15,7 +15,7 @@ exports.handler = async function(event) {
         if (!geminiApiKey) {
             throw new Error("Gemini API key is not set in environment variables.");
         }
-        
+
         const requestBody = JSON.parse(event.body);
         
         // 클라이언트 요청에서 model을 지정할 수 있도록 필드를 추출합니다.
@@ -26,12 +26,13 @@ exports.handler = async function(event) {
         const { model, ...apiRequestBody } = requestBody;
 
         // API URL에 동적으로 modelName을 적용합니다.
-        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`;
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 
         const response = await fetch(GEMINI_API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'x-goog-api-key': geminiApiKey,
             },
             body: JSON.stringify(apiRequestBody) // model 필드가 제거된 body를 전달
         });
