@@ -2,29 +2,59 @@
 // 데이터는 photographyData.js 파일에서 로드됩니다.
 
 const calendarEvents = {
-    9: [
-        { day: 17, title: "테스트 프린트", color: "bg-green-500" },
-        { day: 18, title: "테스트 프린트", color: "bg-green-500" },
-        { day: 20, title: "경일대 면접", color: "bg-purple-500" },
-        { day: 22, title: "1차 프린트(경일)", color: "bg-red-500" },
-        { day: 26, title: "경일 실기/면접", color: "bg-purple-500" },
-        { day: 27, title: "경일 실기/면접", color: "bg-purple-500" },
-    ],  
-    10: [
-        { day: 3, title: "개천절", color: "bg-gray-500", isHoliday: true },
-        { day: 5, title: "추석 연휴", color: "bg-gray-500", isHoliday: true },
-        { day: 6, title: "추석", color: "bg-gray-500", isHoliday: true },
-        { day: 7, title: "추석 연휴", color: "bg-gray-500", isHoliday: true },
-        { day: 8, title: "대체공휴일", color: "bg-gray-500", isHoliday: true },
-        { day: 9, title: "한글날", color: "bg-gray-500", isHoliday: true },
-        { day: 13, title: "2차프린트(예대및추가컷)", color: "bg-red-500" },
-        { day: 18, title: "서울예대 실기(예정)", color: "bg-yellow-500" },
-        { day: 20, title: "서울예대 면접(예정)", color: "bg-yellow-500" },
-        { day: 21, title: "서울예대 면접(예정)", color: "bg-yellow-500" },
-        { day: 22, title: "서울예대 면접(예정)", color: "bg-yellow-500" },
-        { day: 23, title: "서울예대 면접(예정)", color: "bg-yellow-500" },
+    11: [
+        // 11월: 표시할 일정 없음
+    ],
+    12: [
+        { day: 25, title: "성탄절", color: "bg-gray-500", isHoliday: true },
+        { day: 29, title: "경일 원서접수", color: "bg-purple-500" },
+        { day: 30, title: "경일 원서접수", color: "bg-purple-500" },
+        { day: 31, title: "경일 원서접수", color: "bg-purple-500" },
+        { day: 29, title: "서울예대 원서접수 시작", color: "bg-yellow-500" },
+        { day: 30, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 31, title: "서울예대 원서접수", color: "bg-yellow-500" },
     ],
 };
+
+const nextYearCalendarEvents = {
+    1: [
+        { day: 1, title: "신정", color: "bg-gray-500", isHoliday: true },
+        { day: 1, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 2, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 3, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 4, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 5, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 6, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 7, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 8, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 9, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 10, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 11, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 12, title: "서울예대 원서접수", color: "bg-yellow-500" },
+        { day: 13, title: "서울예대 원서접수 마감", color: "bg-yellow-500" },
+        { day: 14, title: "서울예대 원서접수 마감", color: "bg-yellow-500" },
+        { day: 13, title: "경일 정시 면접", color: "bg-purple-500" },
+        { day: 19, title: "예대 정시 주간", color: "bg-yellow-500" },
+        { day: 20, title: "예대 정시 주간", color: "bg-yellow-500" },
+        { day: 21, title: "예대 정시 주간", color: "bg-yellow-500" },
+        { day: 22, title: "예대 정시 주간", color: "bg-yellow-500" },
+        { day: 23, title: "예대 정시 주간", color: "bg-yellow-500" },
+        { day: 28, title: "설날 연휴", color: "bg-gray-500", isHoliday: true },
+        { day: 29, title: "설날", color: "bg-gray-500", isHoliday: true },
+        { day: 30, title: "설날 연휴", color: "bg-gray-500", isHoliday: true },
+        { day: 31, title: "대체공휴일", color: "bg-gray-500", isHoliday: true },
+    ],
+};
+
+function groupEventsByDay(events = []) {
+    const map = {};
+    events.forEach((e) => {
+        const key = e.day;
+        map[key] = map[key] || [];
+        map[key].push({ ...e });
+    });
+    return map;
+}
 const visualizationData = {
     aperture: {
         fullStop: [
@@ -1505,18 +1535,14 @@ function renderContent(category, searchTerm = "") {
     if (category === "home") {
         const today = new Date();
         const currentYear = today.getFullYear();
-        const currentMonth = today.getMonth() + 1;
-        const eventsForSept = {};
-        (calendarEvents[9] || []).forEach((e) => {
-            (eventsForSept[e.day] = eventsForSept[e.day] || []).push({ ...e });
-        });
-        const eventsForOct = {};
-        (calendarEvents[10] || []).forEach((e) => {
-            (eventsForOct[e.day] = eventsForOct[e.day] || []).push({ ...e });
-        });
-        html = `<div class="content-card p-6 md:p-8 mb-6 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">중요 입시 일정</p></div>`;
-        html += createCalendar(currentYear, 9, eventsForSept);
-        html += createCalendar(currentYear, 10, eventsForOct);
+        const nextYear = currentYear + 1;
+        const eventsForNov = groupEventsByDay(calendarEvents[11]);
+        const eventsForDec = groupEventsByDay(calendarEvents[12]);
+        const eventsForJanNext = groupEventsByDay(nextYearCalendarEvents[1]);
+        html = `<div class="content-card p-6 md:p-8 mb-6 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">11월부터 내년 1월까지의 입시 일정</p></div>`;
+        html += createCalendar(currentYear, 11, eventsForNov);
+        html += createCalendar(currentYear, 12, eventsForDec);
+        html += createCalendar(nextYear, 1, eventsForJanNext);
     } else if (category === "visualization") {
         const visualizationContent = [{
             q: "노출의 이해: 조리개와 셔터 속도",
