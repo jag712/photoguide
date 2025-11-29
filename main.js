@@ -1,30 +1,102 @@
 // --- 데이터 영역 ---
 // 데이터는 photographyData.js 파일에서 로드됩니다.
 
-const calendarEvents = {
-    9: [
-        { day: 17, title: "테스트 프린트", color: "bg-green-500" },
-        { day: 18, title: "테스트 프린트", color: "bg-green-500" },
-        { day: 20, title: "경일대 면접", color: "bg-purple-500" },
-        { day: 22, title: "1차 프린트(경일)", color: "bg-red-500" },
-        { day: 26, title: "경일 실기/면접", color: "bg-purple-500" },
-        { day: 27, title: "경일 실기/면접", color: "bg-purple-500" },
-    ],  
-    10: [
-        { day: 3, title: "개천절", color: "bg-gray-500", isHoliday: true },
-        { day: 5, title: "추석 연휴", color: "bg-gray-500", isHoliday: true },
-        { day: 6, title: "추석", color: "bg-gray-500", isHoliday: true },
-        { day: 7, title: "추석 연휴", color: "bg-gray-500", isHoliday: true },
-        { day: 8, title: "대체공휴일", color: "bg-gray-500", isHoliday: true },
-        { day: 9, title: "한글날", color: "bg-gray-500", isHoliday: true },
-        { day: 13, title: "2차프린트(예대및추가컷)", color: "bg-red-500" },
-        { day: 18, title: "서울예대 실기(예정)", color: "bg-yellow-500" },
-        { day: 20, title: "서울예대 면접(예정)", color: "bg-yellow-500" },
-        { day: 21, title: "서울예대 면접(예정)", color: "bg-yellow-500" },
-        { day: 22, title: "서울예대 면접(예정)", color: "bg-yellow-500" },
-        { day: 23, title: "서울예대 면접(예정)", color: "bg-yellow-500" },
-    ],
-};
+function getUpcomingMonthsUntilNextJanuary() {
+    const today = new Date();
+    const months = [];
+    const endYear = today.getFullYear() + 1;
+    const endMonth = 1; // January of next year
+    const cursor = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endDate = new Date(endYear, endMonth - 1, 1);
+
+    while (cursor <= endDate) {
+        months.push({ year: cursor.getFullYear(), month: cursor.getMonth() + 1 });
+        cursor.setMonth(cursor.getMonth() + 1);
+    }
+
+    return months;
+}
+
+function getKoreanHolidays(year) {
+    return [
+        { start: new Date(year, 0, 1), title: "신정", color: "bg-gray-500", isHoliday: true },
+        { start: new Date(year, 2, 1), title: "삼일절", color: "bg-gray-500", isHoliday: true },
+        { start: new Date(year, 4, 5), title: "어린이날", color: "bg-gray-500", isHoliday: true },
+        { start: new Date(year, 5, 6), title: "현충일", color: "bg-gray-500", isHoliday: true },
+        { start: new Date(year, 7, 15), title: "광복절", color: "bg-gray-500", isHoliday: true },
+        { start: new Date(year, 9, 3), title: "개천절", color: "bg-gray-500", isHoliday: true },
+        { start: new Date(year, 9, 9), title: "한글날", color: "bg-gray-500", isHoliday: true },
+        { start: new Date(year, 11, 25), title: "성탄절", color: "bg-gray-500", isHoliday: true },
+    ];
+}
+
+function getAdmissionEventDefinitions(currentYear, nextYear) {
+    return [
+        {
+            start: new Date(currentYear, 11, 29),
+            end: new Date(currentYear, 11, 31),
+            title: "경일 원서접수",
+            color: "bg-purple-600",
+        },
+        {
+            start: new Date(currentYear, 11, 29),
+            end: new Date(nextYear, 0, 14),
+            title: "서울예대 원서접수",
+            color: "bg-yellow-500",
+        },
+        {
+            start: new Date(nextYear, 0, 13),
+            end: new Date(nextYear, 0, 13),
+            title: "경일 정시 면접",
+            color: "bg-purple-700",
+        },
+        {
+            start: new Date(nextYear, 0, 19),
+            end: new Date(nextYear, 0, 23),
+            title: "예대 정시 주간",
+            color: "bg-yellow-600",
+        },
+    ];
+}
+
+function buildMonthlyEvents(monthsToShow) {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const nextYear = currentYear + 1;
+    const monthKey = (year, month) => `${year}-${month}`;
+
+    const base = {};
+    monthsToShow.forEach(({ year, month }) => {
+        base[monthKey(year, month)] = {};
+    });
+
+    const allEvents = [
+        ...getKoreanHolidays(currentYear),
+        ...getKoreanHolidays(nextYear),
+        ...getAdmissionEventDefinitions(currentYear, nextYear),
+    ];
+
+    allEvents.forEach((event) => {
+        const start = new Date(event.start);
+        const end = new Date(event.end || event.start);
+        for (
+            let cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+            cursor <= end;
+            cursor.setDate(cursor.getDate() + 1)
+        ) {
+            const key = monthKey(cursor.getFullYear(), cursor.getMonth() + 1);
+            if (!base[key]) continue;
+            const day = cursor.getDate();
+            (base[key][day] = base[key][day] || []).push({
+                title: event.title,
+                color: event.color,
+                isHoliday: event.isHoliday,
+            });
+        }
+    });
+
+    return base;
+}
 const visualizationData = {
     aperture: {
         fullStop: [
@@ -1503,20 +1575,22 @@ function renderContent(category, searchTerm = "") {
     }
     let html = "";
     if (category === "home") {
-        const today = new Date();
-        const currentYear = today.getFullYear();
-        const currentMonth = today.getMonth() + 1;
-        const eventsForSept = {};
-        (calendarEvents[9] || []).forEach((e) => {
-            (eventsForSept[e.day] = eventsForSept[e.day] || []).push({ ...e });
+        const monthsToShow = getUpcomingMonthsUntilNextJanuary();
+        const monthlyEvents = buildMonthlyEvents(monthsToShow);
+        html = `<div class="content-card p-6 md:p-8 mb-6 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">오늘부터 내년 1월까지 입시 일정과 공휴일</p></div>`;
+        monthsToShow.forEach(({ year, month }) => {
+            const key = `${year}-${month}`;
+            html += createCalendar(year, month, monthlyEvents[key] || {});
         });
-        const eventsForOct = {};
-        (calendarEvents[10] || []).forEach((e) => {
-            (eventsForOct[e.day] = eventsForOct[e.day] || []).push({ ...e });
-        });
-        html = `<div class="content-card p-6 md:p-8 mb-6 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">중요 입시 일정</p></div>`;
-        html += createCalendar(currentYear, 9, eventsForSept);
-        html += createCalendar(currentYear, 10, eventsForOct);
+    } else if (category === "studyNotes") {
+        html = `
+        <div class="content-card p-6 md:p-8 mb-6">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2 text-center">학습 노트</h2>
+            <p class="text-gray-600 text-center mb-4">쮸쀼의 학습 노트를 바로 확인해 보세요.</p>
+            <div class="w-full overflow-hidden rounded-xl shadow-lg border border-gray-200" style="position: relative; padding-top: 56.25%;">
+                <iframe src="https://lapis-pufferfish-855.notion.site/ebd/22707014e3fd807a8ea9dbabbf29bb14" title="학습 노트" allowfullscreen frameborder="0" style="position: absolute; inset: 0; width: 100%; height: 100%;"></iframe>
+            </div>
+        </div>`;
     } else if (category === "visualization") {
         const visualizationContent = [{
             q: "노출의 이해: 조리개와 셔터 속도",
