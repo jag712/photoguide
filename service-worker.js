@@ -1,4 +1,6 @@
-const CACHE_NAME = 'photoguide-cache-v1';
+// Cache version: 2025-07-07T00:00:00Z
+const CACHE_VERSION = 'v1.1.0';
+const CACHE_NAME = `photoguide-cache-${CACHE_VERSION}`;
 const urlsToCache = [
   '/',
   '/index.html',
@@ -11,7 +13,10 @@ const urlsToCache = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+    Promise.all([
+      caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache)),
+      self.skipWaiting()
+    ])
   );
 });
 
@@ -23,7 +28,7 @@ self.addEventListener('activate', (event) => {
           .filter((name) => name !== CACHE_NAME)
           .map((name) => caches.delete(name))
       )
-    )
+    ).then(() => self.clients.claim())
   );
 });
 
