@@ -1586,9 +1586,13 @@ function renderContent(category, searchTerm = "") {
         html = `
         <div class="content-card p-6 md:p-8 mb-6">
             <h2 class="text-3xl font-bold text-gray-800 mb-2 text-center">학습 노트</h2>
-            <p class="text-gray-600 text-center mb-4">쮸쀼의 학습 노트를 바로 확인해 보세요.</p>
+            <p class="text-gray-600 text-center mb-6">쮸쀼의 학습 노트를 바로 확인하거나 원하는 자료를 선택하세요.</p>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-3 mb-4">
+                <button class="note-toggle active px-4 py-2 rounded-full font-semibold border border-gray-200 bg-gray-800 text-white shadow-md" data-src="https://lapis-pufferfish-855.notion.site/ebd/22707014e3fd807a8ea9dbabbf29bb14" data-title="학습 노트 (기본)">기존 학습 노트</button>
+                <button class="note-toggle px-4 py-2 rounded-full font-semibold border border-gray-200 bg-white text-gray-700 hover:bg-gray-100" data-src="https://lapis-pufferfish-855.notion.site/ebd/22407014e3fd8032bb15c18cd6f82ec3" data-title="학습 노트 (추가)">추가 학습 노트</button>
+            </div>
             <div class="w-full overflow-hidden rounded-xl shadow-lg border border-gray-200" style="position: relative; padding-top: 56.25%;">
-                <iframe src="https://lapis-pufferfish-855.notion.site/ebd/22707014e3fd807a8ea9dbabbf29bb14" title="학습 노트" allowfullscreen frameborder="0" style="position: absolute; inset: 0; width: 100%; height: 100%;"></iframe>
+                <iframe id="studyNotesFrame" src="https://lapis-pufferfish-855.notion.site/ebd/22707014e3fd807a8ea9dbabbf29bb14" title="학습 노트 (기본)" allowfullscreen frameborder="0" style="position: absolute; inset: 0; width: 100%; height: 100%;"></iframe>
             </div>
         </div>`;
     } else if (category === "visualization") {
@@ -1686,6 +1690,21 @@ function renderContent(category, searchTerm = "") {
         setupEventListeners();
     } else if (category === "quiz") {
         initQuizPage();
+    } else if (category === "studyNotes") {
+        const frame = document.getElementById("studyNotesFrame");
+        const toggles = document.querySelectorAll(".note-toggle");
+        toggles.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                toggles.forEach((b) => b.classList.remove("active", "bg-gray-800", "text-white", "shadow-md"));
+                btn.classList.add("active", "bg-gray-800", "text-white", "shadow-md");
+                if (frame && btn.dataset.src) {
+                    frame.src = btn.dataset.src;
+                    if (btn.dataset.title) {
+                        frame.title = btn.dataset.title;
+                    }
+                }
+            });
+        });
     } else if (category !== "home") {
         setupCardFlipListeners();
     }
