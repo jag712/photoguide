@@ -406,6 +406,16 @@ function createCalendar(year, month, events = {}) {
 const PROXY_URL = "/.netlify/functions/gemini-proxy";
 let iconChangeInterval;
 
+function escapeHtml(text) {
+    if (!text) return "";
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function showModal(title, contentHtml = '', showLoading = false, onCancel = null) {
     const icons = ["❓", "🤔", "💡", "😊","🙏🏻","🤪"];
     modalTitle.textContent = title;
@@ -461,6 +471,28 @@ function hideModal() {
         geminiModal.classList.add("hidden");
         modalBody.innerHTML = "";
     }, 300);
+}
+
+async function buildProxyError(response) {
+    let message = `프록시 호출 실패. 상태 코드: ${response.status}`;
+    const contentType = response.headers.get("content-type");
+    try {
+        const rawText = await response.text();
+        if (rawText) {
+            if (contentType && contentType.includes("application/json")) {
+                const parsed = JSON.parse(rawText);
+                const detail = parsed.error || parsed.message || rawText;
+                message += `\n${detail}`;
+            } else {
+                message += `\n${rawText}`;
+            }
+        }
+    } catch (parseError) {
+        console.warn("프록시 오류 응답을 파싱하는 데 실패했습니다.", parseError);
+    }
+    const error = new Error(message);
+    error.retryable = !(response.status >= 400 && response.status < 500);
+    return error;
 }
 
 function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
@@ -522,7 +554,7 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
             });
             clearTimeout(timeoutId);
             if (!response.ok) {
-                throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
+                throw await buildProxyError(response);
             }
             const result = await response.json();
             let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -548,21 +580,36 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
                     });
                     return null;
                 }
+
+                const retryable = error.retryable !== false;
                 attempt++;
-                if (attempt <= MAX_RETRIES) {
+                if (retryable && attempt <= MAX_RETRIES) {
                     controller = new AbortController();
                     clearInterval(iconChangeInterval);
                     showModal(title, `<p class="text-red-500">네트워크 오류가 발생했습니다. 재시도 중... (${attempt}/${MAX_RETRIES})</p>`, true, abort);
                     continue;
                 }
+
                 console.error("Gemini proxy call error:", error);
                 clearInterval(iconChangeInterval);
-                const retryBtn = `<button id="retry-btn" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">재시도</button>`;
-                showModal('오류', `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>${retryBtn}`, false);
-                document.getElementById('retry-btn').addEventListener('click', () => {
-                    hideModal();
-                    callGemini(prompt, useSchema, title);
-                });
+                const retryBtn = retryable
+                    ? `<button id="retry-btn" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">재시도</button>`
+                    : "";
+                const details = escapeHtml(error?.message || String(error));
+                const guidance = retryable
+                    ? "잠시 후 다시 시도해 주세요."
+                    : "API 키 또는 프록시 설정을 확인한 뒤 다시 시도해 주세요.";
+                showModal(
+                    '오류',
+                    `<p class="text-red-500">AI 기능을 호출하는 중 오류가 발생했습니다. ${guidance}</p><pre class="mt-3 text-sm bg-gray-100 p-3 rounded whitespace-pre-wrap text-gray-700">${details}</pre>${retryBtn}`,
+                    false
+                );
+                if (retryBtn) {
+                    document.getElementById('retry-btn').addEventListener('click', () => {
+                        hideModal();
+                        callGemini(prompt, useSchema, title);
+                    });
+                }
                 return null;
             }
         }
@@ -604,17 +651,6 @@ function parseJsonResponse(text) {
     } catch (_) {
         return null;
     }
-}
-
-function escapeHtml(str) {
-    if (!str) return "";
-    return str.replace(/[&<>"']/g, c => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;',
-    }[c] || c));
 }
 
 function shuffleArray(items) {
