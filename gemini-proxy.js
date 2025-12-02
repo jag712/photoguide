@@ -2,11 +2,38 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 exports.handler = async (event) => {
   const apiKey = process.env.GEMINI_API_KEY;
+
+  if (event.httpMethod === "GET") {
+    if (!apiKey) {
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ok: false, message: "API Key not configured." })
+      };
+    }
+
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ok: true, message: "Gemini proxy is reachable." })
+    };
+  }
+
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      headers: { Allow: "GET, POST" },
+      body: "Method Not Allowed"
+    };
+  }
+
   if (!apiKey) {
     return { statusCode: 500, body: 'API Key not configured.' };
   }
+
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
   try {
     const { contents, generationConfig } = JSON.parse(event.body);
     const request = {

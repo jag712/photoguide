@@ -405,6 +405,39 @@ function createCalendar(year, month, events = {}) {
 
 const PROXY_URL = "/.netlify/functions/gemini-proxy";
 let iconChangeInterval;
+const aiHealthStatus = { checked: false, healthy: false, message: "" };
+
+async function checkAIConnection(controller = null) {
+    if (aiHealthStatus.checked && aiHealthStatus.healthy) {
+        return { healthy: true, message: aiHealthStatus.message };
+    }
+    const abortController = controller || new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 5000);
+    try {
+        const response = await fetch(`${PROXY_URL}?health=1`, { method: "GET", signal: abortController.signal });
+        clearTimeout(timeoutId);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.ok === false) {
+            const message = data?.message || `Health check failed with status ${response.status}`;
+            aiHealthStatus.checked = true;
+            aiHealthStatus.healthy = false;
+            aiHealthStatus.message = message;
+            return { healthy: false, message };
+        }
+        aiHealthStatus.checked = true;
+        aiHealthStatus.healthy = true;
+        aiHealthStatus.message = data?.message || "AI 연결이 확인되었습니다.";
+        return { healthy: true, message: aiHealthStatus.message };
+    } catch (error) {
+        clearTimeout(timeoutId);
+        const message = error.name === "AbortError" ? "AI 연결 확인이 시간 초과되었습니다." : error.message;
+        console.error("AI health check failed:", error);
+        aiHealthStatus.checked = false;
+        aiHealthStatus.healthy = false;
+        aiHealthStatus.message = message;
+        return { healthy: false, message };
+    }
+}
 
 function showModal(title, contentHtml = '', showLoading = false, onCancel = null) {
     const icons = ["❓", "🤔", "💡", "😊","🙏🏻","🤪"];
@@ -463,19 +496,61 @@ function hideModal() {
     }, 300);
 }
 
-function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
+function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중", skipHealthCheck = false) {
     const MAX_RETRIES = 2;
     let attempt = 0;
-    let controller = new AbortController();
+    let activeControllers = [];
+    const registerController = () => {
+        const ctrl = new AbortController();
+        activeControllers.push(ctrl);
+        return ctrl;
+    };
+    const unregisterController = (ctrl) => {
+        activeControllers = activeControllers.filter((c) => c !== ctrl);
+    };
+
+    let controller = registerController();
     let abortedByUser = false;
     const abort = () => {
         abortedByUser = true;
-        controller.abort();
+        activeControllers.forEach((ctrl) => ctrl.abort());
+        activeControllers = [];
         hideModal();
     };
     showModal(title, '', true, abort);
 
     const result = (async () => {
+        if (!skipHealthCheck) {
+            const healthController = registerController();
+            const { healthy, message } = await checkAIConnection(healthController);
+            unregisterController(healthController);
+            if (!healthy) {
+                hideModal();
+                const retryBtn = `<button id="ai-health-retry" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">다시 확인</button>`;
+                const bypassBtn = `<button id="ai-health-bypass" class="mt-4 bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300">그래도 시도</button>`;
+                const safeMessage = escapeHtml(message || "AI 서버와 연결할 수 없습니다. 네트워크 상태나 API 키 설정을 확인해 주세요.");
+                showModal('AI 연결 오류', `<p class="text-red-500">${safeMessage}</p><div class="flex gap-3 flex-wrap">${retryBtn}${bypassBtn}</div>`, false);
+                const retry = document.getElementById('ai-health-retry');
+                const bypass = document.getElementById('ai-health-bypass');
+                if (retry) {
+                    retry.addEventListener('click', () => {
+                        aiHealthStatus.checked = false;
+                        aiHealthStatus.healthy = false;
+                        aiHealthStatus.message = "";
+                        hideModal();
+                        callGemini(prompt, useSchema, title);
+                    });
+                }
+                if (bypass) {
+                    bypass.addEventListener('click', () => {
+                        hideModal();
+                        callGemini(prompt, useSchema, title, true);
+                    });
+                }
+                return null;
+            }
+        }
+
         while (attempt <= MAX_RETRIES) {
             abortedByUser = false;
             let didTimeout = false;
@@ -510,6 +585,7 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
             } else {
                 payload.generationConfig.responseMimeType = "text/plain";
             }
+            controller = registerController();
             const timeoutId = setTimeout(() => {
                 didTimeout = true;
                 controller.abort();
@@ -521,6 +597,7 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
                 signal: controller.signal,
             });
             clearTimeout(timeoutId);
+            unregisterController(controller);
             if (!response.ok) {
                 throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
             }
@@ -535,6 +612,7 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
             }
                 return text;
             } catch (error) {
+                unregisterController(controller);
                 if (error.name === "AbortError" && abortedByUser) {
                     return null;
                 }
