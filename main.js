@@ -1566,6 +1566,115 @@ function setupCardFlipListeners() {
     });
 }
 
+function initializeStudyNotes() {
+    const chapterList = document.getElementById("studyChapterList");
+    const partTabs = document.getElementById("studyPartTabs");
+    const contentContainer = document.getElementById("studyNoteContent");
+
+    if (!chapterList || !partTabs || !contentContainer || !Array.isArray(studyNotesData)) return;
+
+    let currentChapter = 0;
+    let currentPart = 0;
+
+    const renderContent = () => {
+        const chapter = studyNotesData[currentChapter];
+        const part = chapter?.parts?.[currentPart];
+        if (!chapter || !part) return;
+
+        const takeawayBadges = part.takeaways
+            .map(
+                (tip) => `
+                <div class="p-3 bg-gray-50 border border-gray-100 rounded-lg text-sm text-gray-700 flex items-start gap-2">
+                    <i class="fa-solid fa-chalkboard-user text-gray-500 mt-0.5"></i>
+                    <span>${tip}</span>
+                </div>`
+            )
+            .join("");
+
+        const cards = part.items
+            .map(
+                (item) => `
+                <div class="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+                    <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Q.</p>
+                    <h4 class="text-lg font-bold text-gray-800 mb-2">${item.q}</h4>
+                    <p class="text-gray-700 leading-relaxed whitespace-pre-line">${item.a}</p>
+                </div>`
+            )
+            .join("");
+
+        contentContainer.innerHTML = `
+            <div class="flex flex-wrap gap-2 mb-3">
+                <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">${chapter.title}</span>
+                <span class="px-3 py-1 rounded-full bg-gray-800 text-white text-xs font-semibold">${part.title}</span>
+            </div>
+            <p class="text-gray-700 mb-4">${part.overview}</p>
+            <div class="grid sm:grid-cols-3 gap-3 mb-4">${takeawayBadges}</div>
+            <div class="grid md:grid-cols-2 gap-4">${cards}</div>
+        `;
+    };
+
+    const renderParts = () => {
+        const chapter = studyNotesData[currentChapter];
+        partTabs.innerHTML = chapter.parts
+            .map(
+                (part, index) => `
+                    <button
+                        class="px-3 py-2 rounded-lg text-sm font-semibold border transition-all ${
+                            index === currentPart
+                                ? "bg-gray-800 text-white shadow-md border-gray-800"
+                                : "bg-white text-gray-700 hover:bg-gray-50 border-gray-200"
+                        }"
+                        data-index="${index}"
+                    >
+                        ${part.title}
+                    </button>
+                `
+            )
+            .join("");
+
+        partTabs.querySelectorAll("button").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+                currentPart = Number(e.currentTarget.dataset.index);
+                renderParts();
+                renderContent();
+            });
+        });
+    };
+
+    const renderChapters = () => {
+        chapterList.innerHTML = studyNotesData
+            .map(
+                (chapter, index) => `
+                <button
+                    class="w-full text-left px-3 py-2 rounded-lg border transition-all ${
+                        index === currentChapter
+                            ? "bg-gray-800 text-white shadow-md border-gray-800"
+                            : "bg-white text-gray-800 hover:bg-gray-50 border-gray-200"
+                    }"
+                    data-index="${index}"
+                >
+                    <div class="text-sm font-semibold">${chapter.title}</div>
+                    <div class="text-xs text-gray-600">${chapter.summary}</div>
+                </button>`
+            )
+            .join("");
+
+        chapterList.querySelectorAll("button").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+                currentChapter = Number(e.currentTarget.dataset.index);
+                currentPart = 0;
+                renderChapters();
+                renderParts();
+                renderContent();
+            });
+        });
+    };
+
+    renderChapters();
+    renderParts();
+    renderContent();
+}
+
 function renderContent(category, searchTerm = "") {
     if (category !== "quiz") {
         clearInterviewTimer();
@@ -1583,49 +1692,20 @@ function renderContent(category, searchTerm = "") {
             html += createCalendar(year, month, monthlyEvents[key] || {});
         });
 } else if (category === "studyNotes") {
-        const studyNoteSources = [
-            {
-                label: "학습 자료",
-                src: "https://lapis-pufferfish-855.notion.site/ebd/2ba07014e3fd803aa90cf383e137b0a1",
-                title: "학습 자료",
-            },
-            {
-                label: "사진사 요약",
-                src: "https://lapis-pufferfish-855.notion.site/ebd/22407014e3fd8032bb15c18cd6f82ec3",
-                title: "사진사 요약",
-            },
-        ];
-
-        const toggleButtons = studyNoteSources
-            .map(
-                (note, index) => `
-            <button
-                class="note-toggle px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold transition-all ${index === 0 ? "active bg-gray-800 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50"}"
-                data-src="${note.src}"
-                data-title="${note.title}"
-            >
-                ${note.label}
-            </button>
-        `
-            )
-            .join("");
-
         html = `
         <div class="content-card p-6 md:p-8 mb-6">
-            <h2 class="text-3xl font-bold text-gray-800 mb-2 text-center">학습 노트</h2>
-            <p class="text-gray-600 text-center mb-4">학습 자료와 사진사 요약을 선택해서 확인해 보세요.</p>
-            <div class="flex flex-wrap items-center justify-center gap-3 mb-4">
-                ${toggleButtons}
+            <div class="flex flex-col gap-2 mb-4 text-center">
+                <h2 class="text-3xl font-bold text-gray-800">학습 노트</h2>
+                <p class="text-gray-600">선생님이 곁에서 바로 설명할 수 있도록 챕터와 파트를 선택해 주세요.</p>
             </div>
-            <div class="w-full overflow-hidden rounded-xl shadow-lg border border-gray-200" style="height: 80vh;">
-                <iframe
-                    id="studyNotesFrame"
-                    src="${studyNoteSources[0].src}"
-                    title="${studyNoteSources[0].title}"
-                    allowfullscreen
-                    frameborder="0"
-                    style="width: 100%; height: 100%;"
-                ></iframe>
+            <div class="grid lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-1">
+                    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-3" id="studyChapterList"></div>
+                </div>
+                <div class="lg:col-span-3">
+                    <div class="flex flex-wrap gap-2 mb-4" id="studyPartTabs"></div>
+                    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4" id="studyNoteContent"></div>
+                </div>
             </div>
         </div>`;
 
@@ -1725,20 +1805,7 @@ function renderContent(category, searchTerm = "") {
     } else if (category === "quiz") {
         initQuizPage();
     } else if (category === "studyNotes") {
-        const frame = document.getElementById("studyNotesFrame");
-        const toggles = document.querySelectorAll(".note-toggle");
-        toggles.forEach((btn) => {
-            btn.addEventListener("click", () => {
-                toggles.forEach((b) => b.classList.remove("active", "bg-gray-800", "text-white", "shadow-md"));
-                btn.classList.add("active", "bg-gray-800", "text-white", "shadow-md");
-                if (frame && btn.dataset.src) {
-                    frame.src = btn.dataset.src;
-                    if (btn.dataset.title) {
-                        frame.title = btn.dataset.title;
-                    }
-                }
-            });
-        });
+        initializeStudyNotes();
     } else if (category !== "home") {
         setupCardFlipListeners();
     }
