@@ -218,6 +218,411 @@ const pickRandom = (arr, n) => {
 const baseCount = Object.values(photographyData).reduce((acc, arr) => acc + arr.length, 0);
 const sampleSize = Math.min(baseCount, 23);
 
+const studyNoteChapters = [
+    {
+        title: "Chapter 1. 카메라 기본 & 노출",
+        subtitle: "기초 구조에서 사진사까지 한눈에 정리",
+        parts: [
+            {
+                title: "Part 1. 카메라 기본",
+                summary: "DSLR/RF 구조, 셔터와 조리개, 무브먼트, 노출 개념을 묶어 놓은 기본 가이드",
+                content: `
+                    <div class="space-y-4 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>카메라 유형:</strong> DSLR은 미러·펜타프리즘을 통해 광학 뷰파인더로 확인하며, RF는 렌즈와 뷰파인더가 분리되어 시차가 생깁니다.</li>
+                            <li><strong>미러/펜타프리즘 역할:</strong> 미러는 상하를 반전하고, 펜타프리즘은 좌우를 바로잡아 올바른 상을 제공합니다.</li>
+                            <li><strong>포맷별 특징:</strong> 소형(35mm)·중형(6×4.5~6×9cm)·대형(4×5인치 이상)으로 나뉘며, 대형일수록 화질과 무브먼트 여유가 큽니다.</li>
+                            <li><strong>무브먼트 종류:</strong> 라이즈/폴(상하), 쉬프트(좌우), 틸트(앞뒤 기울임), 스윙(좌우 기울임)으로 초점면과 왜곡을 제어합니다.</li>
+                            <li><strong>이미지 서클과 비네팅:</strong> 센서보다 이미지 서클이 작으면 모서리가 어두워지고 잘립니다.</li>
+                            <li><strong>셔터:</strong> 포컬 플레인(고속, 동조 제한), 렌즈 셔터(플래시 유리), 전자 셔터(무소음, 롤링 왜곡 가능).</li>
+                            <li><strong>셔터 모드:</strong> i=설정 시간, b=누르는 동안 개방, t=한 번 열고 한 번 닫음.</li>
+                            <li><strong>속도 스텝:</strong> 1스톱(1s→1/2→...→1/8000)과 1/3스톱(1s→0.8→0.6→...→1/8000) 값을 함께 기억합니다.</li>
+                            <li><strong>조리개와 회절:</strong> f/5.6~f/11 구간이 해상도가 높으며, f/16 이후 회절로 선명도가 감소합니다.</li>
+                            <li><strong>조리개 스텝:</strong> f/1→1.4→2→2.8→...→128(1스톱), f/1~22까지 1/3스톱 값(1.1,1.2,1.4,...,22).</li>
+                            <li><strong>스톱과 노출:</strong> 빛의 양을 두 배/절반으로 조절하는 단위. 노출은 센서·필름에 도달하는 빛의 총량이며, 적정 노출은 의도와 중간회색 기준의 균형입니다.</li>
+                        </ul>
+                        <div class="bg-gray-50 border rounded-lg p-3 text-xs leading-relaxed">
+                            <p class="font-semibold">시차와 시야율 요약</p>
+                            <p class="mt-1">RF·TLR·콤팩트·스마트폰에서 시차가 발생하며, 시야율이 100%에 가까울수록 뷰파인더와 결과가 일치합니다.</p>
+                        </div>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 2. 디지털 파트",
+                summary: "센서 방식, 포맷, 파일 포맷의 차이를 빠르게 비교",
+                content: `
+                    <div class="space-y-4 text-sm leading-relaxed text-gray-800">
+                        <table class="w-full text-left text-xs border border-gray-200">
+                            <thead class="bg-gray-100"><tr><th class="p-2">구분</th><th class="p-2">CCD</th><th class="p-2">CMOS</th></tr></thead>
+                            <tbody>
+                                <tr class="border-t"><td class="p-2">방식</td><td class="p-2">외부 회로 증폭</td><td class="p-2">픽셀 자체 증폭</td></tr>
+                                <tr class="border-t"><td class="p-2">장점</td><td class="p-2">고화질, 균일성</td><td class="p-2">저전력, 빠른 처리</td></tr>
+                                <tr class="border-t"><td class="p-2">단점</td><td class="p-2">고가, 전력 소모</td><td class="p-2">초기엔 노이즈</td></tr>
+                            </tbody>
+                        </table>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>센서 크기 영향:</strong> 크면 노이즈가 적고 배경 흐림이 크며 저조도 성능이 좋습니다.</li>
+                            <li><strong>RAW·TIFF·JPEG:</strong> RAW는 12~14bit 원본(25~40MB), TIFF는 보정 완료 8/16bit(30~180MB), JPEG는 손실 8bit(5~10MB).</li>
+                            <li><strong>화이트 밸런스:</strong> 광원 색온도와 카메라 색온도를 맞춰 흰색을 중립으로 보정.</li>
+                            <li><strong>노이즈 감소 팁:</strong> ISO를 낮게, 적정 노출 확보, 밝은 렌즈와 조명 활용, 센서 발열 관리.</li>
+                            <li><strong>디지털 오류:</strong> 스미어(세로 번짐), 블루밍(빛 넘침), 계단 현상, 무아레 등은 노출·필터·각도 조정으로 완화.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 3. 사진 역사 & 작가",
+                summary: "사진 발명과 대표 작가 흐름을 표와 함께 정리",
+                content: `
+                    <div class="space-y-4 text-sm leading-relaxed text-gray-800">
+                        <table class="w-full text-left text-xs border border-gray-200">
+                            <thead class="bg-gray-100"><tr><th class="p-2">기법</th><th class="p-2">발명자/연도</th><th class="p-2">특징</th></tr></thead>
+                            <tbody>
+                                <tr class="border-t"><td class="p-2">헬리오그래피</td><td class="p-2">니엡스 · 1826</td><td class="p-2">역청 도포 금속판, 최초 사진</td></tr>
+                                <tr class="border-t"><td class="p-2">다게레오타입</td><td class="p-2">다게르 · 1839</td><td class="p-2">은판 직접 양화, 복제 불가</td></tr>
+                                <tr class="border-t"><td class="p-2">칼로타입</td><td class="p-2">탈보트 · 1841</td><td class="p-2">종이 네거티브→양화, 복제 가능</td></tr>
+                            </tbody>
+                        </table>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>습판/건판:</strong> 아처의 콜로디온 습판(고화질, 현장 현상 필요)과 매덕스의 젤라틴 건판(운반·고감도)로 발전.</li>
+                            <li><strong>사진 대중화:</strong> 1890년대 이스트만의 코닥과 "You press the button" 슬로건으로 보급.</li>
+                            <li><strong>회화주의 vs 자연주의:</strong> 합성·소프트포커스로 회화적 표현(레일랜더, 로빈슨)과 자연광 사실 표현(에머슨)으로 대비.</li>
+                            <li><strong>머이브릿지:</strong> 다중 카메라 고속 연속촬영(Animal Locomotion)으로 영화의 기초 마련.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+        ],
+    },
+    {
+        title: "Chapter 2. 장비와 촬영 이론",
+        subtitle: "렌즈 특성과 촬영 방식, 두 번째 디지털 기초",
+        parts: [
+            {
+                title: "Part 1. 장비 & 촬영 기본",
+                summary: "렌즈 종류, 피사계심도, 수차, 비네팅 등 촬영 핵심",
+                content: `
+                    <div class="space-y-4 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>렌즈 사례:</strong> Canon EF 24-70mm f/2.8L II는 전 구간 f/2.8 고정, 실전 기동성 높음.</li>
+                            <li><strong>초점거리:</strong> 길수록 화각이 좁고 배경 압축, 짧을수록 원근감이 강조됩니다.</li>
+                            <li><strong>표준렌즈:</strong> 포맷 대각선 길이와 유사(35mm=50mm, 4×5=150mm 등).</li>
+                            <li><strong>광각 vs 망원:</strong> 광각은 깊은 심도·강한 원근감, 망원은 얕은 심도·배경 압축.</li>
+                            <li><strong>수차 종류:</strong> 구면, 코마, 비점, 상면만곡, 왜곡, 색수차를 비구면·ED 유리·조리개로 보정.</li>
+                            <li><strong>특수 렌즈:</strong> 시프트(수직 유지), 매크로(1:1), 어안(극광각), 연초점(소프트), 시프트/틸트로 무브먼트 구현.</li>
+                            <li><strong>피사계심도:</strong> 조리개 조임, 짧은 초점거리, 피사체와 거리 확보로 깊게 확보.</li>
+                            <li><strong>비네팅/플레어:</strong> 이미지 서클 부족, 필터 중첩, 후드 간섭 등이 원인. 후드·조리개 조이기·보정으로 완화.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 2. 디지털 카메라 II",
+                summary: "노이즈, 화소, 센서 크기, 히스토그램 활용",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>노이즈:</strong> 고감도·저조도·언더 보정 시 증가. 센서 크기와 적정 노출 확보가 핵심.</li>
+                            <li><strong>화소수:</strong> 디테일과 크롭에 유리하지만 센서 대비 과도하면 노이즈 증가.</li>
+                            <li><strong>다이내믹 레인지:</strong> 동시에 표현 가능한 명암 범위. 히스토그램으로 노출·톤 분포를 확인.</li>
+                            <li><strong>DSLR vs 미러리스:</strong> 미러 유무, EVF 실시간 확인 vs 광학 뷰파인더, 휴대성/배터리 차이.</li>
+                            <li><strong>포맷:</strong> 풀프레임(36×24mm) vs 크롭(APS-C, 1.5/1.6배 환산). 크롭 렌즈를 풀프레임에 사용 시 비네팅.</li>
+                            <li><strong>무아레:</strong> 촘촘한 패턴과 센서 배열 간 간섭. 저역통과 필터나 각도 변경으로 완화.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 3. 사진사 & 역사",
+                summary: "자콥 리스부터 f/64 그룹까지 핵심 인물 정리",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>자콥 리스/루이스 하인:</strong> 사회 개혁과 아동노동 고발 사진.</li>
+                            <li><strong>스티글리츠:</strong> 사진분리파, 스트레이트 포토그래피, 『카메라 워크』와 291 갤러리.</li>
+                            <li><strong>으젠느 앗제/스타이켄:</strong> 파리 기록과 『인간 가족전』으로 사진 보편성 확장.</li>
+                            <li><strong>즉물주의 & f/64 그룹:</strong> 기계적 기록성(폴 스트랜드)과 고해상 풍경(아담스, 웨스턴, 커닝험).</li>
+                            <li><strong>스냅 사진:</strong> 에리히 잘로몬 등 준비되지 않은 순간을 포착하는 캔디드 포토.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+        ],
+    },
+    {
+        title: "Chapter 3. 노출 심화",
+        subtitle: "존 시스템과 디지털 비트, 포토저널리즘 흐름",
+        parts: [
+            {
+                title: "Part 1. 노출 원리",
+                summary: "상반법칙, TTL 측광, 존 시스템까지 실전 노출 정리",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>E.I:</strong> 촬영자가 정하는 실효 감도. 필름 특성/현상 조건에 맞춰 조정.</li>
+                            <li><strong>우선식 모드:</strong> 조리개 우선=심도 제어, 셔터 우선=움직임 제어.</li>
+                            <li><strong>상반법칙:</strong> 조리개와 셔터 속도 교환으로 동일 노출 확보. 극단적 시간에서는 불궤 가능.</li>
+                            <li><strong>TTL 측광:</strong> 평가·중앙중점·부분·스팟 모드. 그레이카드 18%, 화이트카드 +2 1/3스톱 보정.</li>
+                            <li><strong>존 시스템:</strong> 존0~X, 존3(암부 디테일)~존7(명부 디테일) 활용. 디테일 영역은 존2~8.</li>
+                            <li><strong>노출/노광:</strong> 촬영 시 빛 주기 vs 인화 시 인화지에 주는 빛.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 2. 디지털 카메라 III",
+                summary: "비트심도, 해상도, 출력 단위 정리",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>비트심도:</strong> 8bit=256단계, 16bit=65,536단계. 16bit가 후보정에 유리.</li>
+                            <li><strong>메모리 단위:</strong> 8bit=1Byte → KB→MB→GB→TB→PB→EB→ZB→YB.</li>
+                            <li><strong>해상도와 해상력:</strong> 픽셀 밀도(PPI/DPI/LPI) vs 표현 가능한 세부(선/mm).</li>
+                            <li><strong>300DPI:</strong> 인쇄 표준(1인치당 300×300=90,000점).</li>
+                            <li><strong>색공간:</strong> 8bit RGB 총 16,777,216색. 비트가 높을수록 다이내믹 레인지 확보.</li>
+                            <li><strong>포맷:</strong> TIFF/PSD는 레이어·16bit 지원, JPEG는 8bit 손실, PNG는 투명·비손실, HEIF는 고효율 10~12bit.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 3. 포토저널리즘 & 아방가르드",
+                summary: "유럽·미국 보도사진 흐름과 실험사진가",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>케르테츠·브라사이:</strong> 파리 거리·야경의 감성적 기록.</li>
+                            <li><strong>아이젠슈테트·LIFE:</strong> 사진 에세이 정착으로 스토리텔링 강화.</li>
+                            <li><strong>다다이즘·뉴 비전:</strong> 포토몽타주(존 하트필드), 포토그램(만 레이), 급진적 구도(로드첸코).</li>
+                            <li><strong>FSA 다큐:</strong> 에반스(구조적 기록), 랭(『Migrant Mother』), 버크 화이트(산업·전쟁).</li>
+                            <li><strong>매그넘:</strong> 1947년 카파·브레송 등이 설립, 사진가의 편집권 존중.</li>
+                            <li><strong>결정적 순간:</strong> 브레송이 정의한 빛·구도·감정이 일치하는 찰나.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+        ],
+    },
+    {
+        title: "Chapter 4. 필름 & 디지털 기초",
+        subtitle: "필름 재료, 색온도, 기본 파일 포맷 정리",
+        parts: [
+            {
+                title: "Part 1. 필름 기본",
+                summary: "필름 구성 요소와 기초 용어",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>필름:</strong> 감광유제를 기재 위에 도포한 재료. 흑백/컬러, 네거티브/포지티브로 구분.</li>
+                            <li><strong>감광유제:</strong> 젤라틴+은염. 감도는 빛 민감도, 관용도는 허용 노출 범위, 입상성과 해상력은 입자 크기·정렬 정도.</li>
+                            <li><strong>감색성:</strong> 청감성(짧은 파장), 정색성(파랑~노랑), 전정색성(가시광 전체).</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 2. 필름 종류와 색온도",
+                summary: "네거티브/포지티브, 현상 공정, 색온도와 필터",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>컬러 네거티브 vs 포지티브:</strong> 네거티브는 관용도 넓고 C-41, 포지티브는 관용도 좁고 E-6.</li>
+                            <li><strong>C-41/E-6 단계:</strong> C-41(발색→표백→정착→수세→안정), E-6(1차 흑백→반전→발색→표백→정착).</li>
+                            <li><strong>색온도:</strong> 촛불 1,000~2,000K, 텅스텐 2,800~3,200K, 주광 5,500K, 흐린 날 7,500K+. 색온도계로 측정.</li>
+                            <li><strong>필름 감도:</strong> 400필름은 100필름보다 2스톱 빠르며 관용도는 넓지만 입상이 거칠고 해상력 낮음.</li>
+                            <li><strong>특성곡선:</strong> 베이스+포그→발부→직선부→어깨→솔라리제이션. 감마(직선부 기울기)와 C.I(평균 기울기)로 콘트라스트 판단.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 3. 디지털 기본 이론",
+                summary: "JPEG/TIFF/PSD, 벡터와 비트맵, 저장장치 역할",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>JPEG:</strong> 손실 압축 8bit, 용량 작고 호환성 높음.</li>
+                            <li><strong>TIFF:</strong> 비손실/무압축, 8/16bit, 인쇄·아카이브용.</li>
+                            <li><strong>PSD:</strong> 포토샵 전용, 레이어·마스크 유지, 16/32bit 지원.</li>
+                            <li><strong>EPS/AI/PDF:</strong> 벡터 기반. EPS는 레거시, AI는 편집용, PDF는 배포·출력 표준.</li>
+                            <li><strong>비트맵 vs 벡터:</strong> 픽셀 기반(확대 시 계단) vs 수학적 좌표(확대에도 선명).</li>
+                            <li><strong>컴퓨터 자원:</strong> CPU=연산, RAM=작업 메모리, GPU=그래픽 가속, SSD/HDD=저장/속도 차이.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+        ],
+    },
+    {
+        title: "Chapter 5. 필름 II & CMS",
+        subtitle: "상반칙 불궤 보정부터 색 관리까지",
+        parts: [
+            {
+                title: "Part 1. 필름 II",
+                summary: "형광등 색편차, 텅스텐 필름, DX코드 등 심화",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>형광등 촬영:</strong> 녹색끼 발생 → FL/CC 마젠타 필터 또는 RAW 틴트 보정.</li>
+                            <li><strong>D/T 타입:</strong> D타입 필름은 텅스텐에서 붉게, T타입 필름은 주광에서 푸르게 → 80/85계열 필터로 보정.</li>
+                            <li><strong>보조 층:</strong> 할레이션 방지층(재반사 차단), 옐로우 방지층(블루 차단), 오렌지 마스킹(정확한 색 분리).</li>
+                            <li><strong>식별 요소:</strong> DX코드(ISO/매수), 유제번호(생산 배치), 유제/베이스 면 구분.</li>
+                            <li><strong>상반칙불궤:</strong> 장노출 부족·고속 과다. L타입(장노출 보정)·S타입(고속 보정) 필름 존재.</li>
+                            <li><strong>필름 형태:</strong> 시트필름(4×5, 8×10 등, 개별 현상) vs 롤필름(120/220/135, 연속 촬영).</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 2. CMS & 색공간",
+                summary: "캘리브레이션, sRGB/Adobe RGB/P3, ICC 프로파일",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>CMS:</strong> 장비 간 색 일치를 위한 시스템. 모니터·프린터·카메라의 색차를 줄여 예측 가능성 향상.</li>
+                            <li><strong>캘리브레이션:</strong> 컬러미터(Spyder, i1 Display) vs 분광측색계(i1 Pro)로 색 편차 교정.</li>
+                            <li><strong>색공간:</strong> sRGB(웹), Adobe RGB(인쇄), Display P3(영상/HDR), Rec.709/2020(영상), ProPhoto RGB(가장 넓은 장치 의존형).</li>
+                            <li><strong>색역:</strong> 색공간 설계도 안에서 실제 장치가 구현하는 범위. 모니터 스펙 확인 필요.</li>
+                            <li><strong>감마:</strong> 2.2(표준), 1.8(구 macOS), 2.6(DCI-P3 투사). 비선형 보정으로 자연스러운 계조 확보.</li>
+                            <li><strong>ICC 프로파일:</strong> 장치 색 특성 파일(Process/Generic/Custom). Adobe RGB를 워킹 스페이스로 사용.</li>
+                            <li><strong>스풀:</strong> 출력 데이터를 임시 저장해 프린터 대기열을 관리, 대용량 인쇄 효율 개선.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 3. 유형학 & 현대 사진가",
+                summary: "타이포로지, 구르스키, 제프 월, 노부요시까지",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>유형학적 사진:</strong> 동일 조건 반복 촬영 배열. 베허 부부(산업 건축물), 구르스키(고공·합성), 스트루스·루프·회퍼 등.</li>
+                            <li><strong>제프 월 vs 베르나르 포콩:</strong> 월은 영화적 세트·라이트박스의 사회적 서사, 포콩은 인형·세트로 유년기의 환상 표현.</li>
+                            <li><strong>마틴 파/샌디 스코글룬:</strong> 소비문화 풍자, 설치·반복 색채 연출.</li>
+                            <li><strong>바바라 크루거/잰 그루버:</strong> 광고 언어 차용으로 권력·소비 비판.</li>
+                            <li><strong>로버트 메이플소프 & 아라키 노부요시:</strong> 금기 소재를 고전적 조형미와 일상/타나토스 서사로 결합.</li>
+                            <li><strong>낸 골딘 & 신디 셔먼:</strong> 자전적 스냅 vs 분장 셀프 포트레이트로 정체성 탐구.</li>
+                            <li><strong>포스트모더니즘 개념:</strong> 패러디·차용, 아우라 붕괴(벤야민), 스투디움/푼크툼(바르트), 바우하우스·미니멀리즘 영향.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+        ],
+    },
+    {
+        title: "Chapter 6. 필터 & 컬러",
+        subtitle: "필터 원리와 디지털 색 이론",
+        parts: [
+            {
+                title: "Part 1. 필터 기본",
+                summary: "필터 계수, ND/PL/UV, 가변 ND와 편광 사용법",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>원리:</strong> 같은 색은 통과, 보색은 흡수. 오렌지 필터로 오렌지를 밝게 표현.</li>
+                            <li><strong>필터 계수:</strong> 필터 사용으로 줄어드는 노출량. TTL 측광이면 자동 보정.</li>
+                            <li><strong>ND:</strong> Neutral Density, 색 변화 없이 광량 감소(ND400≈8⅔스톱). 장노출·개방 심도에 사용.</li>
+                            <li><strong>PL/CPL:</strong> 난반사 제거·채도 향상. 태양 90° 방향 하늘, 유리/물 50° 전후에서 효과적.</li>
+                            <li><strong>가변 ND:</strong> 편광 2장으로 광량 조절, X자 밴딩·색 틀어짐 유의.</li>
+                            <li><strong>UV/스카이라이트:</strong> 자외선·푸른 기운 완화, 렌즈 보호용으로 사용.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 2. 필터별 효과",
+                summary: "색온도·헤이즈·다계조 필터까지 실습용 표",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>색온도 필터:</strong> CC(대조정, 80A/85B 등) vs LB(미세 조정, 81A/82A 등). 형광등 보정은 FL/CC 마젠타.</li>
+                            <li><strong>헤이즈 대응:</strong> 헤이즈 컷/PL/SL로 산란광 감소, ND는 표현적 흐림.</li>
+                            <li><strong>흑백 대비:</strong> 보색 흡수 원리. 옐로→기본 대비, 오렌지→강한 대비, 레드→극적 하늘.</li>
+                            <li><strong>다계조 인화 필터:</strong> 인화지 한 장으로 콘트라스트 조절. 4호 이상은 노광을 두 배.</li>
+                            <li><strong>공용 필터:</strong> UV, 스카이라이트, ND, PL, 클로즈업 필터는 흑백/컬러 모두 사용 가능.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 3. 디지털 컬러 II",
+                summary: "RGB/CMYK 혼합, 채널·색 속성, 톤 개념",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>RGB vs CMYK:</strong> RGB는 가산혼합(빛, 화면), CMYK는 감산혼합(잉크, 인쇄).</li>
+                            <li><strong>보색 관계:</strong> R↔C, G↔M, B↔Y. RGB 합성으로 노랑/시안/마젠타, 모두 합치면 흰색.</li>
+                            <li><strong>컬러 모드:</strong> RGB(모니터), CMYK(인쇄), Grayscale(무채색).</li>
+                            <li><strong>채널:</strong> 각 색상/명도 정보 단위. RGB=3채널, CMYK=4채널.</li>
+                            <li><strong>색의 3속성:</strong> 색상·채도·명도. 밝기는 광량, 명도는 지각 밝음.</li>
+                            <li><strong>조도/휘도:</strong> 조도=비추는 빛 양, 휘도=반사되어 들어오는 빛 양.</li>
+                            <li><strong>톤과 톤 앤 매너:</strong> 채도+명도의 분위기, 작품 전체의 일관된 스타일을 의미.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+        ],
+    },
+    {
+        title: "Chapter 7. 현상·인화·조명",
+        subtitle: "암실부터 플래시 조명까지 수업용 압축 노트",
+        parts: [
+            {
+                title: "Part 1. 현상",
+                summary: "흑백 필름 현상 단계와 증감현상, 컬러 프로세스",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>흑백 현상 순서:</strong> 현상→중간정지→정착→수세→포토플로→건조.</li>
+                            <li><strong>과·부족 현상:</strong> 과다=콘트라스트↑·입자 거침, 부족=밀도↓·암부 손실.</li>
+                            <li><strong>증감현상:</strong> 감도 올려 촬영 후 현상 시간을 늘려 노출 보충(콘트라스트↑).</li>
+                            <li><strong>C-41 vs E-6:</strong> 네거티브 발색/표백/정착/안정 vs 1차흑백→반전→발색→표백→정착.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 2. 인화",
+                summary: "RC/FB 인화지, 다계조·호수지, 버닝/닷징",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>RC vs FB:</strong> RC=수지 코팅, 빠른 처리·편리. FB=섬유 베이스, 계조 풍부·보존성 우수.</li>
+                            <li><strong>다계조 인화지:</strong> 필터로 콘트라스트 조절(기본 2.5호). 4호 이상은 노광 두 배.</li>
+                            <li><strong>호수지:</strong> 인화지 자체가 콘트라스트 등급을 가짐(1호 저대비~5호 고대비).</li>
+                            <li><strong>버닝/닷징:</strong> 부분 노광 가감으로 하이라이트·섀도우 디테일 살리기.</li>
+                            <li><strong>사바티에/솔라리제이션:</strong> 현상 중 재노광에 의한 부분 반전 vs 과다 노광으로 인한 전체 반전.</li>
+                            <li><strong>포토그램:</strong> 카메라 없이 물체를 인화지 위에 두고 빛을 주는 기법(만 레이·모홀리 나기).</li>
+                            <li><strong>마무리:</strong> 스팟팅(흰 점 보정), 엣칭(검은 점 긁기).</li>
+                        </ul>
+                    </div>
+                `,
+            },
+            {
+                title: "Part 3. 출력 장치 & 조명",
+                summary: "프린터와 플래시 조명비, 광질, 동조까지",
+                content: `
+                    <div class="space-y-3 text-sm leading-relaxed text-gray-800">
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>프린터:</strong> 디지털 은염(C)·잉크젯·염료승화·레이저. 안료=보존성·정확성, 염료=색역 넓음.</li>
+                            <li><strong>스캐너:</strong> 평판·필름·드럼·가상 드럼으로 아날로그를 디지털 변환.</li>
+                            <li><strong>조명 기본:</strong> 주조명과 보조조명, 조명비 2:1(1스톱)~16:1(4스톱)으로 대비 조절.</li>
+                            <li><strong>광질:</strong> 직사광=강한 그림자, 확산광=부드러운 그림자. 역광/순광/측광/사광으로 표현 변주.</li>
+                            <li><strong>플래시:</strong> 가이드 넘버 GN=f값×거리, 역제곱 법칙으로 광량 감소. 5D Mark IV 동조 한계 1/200s.</li>
+                            <li><strong>동조:</strong> 선막/후막 동조, 롤링셔터 왜곡 vs 글로벌셔터 동시 노출.</li>
+                            <li><strong>광 확산/집중:</strong> 소프트박스·엄브렐라·디퓨저(부드럽게) vs 리플렉터·그리드·스누트(집중).</li>
+                            <li><strong>패턴 라이팅:</strong> 램브란트, 버터플라이, 바운스, 캐치라이트, 적목 방지 팁 포함.</li>
+                        </ul>
+                    </div>
+                `,
+            },
+        ],
+    },
+];
+
+let activeStudyNoteChapter = 0;
+
 const mainContent = document.getElementById("mainContent");
 const searchInput = document.getElementById("searchInput");
 const geminiModal = document.getElementById("geminiModal");
@@ -1566,6 +1971,75 @@ function setupCardFlipListeners() {
     });
 }
 
+function renderStudyNoteParts(chapter) {
+    return chapter.parts
+        .map(
+            (part, idx) => `
+        <div class="content-card">
+            <div class="flex items-start gap-3 mb-3">
+                <div class="h-10 w-10 rounded-full bg-gray-800 text-white flex items-center justify-center text-sm font-bold">${idx + 1}</div>
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-gray-500">${chapter.title}</p>
+                    <h3 class="text-lg font-bold text-gray-900">${part.title}</h3>
+                    <p class="text-sm text-gray-600">${part.summary}</p>
+                </div>
+            </div>
+            <div class="prose prose-sm max-w-none text-gray-800 leading-relaxed">${part.content}</div>
+        </div>
+    `
+        )
+        .join("");
+}
+
+function renderStudyNotesView() {
+    const chapterButtons = studyNoteChapters
+        .map(
+            (chapter, index) => `
+        <button
+            class="study-chapter-btn px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold transition-all ${
+                index === activeStudyNoteChapter
+                    ? "bg-gray-800 text-white shadow-md"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+            }"
+            data-index="${index}"
+        >
+            ${chapter.title}
+        </button>
+    `
+        )
+        .join("");
+
+    const currentChapter = studyNoteChapters[activeStudyNoteChapter];
+
+    return `
+        <div class="content-card p-6 md:p-8 mb-6">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2 text-center">학습 노트</h2>
+            <p class="text-gray-600 text-center mb-4">외부 링크 없이 바로 수업에 쓸 수 있는 정리본입니다. 각 챕터는 3개의 파트로 나누어 교사용 화면으로 꾸몄습니다.</p>
+            <div class="flex flex-wrap items-center justify-center gap-3 mb-4">
+                ${chapterButtons}
+            </div>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                <p class="text-sm text-gray-700"><span class="font-semibold">${currentChapter.title}</span> · ${currentChapter.subtitle}</p>
+                <p class="text-xs text-gray-500 mt-1">파트별 핵심 bullet과 표로 요약되어 있어, 바로 화면을 띄워 설명하기 좋습니다.</p>
+            </div>
+            <div class="space-y-4" id="study-note-parts">${renderStudyNoteParts(currentChapter)}</div>
+        </div>
+    `;
+}
+
+function setupStudyNoteListeners() {
+    const buttons = document.querySelectorAll(".study-chapter-btn");
+    buttons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const idx = Number(btn.dataset.index);
+            if (!Number.isNaN(idx)) {
+                activeStudyNoteChapter = idx;
+                renderContent("studyNotes");
+            }
+        });
+    });
+}
+
 function renderContent(category, searchTerm = "") {
     if (category !== "quiz") {
         clearInterviewTimer();
@@ -1583,51 +2057,7 @@ function renderContent(category, searchTerm = "") {
             html += createCalendar(year, month, monthlyEvents[key] || {});
         });
 } else if (category === "studyNotes") {
-        const studyNoteSources = [
-            {
-                label: "학습 자료",
-                src: "https://lapis-pufferfish-855.notion.site/ebd/2ba07014e3fd803aa90cf383e137b0a1",
-                title: "학습 자료",
-            },
-            {
-                label: "사진사 요약",
-                src: "https://lapis-pufferfish-855.notion.site/ebd/22407014e3fd8032bb15c18cd6f82ec3",
-                title: "사진사 요약",
-            },
-        ];
-
-        const toggleButtons = studyNoteSources
-            .map(
-                (note, index) => `
-            <button
-                class="note-toggle px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold transition-all ${index === 0 ? "active bg-gray-800 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50"}"
-                data-src="${note.src}"
-                data-title="${note.title}"
-            >
-                ${note.label}
-            </button>
-        `
-            )
-            .join("");
-
-        html = `
-        <div class="content-card p-6 md:p-8 mb-6">
-            <h2 class="text-3xl font-bold text-gray-800 mb-2 text-center">학습 노트</h2>
-            <p class="text-gray-600 text-center mb-4">학습 자료와 사진사 요약을 선택해서 확인해 보세요.</p>
-            <div class="flex flex-wrap items-center justify-center gap-3 mb-4">
-                ${toggleButtons}
-            </div>
-            <div class="w-full overflow-hidden rounded-xl shadow-lg border border-gray-200" style="height: 80vh;">
-                <iframe
-                    id="studyNotesFrame"
-                    src="${studyNoteSources[0].src}"
-                    title="${studyNoteSources[0].title}"
-                    allowfullscreen
-                    frameborder="0"
-                    style="width: 100%; height: 100%;"
-                ></iframe>
-            </div>
-        </div>`;
+        html = renderStudyNotesView();
 
     } else if (category === "visualization") {
         const visualizationContent = [{
@@ -1725,20 +2155,7 @@ function renderContent(category, searchTerm = "") {
     } else if (category === "quiz") {
         initQuizPage();
     } else if (category === "studyNotes") {
-        const frame = document.getElementById("studyNotesFrame");
-        const toggles = document.querySelectorAll(".note-toggle");
-        toggles.forEach((btn) => {
-            btn.addEventListener("click", () => {
-                toggles.forEach((b) => b.classList.remove("active", "bg-gray-800", "text-white", "shadow-md"));
-                btn.classList.add("active", "bg-gray-800", "text-white", "shadow-md");
-                if (frame && btn.dataset.src) {
-                    frame.src = btn.dataset.src;
-                    if (btn.dataset.title) {
-                        frame.title = btn.dataset.title;
-                    }
-                }
-            });
-        });
+        setupStudyNoteListeners();
     } else if (category !== "home") {
         setupCardFlipListeners();
     }
