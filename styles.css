@@ -227,6 +227,32 @@ body {
   transform: translateY(-4px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
+.chapter-toggle,
+.part-toggle {
+  transition: all 0.2s ease;
+}
+.chapter-toggle.active,
+.part-toggle.active {
+  transform: translateY(-1px);
+}
+.study-note-panel {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+}
+.study-note-body {
+  max-height: 65vh;
+  overflow-y: auto;
+}
+.study-note-surface {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1rem;
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
 
 ::-webkit-scrollbar {
   width: 8px;
