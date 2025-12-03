@@ -218,6 +218,32 @@ const pickRandom = (arr, n) => {
 const baseCount = Object.values(photographyData).reduce((acc, arr) => acc + arr.length, 0);
 const sampleSize = Math.min(baseCount, 23);
 
+function renderStudyNoteContent(chapterIndex, partIndex) {
+    const chapterLabel = document.getElementById("studyNoteChapter");
+    const titleLabel = document.getElementById("studyNoteTitle");
+    const body = document.getElementById("studyNoteBody");
+    const chapter = studyNotesChapters[chapterIndex];
+    const part = chapter?.parts?.[partIndex];
+    if (!chapter || !part || !body || !chapterLabel || !titleLabel) return;
+    chapterLabel.textContent = chapter.title;
+    titleLabel.textContent = part.title;
+    body.textContent = part.content;
+}
+
+function setupStudyNotes() {
+    const buttons = document.querySelectorAll(".note-part-btn");
+    buttons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            buttons.forEach((b) => b.classList.remove("active", "bg-gray-800", "text-white", "shadow"));
+            btn.classList.add("active", "bg-gray-800", "text-white", "shadow");
+            const chapterIndex = Number(btn.dataset.chapter || 0);
+            const partIndex = Number(btn.dataset.part || 0);
+            renderStudyNoteContent(chapterIndex, partIndex);
+        });
+    });
+    renderStudyNoteContent(0, 0);
+}
+
 const mainContent = document.getElementById("mainContent");
 const searchInput = document.getElementById("searchInput");
 const geminiModal = document.getElementById("geminiModal");
@@ -1583,29 +1609,29 @@ function renderContent(category, searchTerm = "") {
             html += createCalendar(year, month, monthlyEvents[key] || {});
         });
 } else if (category === "studyNotes") {
-        const studyNoteSources = [
-            {
-                label: "학습 자료",
-                src: "https://lapis-pufferfish-855.notion.site/ebd/2ba07014e3fd803aa90cf383e137b0a1",
-                title: "학습 자료",
-            },
-            {
-                label: "사진사 요약",
-                src: "https://lapis-pufferfish-855.notion.site/ebd/22407014e3fd8032bb15c18cd6f82ec3",
-                title: "사진사 요약",
-            },
-        ];
-
-        const toggleButtons = studyNoteSources
+        const chapterNav = studyNotesChapters
             .map(
-                (note, index) => `
-            <button
-                class="note-toggle px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold transition-all ${index === 0 ? "active bg-gray-800 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50"}"
-                data-src="${note.src}"
-                data-title="${note.title}"
-            >
-                ${note.label}
-            </button>
+                (chapter, chapterIndex) => `
+            <div class="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                <p class="font-semibold text-gray-800 mb-3">${chapter.title}</p>
+                <div class="grid grid-cols-1 gap-2">
+                    ${chapter.parts
+                        .map(
+                            (part, partIndex) => `
+                                <button
+                                    class="note-part-btn w-full text-left px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold transition-all ${
+                                        chapterIndex === 0 && partIndex === 0 ? "active bg-gray-800 text-white shadow" : "hover:bg-gray-100"
+                                    }"
+                                    data-chapter="${chapterIndex}"
+                                    data-part="${partIndex}"
+                                >
+                                    ${part.title}
+                                </button>
+                            `
+                        )
+                        .join("")}
+                </div>
+            </div>
         `
             )
             .join("");
@@ -1613,19 +1639,21 @@ function renderContent(category, searchTerm = "") {
         html = `
         <div class="content-card p-6 md:p-8 mb-6">
             <h2 class="text-3xl font-bold text-gray-800 mb-2 text-center">학습 노트</h2>
-            <p class="text-gray-600 text-center mb-4">학습 자료와 사진사 요약을 선택해서 확인해 보세요.</p>
-            <div class="flex flex-wrap items-center justify-center gap-3 mb-4">
-                ${toggleButtons}
-            </div>
-            <div class="w-full overflow-hidden rounded-xl shadow-lg border border-gray-200" style="height: 80vh;">
-                <iframe
-                    id="studyNotesFrame"
-                    src="${studyNoteSources[0].src}"
-                    title="${studyNoteSources[0].title}"
-                    allowfullscreen
-                    frameborder="0"
-                    style="width: 100%; height: 100%;"
-                ></iframe>
+            <p class="text-gray-600 text-center mb-6">외부 링크 없이 제공 자료를 정리한 교재형 학습 노트입니다. 각 챕터는 3개 파트로 구성되어 수업 보조에 적합합니다.</p>
+            <div class="grid lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-1 space-y-4">${chapterNav}</div>
+                <div class="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <p id="studyNoteChapter" class="text-sm font-semibold text-gray-500">${studyNotesChapters[0].title}</p>
+                            <h3 id="studyNoteTitle" class="text-2xl font-bold text-gray-900">${studyNotesChapters[0].parts[0].title}</h3>
+                        </div>
+                        <span class="inline-flex items-center px-3 py-1 text-xs font-semibold text-gray-700 bg-gray-100 rounded-full border">교재 미리보기</span>
+                    </div>
+                    <div class="flex-1 overflow-y-auto bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div id="studyNoteBody" class="whitespace-pre-wrap text-gray-800 leading-relaxed text-sm md:text-base"></div>
+                    </div>
+                </div>
             </div>
         </div>`;
 
@@ -1725,20 +1753,7 @@ function renderContent(category, searchTerm = "") {
     } else if (category === "quiz") {
         initQuizPage();
     } else if (category === "studyNotes") {
-        const frame = document.getElementById("studyNotesFrame");
-        const toggles = document.querySelectorAll(".note-toggle");
-        toggles.forEach((btn) => {
-            btn.addEventListener("click", () => {
-                toggles.forEach((b) => b.classList.remove("active", "bg-gray-800", "text-white", "shadow-md"));
-                btn.classList.add("active", "bg-gray-800", "text-white", "shadow-md");
-                if (frame && btn.dataset.src) {
-                    frame.src = btn.dataset.src;
-                    if (btn.dataset.title) {
-                        frame.title = btn.dataset.title;
-                    }
-                }
-            });
-        });
+        setupStudyNotes();
     } else if (category !== "home") {
         setupCardFlipListeners();
     }
