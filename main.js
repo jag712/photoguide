@@ -1582,29 +1582,29 @@ function renderContent(category, searchTerm = "") {
             const key = `${year}-${month}`;
             html += createCalendar(year, month, monthlyEvents[key] || {});
         });
-} else if (category === "studyNotes") {
-        const studyNoteSources = [
-            {
-                label: "학습 자료",
-                src: "https://lapis-pufferfish-855.notion.site/ebd/2ba07014e3fd803aa90cf383e137b0a1",
-                title: "학습 자료",
-            },
-            {
-                label: "사진사 요약",
-                src: "https://lapis-pufferfish-855.notion.site/ebd/22407014e3fd8032bb15c18cd6f82ec3",
-                title: "사진사 요약",
-            },
-        ];
-
-        const toggleButtons = studyNoteSources
+    } else if (category === "studyNotes") {
+        const initialChapter = studyNotesChapters[0];
+        const initialPart = initialChapter.parts[0];
+        const chapterButtons = studyNotesChapters
             .map(
-                (note, index) => `
+                (chapter, index) => `
             <button
-                class="note-toggle px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold transition-all ${index === 0 ? "active bg-gray-800 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50"}"
-                data-src="${note.src}"
-                data-title="${note.title}"
+                class="chapter-toggle px-3 py-2 rounded-lg border text-sm font-semibold transition-all ${index === 0 ? "active bg-gray-800 text-white shadow-md border-gray-800" : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"}"
+                data-chapter="${chapter.id}"
             >
-                ${note.label}
+                ${chapter.title}
+            </button>
+        `
+            )
+            .join("");
+        const partButtons = initialChapter.parts
+            .map(
+                (part, index) => `
+            <button
+                class="part-toggle px-3 py-2 rounded-lg border text-xs sm:text-sm font-semibold transition-all ${index === 0 ? "active bg-blue-600 text-white shadow" : "bg-white text-gray-700 hover:bg-blue-50 border-gray-300"}"
+                data-part-index="${index}"
+            >
+                ${part.title}
             </button>
         `
             )
@@ -1613,22 +1613,23 @@ function renderContent(category, searchTerm = "") {
         html = `
         <div class="content-card p-6 md:p-8 mb-6">
             <h2 class="text-3xl font-bold text-gray-800 mb-2 text-center">학습 노트</h2>
-            <p class="text-gray-600 text-center mb-4">학습 자료와 사진사 요약을 선택해서 확인해 보세요.</p>
-            <div class="flex flex-wrap items-center justify-center gap-3 mb-4">
-                ${toggleButtons}
+            <p class="text-gray-600 text-center mb-4">각 챕터를 선택하고 3개의 파트를 오가며 바로 강의할 수 있도록 구성했어요.</p>
+            <div class="flex flex-wrap items-center justify-center gap-2 mb-4">
+                ${chapterButtons}
             </div>
-            <div class="w-full overflow-hidden rounded-xl shadow-lg border border-gray-200" style="height: 80vh;">
-                <iframe
-                    id="studyNotesFrame"
-                    src="${studyNoteSources[0].src}"
-                    title="${studyNoteSources[0].title}"
-                    allowfullscreen
-                    frameborder="0"
-                    style="width: 100%; height: 100%;"
-                ></iframe>
+            <div class="content-card p-4 md:p-6">
+                <div id="studyPartButtons" class="flex flex-wrap gap-2 mb-4 justify-center">
+                    ${partButtons}
+                </div>
+                <div class="study-note-panel">
+                    <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                        <h3 id="studyNotePartTitle" class="text-xl font-bold text-gray-800">${initialPart.title}</h3>
+                        <span id="studyNoteChapterLabel" class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-md">${initialChapter.title}</span>
+                    </div>
+                    <div id="studyNoteContent" class="study-note-body">${formatStudyNoteContent(initialPart.content)}</div>
+                </div>
             </div>
         </div>`;
-
     } else if (category === "visualization") {
         const visualizationContent = [{
             q: "노출의 이해: 조리개와 셔터 속도",
@@ -1725,20 +1726,7 @@ function renderContent(category, searchTerm = "") {
     } else if (category === "quiz") {
         initQuizPage();
     } else if (category === "studyNotes") {
-        const frame = document.getElementById("studyNotesFrame");
-        const toggles = document.querySelectorAll(".note-toggle");
-        toggles.forEach((btn) => {
-            btn.addEventListener("click", () => {
-                toggles.forEach((b) => b.classList.remove("active", "bg-gray-800", "text-white", "shadow-md"));
-                btn.classList.add("active", "bg-gray-800", "text-white", "shadow-md");
-                if (frame && btn.dataset.src) {
-                    frame.src = btn.dataset.src;
-                    if (btn.dataset.title) {
-                        frame.title = btn.dataset.title;
-                    }
-                }
-            });
-        });
+        initializeStudyNotes();
     } else if (category !== "home") {
         setupCardFlipListeners();
     }
@@ -1763,6 +1751,76 @@ function renderContent(category, searchTerm = "") {
             });
         }, 0);
     }
+}
+function formatStudyNoteContent(text) {
+    return `<div class="study-note-surface whitespace-pre-line leading-relaxed">${text}</div>`;
+}
+function initializeStudyNotes() {
+    const studyNoteContent = document.getElementById("studyNoteContent");
+    const studyNoteTitle = document.getElementById("studyNotePartTitle");
+    const studyNoteChapterLabel = document.getElementById("studyNoteChapterLabel");
+    const partButtonsContainer = document.getElementById("studyPartButtons");
+    const chapterButtons = document.querySelectorAll(".chapter-toggle");
+    let activeChapter = studyNotesChapters[0];
+
+    function setActivePart(partIndex) {
+        const part = activeChapter.parts[partIndex];
+        if (!part || !studyNoteContent || !studyNoteTitle) return;
+        studyNoteTitle.textContent = part.title;
+        studyNoteContent.innerHTML = formatStudyNoteContent(part.content);
+        partButtonsContainer?.querySelectorAll(".part-toggle").forEach((btn) => {
+            btn.classList.remove("active", "bg-blue-600", "text-white", "shadow");
+            btn.classList.add("bg-white", "text-gray-700", "border-gray-300");
+            if (Number(btn.dataset.partIndex) === partIndex) {
+                btn.classList.add("active", "bg-blue-600", "text-white", "shadow");
+                btn.classList.remove("bg-white", "text-gray-700", "border-gray-300");
+            }
+        });
+    }
+
+    function renderPartButtons(chapter) {
+        if (!partButtonsContainer) return;
+        partButtonsContainer.innerHTML = chapter.parts
+            .map(
+                (part, index) => `
+            <button
+                class="part-toggle px-3 py-2 rounded-lg border text-xs sm:text-sm font-semibold transition-all ${index === 0 ? "active bg-blue-600 text-white shadow" : "bg-white text-gray-700 hover:bg-blue-50 border-gray-300"}"
+                data-part-index="${index}"
+            >
+                ${part.title}
+            </button>`
+            )
+            .join("");
+        partButtonsContainer.querySelectorAll(".part-toggle").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const index = Number(btn.dataset.partIndex || 0);
+                setActivePart(index);
+            });
+        });
+    }
+
+    function setActiveChapter(chapterId) {
+        const nextChapter = studyNotesChapters.find((chapter) => chapter.id === chapterId) || studyNotesChapters[0];
+        activeChapter = nextChapter;
+        if (studyNoteChapterLabel) {
+            studyNoteChapterLabel.textContent = nextChapter.title;
+        }
+        renderPartButtons(activeChapter);
+        setActivePart(0);
+    }
+
+    chapterButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            chapterButtons.forEach((b) => b.classList.remove("active", "bg-gray-800", "text-white", "shadow-md", "border-gray-800"));
+            chapterButtons.forEach((b) => b.classList.add("bg-white", "text-gray-700", "border-gray-300"));
+            btn.classList.add("active", "bg-gray-800", "text-white", "shadow-md", "border-gray-800");
+            btn.classList.remove("bg-white", "text-gray-700", "border-gray-300");
+            setActiveChapter(btn.dataset.chapter);
+        });
+    });
+
+    renderPartButtons(activeChapter);
+    setActivePart(0);
 }
 function handleNavClick(e) {
     e.preventDefault();
