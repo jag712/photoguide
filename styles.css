@@ -4,6 +4,34 @@ body {
   background-color: #f8f9fa;
   color: #4a4a4a;
 }
+.gesture-underline-layer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 40;
+}
+.gesture-underline-path {
+  stroke: #ef4444;
+  stroke-width: 4;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.9;
+  animation: gesture-underline-fade 3s forwards;
+}
+@keyframes gesture-underline-fade {
+  0% {
+    opacity: 0.9;
+  }
+  85% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
 .nav-item {
   transition: all 0.2s ease-in-out;
 }

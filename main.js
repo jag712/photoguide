@@ -1841,6 +1841,77 @@ function setupGeminiButtons() {
         });
     });
 }
+function setupDragUnderlineOverlay() {
+    const svgNS = "http://www.w3.org/2000/svg";
+    const layer = document.createElementNS(svgNS, "svg");
+    layer.setAttribute("id", "gesture-underline-layer");
+    layer.setAttribute("class", "gesture-underline-layer");
+    layer.setAttribute("aria-hidden", "true");
+    document.body.appendChild(layer);
+
+    const updateSize = () => {
+        layer.setAttribute("width", window.innerWidth);
+        layer.setAttribute("height", window.innerHeight);
+        layer.setAttribute("viewBox", `0 0 ${window.innerWidth} ${window.innerHeight}`);
+    };
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+
+    let activePath = null;
+    let activePoints = [];
+    let activePointerId = null;
+
+    const buildPathData = () => {
+        if (!activePoints.length) return "";
+        const [first, ...rest] = activePoints;
+        return rest.reduce((d, point) => `${d} L ${point.x} ${point.y}`, `M ${first.x} ${first.y}`);
+    };
+
+    const clearActivePath = () => {
+        if (!activePath) return;
+        if (activePoints.length < 2) {
+            activePath.remove();
+        } else {
+            const pathRef = activePath;
+            setTimeout(() => pathRef.remove(), 3200);
+        }
+        activePath = null;
+        activePoints = [];
+        activePointerId = null;
+    };
+
+    const handlePointerDown = (event) => {
+        if (!["mouse", "touch", "pen"].includes(event.pointerType)) return;
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+        if (event.target.closest("input, textarea, button, select, [contenteditable=\"true\"]")) return;
+
+        clearActivePath();
+        activePointerId = event.pointerId;
+        activePoints = [{ x: event.clientX, y: event.clientY }];
+        activePath = document.createElementNS(svgNS, "path");
+        activePath.setAttribute("class", "gesture-underline-path");
+        layer.appendChild(activePath);
+        activePath.setAttribute("d", buildPathData());
+    };
+
+    const handlePointerMove = (event) => {
+        if (!activePath || event.pointerId !== activePointerId) return;
+        activePoints.push({ x: event.clientX, y: event.clientY });
+        activePath.setAttribute("d", buildPathData());
+    };
+
+    const handlePointerEnd = (event) => {
+        if (!activePath || event.pointerId !== activePointerId) return;
+        clearActivePath();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerEnd);
+    document.addEventListener("pointercancel", handlePointerEnd);
+    document.addEventListener("pointerleave", handlePointerEnd);
+}
 function initQuizPage() {
     const quizBtn = document.getElementById("quizBtn");
     const practiceBtn = document.getElementById("practiceBtn");
@@ -1874,4 +1945,5 @@ geminiModal.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !geminiModal.classList.contains("hidden")) hideModal();
 });
+setupDragUnderlineOverlay();
 renderContent("home");
