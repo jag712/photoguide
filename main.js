@@ -205,6 +205,304 @@ const visualizationData = {
     },
 };
 
+const studyNoteChapters = [
+    {
+        title: "Chapter 1. 카메라 기본 & 노출",
+        description: "카메라 구조와 노출 스톱 값을 한눈에 정리해 기초를 탄탄히 잡는 단원입니다.",
+        parts: [
+            {
+                title: "카메라 구조와 시야",
+                summary: "DSLR·RF·TLR·미러리스의 차이와 뷰파인더, 셔터 구조를 비교합니다.",
+                bullets: [
+                    "Canon EOS 5D Mark IV 같은 DSLR은 미러·펜타프리즘으로 상을 바로잡고, 셔터를 누르면 미러가 올라가 센서에 빛이 도달합니다 (약 3,040만 화소 풀프레임).",
+                    "RF 카메라는 거리계 창으로 초점을 맞추며 뷰파인더가 렌즈와 분리돼 시차가 생깁니다. TLR·콤팩트·스마트폰도 뷰파인더 위치 차로 시차 주의가 필요합니다.",
+                    "시야율은 뷰파인더 대비 실제 촬영 영역 비율로 100%에 가까울수록 정확합니다.",
+                    "셔터 종류: 포컬 플레인(고속·플래시 동조 제한), 렌즈 셔터(왜곡 없음·렌즈마다 필요), 전자 셔터(무소음·롤링 왜곡 가능).",
+                    "i(Instantaneous)/b(Bulb)/t(Time) 모드로 셔터 개폐 시간을 다르게 운용하며 장노출에는 b·t 모드를 활용합니다.",
+                ],
+            },
+            {
+                title: "무브먼트와 이미지 서클",
+                summary: "대형 카메라 무브먼트와 이미지 서클 개념으로 초점·왜곡을 다루는 방법을 정리합니다.",
+                bullets: [
+                    "무브먼트: 라이즈/폴(상하 구도), 쉬프트(좌우 구도), 틸트·스윙(초점면 기울이기)로 구도와 왜곡을 보정합니다.",
+                    "이미지 서클은 렌즈가 만드는 선명한 원형상입니다. 센서보다 크면 무브먼트 여유가 생기고, 작으면 가장자리 어둡거나 잘리는 이미지 커버리지 부족이 발생합니다.",
+                    "비네팅은 광학 설계·필터 중첩·서클 부족 등으로 모서리가 어두워지는 현상이며 연출 효과로도 활용됩니다.",
+                    "샤임플러그 법칙: 렌즈면·필름면·초점면이 한 선상에서 만나면 전체에 초점이 맞습니다. 틸트/스윙 시 피사계 심도를 확장할 수 있습니다.",
+                    "소형(35mm 이하), 중형(6×4.5~6×9cm), 대형(4×5인치 이상)은 크기와 무브먼트 가능 여부, 화질에서 차이가 납니다.",
+                ],
+            },
+            {
+                title: "노출 스톱과 조리개/셔터",
+                summary: "스톱 단위와 셔터·조리개 값을 표준 순서로 정리합니다.",
+                bullets: [
+                    "스톱은 노출량을 두 배/절반으로 바꾸는 기본 단위입니다.",
+                    "셔터 1스톱 값: 1s→1/2→1/4→1/8→1/15→1/30→1/60→1/125→1/250→1/500→1/1000→1/2000→1/4000→1/8000, 디지털 카메라 대부분 1/8000s 지원.",
+                    "셔터 1/3스톱 값은 1s부터 1/8000s까지 세밀히 배치되어 1/3단계로 노출을 조정합니다.",
+                    "조리개는 빛의 양과 심도를 동시에 조절하는 원형 구멍입니다. 표준 1스톱 값: f/1→f/1.4→f/2→f/2.8→f/4→f/5.6→f/8→f/11→f/16→f/22→f/32→f/45→f/64→f/90→f/128.",
+                    "회절로 인해 f/16~22 이후에는 해상도가 떨어질 수 있으므로 f/5.6~f/11 근처가 선명도의 균형점입니다.",
+                ],
+            },
+        ],
+    },
+    {
+        title: "Chapter 2. 장비 및 기초 촬영 이론",
+        description: "렌즈 선택, 초점거리, 심도·수차 등 장비 운용의 핵심을 3파트로 묶었습니다.",
+        parts: [
+            {
+                title: "렌즈 선택과 초점거리",
+                summary: "표준 줌·단렌즈 밝기와 초점거리 효과를 정리합니다.",
+                bullets: [
+                    "Canon EF 24-70mm f/2.8L II는 전 구간 f/2.8 고정으로 기동성과 해상력이 균형 잡힌 표준 줌입니다.",
+                    "초점거리는 렌즈 제2주점부터 센서까지의 거리로, 길수록 화각이 좁아지고 망원 압축이 생기며 짧을수록 광각 원근감이 강조됩니다.",
+                    "원근감을 강조하려면 광각을 사용하고 가까운 피사체를 크게 배치하며 조리개를 조여 깊은 심도를 확보합니다.",
+                    "표준렌즈: 35mm 포맷 50mm, 중형 6×4.5는 75mm, 6×6은 80mm, 6×7은 90mm, 대형 4×5는 150mm, 8×10은 300mm가 일반적입니다.",
+                    "조리개 표기는 초점거리÷구경이며 f/2.8 같은 낮은 수치일수록 밝아 어두운 환경에서 유리합니다.",
+                ],
+            },
+            {
+                title: "심도와 수차 관리",
+                summary: "광각·망원 특성, 피사계 심도와 수차를 줄이는 방법을 모았습니다.",
+                bullets: [
+                    "광각은 화각이 넓고 심도가 깊으며 원근감이 강합니다. 망원은 화각이 좁고 배경 압축·얕은 심도를 제공합니다.",
+                    "피사계 심도를 깊게 하려면 조리개를 조이고, 초점거리를 줄이며, 피사체와 거리를 늘립니다.",
+                    "자이델 5수차(구면·코마·비점·상면만곡·왜곡)와 색수차가 대표적이며, 비구면/저분산 렌즈와 조리개 조임으로 보정합니다.",
+                    "비네팅은 렌즈 구조·필터 중첩·이미지 서클 부족으로 발생하며 광각·개방에서 두드러집니다.",
+                    "장파장은 굴절률이 작고 단파장은 크므로 색수차가 생기며, ED/L 렌즈 등이 이를 줄입니다.",
+                ],
+            },
+            {
+                title: "특수 렌즈와 초점 기법",
+                summary: "시프트, 매크로, 어안, 연초점 렌즈와 접사·초점 기법을 정리합니다.",
+                bullets: [
+                    "시프트 렌즈는 카메라 위치를 바꾸지 않고 렌즈를 평행 이동해 건축물 수직선을 보정합니다.",
+                    "매크로 렌즈는 1:1 배율 접사가 가능하며 접사 필터·튜브·벨로우즈·리버스 링으로도 접사 확장이 가능합니다.",
+                    "어안렌즈는 최대 180° 광각과 강한 왜곡으로 과장된 공간감을 만듭니다. 연초점렌즈는 일부러 소프트 포커스를 남깁니다.",
+                    "과초점거리는 무한대까지 선명해지는 가장 가까운 거리이며, 그보다 멀리 맞추면 전방~무한대가 선명합니다.",
+                    "존 포커싱은 피사계 심도를 활용해 미리 거리 영역을 설정하고 빠르게 촬영하는 기법입니다.",
+                ],
+            },
+        ],
+    },
+    {
+        title: "Chapter 3. 노출",
+        description: "노출 이론, 측광 방식, 존 시스템을 수업용으로 바로 볼 수 있게 묶었습니다.",
+        parts: [
+            {
+                title: "노출 이론 핵심",
+                summary: "EI, 노출 모드, 상반법칙을 중심으로 개념을 정리합니다.",
+                bullets: [
+                    "E.I는 현상·촬영 조건에 맞춰 촬영자가 재설정하는 감도로, 제조사 ISO 대신 실제 조건에 맞는 기준을 만듭니다.",
+                    "조리개 우선은 심도 우선, 셔터 우선은 움직임 표현 우선입니다.",
+                    "등가노출/상반법칙: 조리개와 셔터 시간을 바꿔도 빛의 양이 같으면 같은 밝기가 됩니다 (예: f/8 1/125s = f/5.6 1/250s).",
+                    "상반칙 불궤는 매우 짧거나 긴 노출에서 필름 반응이 직선적이지 않은 현상이며, S타입(밝은 환경)·L타입(어두운 환경) 필름이 보정합니다.",
+                    "노출은 센서·필름에 도달하는 빛의 총량이며 조리개·셔터·ISO로 조절합니다.",
+                ],
+            },
+            {
+                title: "측광과 카드 활용",
+                summary: "TTL 모드와 그레이·화이트 카드 사용법을 바로 제시합니다.",
+                bullets: [
+                    "Canon 5D Mark IV의 TTL 모드는 평가·중앙중점·부분(6.5%)·스팟(1.5%) 측광을 제공합니다.",
+                    "평가측광은 대부분 상황에, 스팟·부분 측광은 역광이나 특정 지점 노출에 유리합니다.",
+                    "반사식 노출계는 피사체 반사광을, 입사식은 피사체에 도달하는 광량을 직접 측정합니다. 풍경은 반사식, 조명 세팅은 입사식이 정확합니다.",
+                    "그레이카드는 18% 반사율로 바로 측정, 화이트카드는 +2 1/3스톱, 손바닥은 +1스톱 보정해 측정합니다.",
+                    "그레이카드를 피사체와 같은 빛에 두고 그림자 없이 프레임 가득 채워 측정합니다.",
+                ],
+            },
+            {
+                title: "존 시스템과 적정 노출",
+                summary: "존 0~10의 밝기 구간을 활용해 노출 판단을 연습합니다.",
+                bullets: [
+                    "존 시스템은 0(완전 검정)~10(완전 백) 11단계로 나누며 존5는 중간회색, 존3은 질감 있는 암부, 존7은 질감 있는 명부입니다.",
+                    "디테일이 보이는 영역은 보통 존2~존8이며, 그 이하·이상은 뭉개질 수 있습니다.",
+                    "존 시스템은 반사식 노출계가 모든 피사체를 존5로 본다는 점을 보정해 실제 밝기에 맞춰 -2스톱(암부)·+2스톱(명부)을 조정합니다.",
+                    "과다 노출은 하이라이트 디테일 손실, 부족 노출은 암부 디테일 손실을 초래합니다.",
+                    "노출은 촬영 시, 노광은 인화 시 사용하는 용어로 맥락은 다르지만 빛을 주는 원리는 같습니다.",
+                ],
+            },
+        ],
+    },
+    {
+        title: "Chapter 4. 필름",
+        description: "필름·감광유제 특성, 컬러/포지티브 차이, 특성곡선을 3파트로 요약했습니다.",
+        parts: [
+            {
+                title: "필름과 감광유제",
+                summary: "필름 구조와 감도·관용도·입상성 등 표현 특성을 정리합니다.",
+                bullets: [
+                    "필름은 감광유제를 플라스틱 기재에 도포한 감광재로 흑백·컬러, 네거티브·포지티브가 있습니다.",
+                    "감도는 빛 반응 민감도이며 높을수록 어두운 곳에 유리하나 입상성이 거칠어지고 콘트라스트는 낮습니다.",
+                    "관용도는 과·부족 노출 허용 범위로 네거티브가 포지티브보다, 고감도가 저감도보다 넓습니다.",
+                    "입상성은 은입자의 크기·분포, 해상력은 mm당 선 수 표현 능력이며 감도가 낮을수록 일반적으로 좋습니다.",
+                    "감색성: 청감성(짧은 파장), 정색성(파~노랑), 전정색성(가시광 전 영역)으로 빛 파장 반응 범위를 나눕니다.",
+                ],
+            },
+            {
+                title: "필름 종류와 현상 프로세스",
+                summary: "컬러 네거티브·포지티브 차이와 C-41/E-6/K-14 개념을 묶었습니다.",
+                bullets: [
+                    "컬러 네거티브는 색·명암이 반전되어 관용도 넓고 콘트라스트 낮으며 C-41(발색→표백→정착)로 현상합니다.",
+                    "포지티브(슬라이드/리버설)는 촬영 색이 그대로 기록돼 바로 볼 수 있고 관용도가 좁으며 E-6(흑백 1차→반전→발색→표백→정착)로 현상합니다.",
+                    "C-41은 Kodak의 41번째 컬러 네거티브 프로세스, E-6은 Ektachrome 6번째 표준, K-14는 Kodachrome 전용(현재 단종)입니다.",
+                    "포지티브 필름은 슬라이드 프로젝터로 직접 투사할 수 있어 교육·원고용에 쓰입니다.",
+                    "감도 400 필름은 100 필름보다 2스톱 빠른 셔터/조리개가 가능하지만 입상성·해상력에서 손해가 있습니다.",
+                ],
+            },
+            {
+                title: "특성곡선과 콘트라스트",
+                summary: "D-logE 곡선과 감마/CI, 색온도 기본을 수업용으로 정리했습니다.",
+                bullets: [
+                    "특성곡선은 노출(logE) 대비 농도(D)를 표현하며 베이스+포그→발(Toe)→직선부→어깨→솔라리제이션 구간으로 나뉩니다.",
+                    "감마는 직선부 기울기로 콘트라스트를 나타내고, CI는 곡선 전체 평균 기울기로 일관된 콘트라스트 지표를 제공합니다.",
+                    "포그는 약품·광선 누출·보관 문제로 생기는 불필요한 흑화로 화질을 저하시킵니다.",
+                    "색온도는 빛의 색을 K로 나타내며 일출/일몰 약 2000K, 정오 태양 5400~6000K, 흐린 날 7500K 이상입니다.",
+                    "조도는 피사체에 비추는 빛, 휘도는 반사되어 눈/센서로 들어오는 빛입니다.",
+                ],
+            },
+        ],
+    },
+    {
+        title: "Chapter 5. 필름 II & 컬러",
+        description: "색온도 보정, 필름 관리, 상반칙 불궤 보정까지 현장에서 바로 참고할 수 있습니다.",
+        parts: [
+            {
+                title: "색온도와 필터 보정",
+                summary: "광원별 색 편차와 필터 보정법을 정리합니다.",
+                bullets: [
+                    "형광등은 녹색 성분이 강해 사진이 녹색끼를 띠므로 FL 또는 CC 30~40M 필터로 보정합니다.",
+                    "D타입(주광) 필름을 텅스텐광(3200~3400K)에서 사용하면 붉어지므로 80계열(80A)로 색온도를 올립니다.",
+                    "T타입(텅스텐) 필름을 태양광에서 쓰면 푸르게 떠서 85계열(85B)로 내려줍니다.",
+                    "색온도 예시: 촛불 1000~2000K, 텅스텐 2800~3200K, 형광등 4000~5000K(종류별 차), LED는 2700~6500K까지 다양.",
+                    "색온도계는 광원 색을 측정해 화이트밸런스·필터 선택을 정확히 합니다.",
+                ],
+            },
+            {
+                title: "필름 관리와 코드",
+                summary: "할레이션 방지층부터 DX 코드, 특수 필름 정보를 모았습니다.",
+                bullets: [
+                    "할레이션 방지층은 베이스 반사를 막아 재감광을 방지하고, 안티컬링층이 말림을 억제합니다.",
+                    "유제면은 거칠고 긁히며 빛에 민감하고, 베이스면은 짙고 매끄럽습니다.",
+                    "DX코드는 35mm 카트리지 외부 금속 접점으로 감도·매수·관용도를 카메라에 전달합니다.",
+                    "유제번호는 생산 로트를 알려 동일 조건 결과 확인과 유통기한 확인에 쓰입니다. 잠상퇴행을 막으려면 촬영 후 빨리 현상합니다.",
+                    "A타입(3400K)·B타입(3200K) 텅스텐 슬라이드, T(텅스텐)·L(장노출 보정) 타입, 크로마제닉 흑백 필름(C-41 사용) 등 특수 타입을 구분합니다.",
+                ],
+            },
+            {
+                title: "상반칙 불궤 보정 필름",
+                summary: "장·단노출 보정용 필름과 디지털 컬러 관리 기초를 소개합니다.",
+                bullets: [
+                    "상반칙 불궤는 노출 시간과 감광 효과가 비례하지 않는 현상으로 장노출은 노출 부족, 초고속은 과다/색 틀어짐이 발생합니다.",
+                    "L타입 필름은 1초 이상 장노출에서도 색·노출 안정성을 높이고, S타입은 1/1000s 이하 고속에서 상반칙 불궤를 줄입니다.",
+                    "CMS(Color Management System)는 장비 간 색 일치를 위한 시스템이며, 캘리브레이션으로 모니터 색 오차를 보정합니다.",
+                    "색공간은 sRGB(웹), Adobe RGB(인쇄), P3(영상) 등 장치 의존형과 CIE Lab/XYZ 같은 장치 독립형으로 나뉩니다.",
+                    "ICC 프로파일은 장치 색 특성을 기록한 표준 파일로 프로세스/제너릭/커스텀 프로파일을 활용합니다.",
+                ],
+            },
+        ],
+    },
+    {
+        title: "Chapter 6. 필터",
+        description: "필터 원리, ND·PL·색보정 필터를 선생님이 바로 설명할 수 있게 묶었습니다.",
+        parts: [
+            {
+                title: "필터 원리와 ND/PL",
+                summary: "필터 계수, ND·PL 정의를 정리합니다.",
+                bullets: [
+                    "필터는 동일 계열 색을 통과시키고 보색을 흡수합니다. TTL 노출계는 필터 계수를 자동 보정해 별도 계산이 필요 없습니다.",
+                    "ND(Neutral Density)는 색 변화 없이 광량만 줄이며 ND400은 약 1/400(8⅔스톱)로 줄여 장노출/개방 촬영에 씁니다.",
+                    "PL은 금속 제외 반사를 줄이고 채도를 높이며, 태양 90° 방향에서 하늘을, 약 50°에서 유리·수면 반사를 효과적으로 제거합니다.",
+                    "CPL은 원형 편광으로 DSLR/미러리스 AF·측광에 안전하며, LPL(선형)은 대형·수동 카메라에 적합합니다.",
+                    "PL 사용 시 보통 1~2스톱 노출 보정이 필요하며 ND·PL은 중성 회색을 띱니다.",
+                ],
+            },
+            {
+                title: "필터 활용과 헤이즈 감소",
+                summary: "가변 ND, UV/스카이라이트, 헤이즈 컷 필터 활용을 정리합니다.",
+                bullets: [
+                    "가변 ND는 편광 필터 두 장을 겹쳐 광량을 조절하지만 X자 밴딩·색 틀어짐이 생길 수 있습니다.",
+                    "UV 필터는 자외선 차단으로 원경 헤이즈를 줄였으나 디지털은 내장 차단이 많아 현재는 렌즈 보호용으로 사용합니다.",
+                    "헤이즈 컷은 UV/근적외선을 막아 원경 푸른 기운을 줄이고, 스카이라이트는 옅은 마젠타로 하늘 푸른빛을 줄여 색 균형을 맞춥니다.",
+                    "ND는 헤이즈를 직접 줄이진 않지만 장노출로 부드러운 표현을 만들며, PL은 산란광을 없애 하늘을 진하게 만들어 헤이즈 개선에 가장 효과적입니다.",
+                    "흑백 인화용 다계조 필터는 옐로(소프트)·마젠타(하드) 조합으로 한 장의 인화지에서 여러 콘트라스트를 만듭니다.",
+                ],
+            },
+            {
+                title: "색보정과 흑백 대비 필터",
+                summary: "CC/LB 필터, 흑백 대비 필터, 필름 내부 필터를 묶었습니다.",
+                bullets: [
+                    "색온도 변환(CC) 필터는 큰 색온도 차(예: 80A, 85B)를, 색온도 조정(LB) 필터는 미세 차이를 보정합니다.",
+                    "흑백 사진에서 옐로/오렌지/레드 필터는 푸른 하늘을 점점 더 어둡게 만들어 구름 대비를 높입니다.",
+                    "컬러 사진에서는 CC/LB/FL/헤이즈 컷 필터가 주로 사용됩니다.",
+                    "컬러 네거티브 필름의 오렌지 마스킹은 색 상쇄로 정확한 재현을 돕고, 옐로우 방지층은 블루 광이 하단층에 닿지 않게 막습니다.",
+                    "UV·스카이라이트·ND·PL·클로즈업 필터 등은 필름/디지털 공통으로 사용할 수 있습니다.",
+                ],
+            },
+        ],
+    },
+    {
+        title: "Chapter 7. 현상·인화·조명",
+        description: "현상/인화 프로세스와 출력·조명 기본을 교재 화면으로 제공합니다.",
+        parts: [
+            {
+                title: "필름 현상 흐름",
+                summary: "흑백 현상 단계와 증감, 컬러 프로세스를 한눈에 볼 수 있습니다.",
+                bullets: [
+                    "흑백 네거티브: 현상→중간정지→정착→수세→포토플로→건조 순으로 진행하며 현상에서 노광된 할로겐화은이 은으로 환원됩니다.",
+                    "현상 과다는 하이라이트 디테일 손실·입자 거칠어짐, 부족은 밀도 부족·콘트라스트 저하를 낳습니다.",
+                    "증감현상(푸시)은 현상 시간을 늘려 노출 부족을 보완하지만 콘트라스트·입자 증가가 있습니다.",
+                    "C-41 컬러 네거티브: 발색→표백→정착→세정→안정, E-6 슬라이드: 1차 흑백→반전→발색→표백→정착→수세 순입니다.",
+                    "솔라리제이션은 과도한 초기 노출로 전체 반전, 사바티에 효과는 현상 중 재노광으로 윤곽이 반전 강조됩니다.",
+                ],
+            },
+            {
+                title: "인화와 톤 조절",
+                summary: "인화지 종류와 버닝/닷징 등 암실 기법을 정리합니다.",
+                bullets: [
+                    "RC 인화지는 수지 코팅으로 처리·건조가 빠르지만 계조가 상대적으로 얕고 보존성은 FB보다 떨어집니다. FB는 계조·보존성이 우수하나 처리 시간이 길고 컬링이 생길 수 있습니다.",
+                    "다계조 인화지는 낮은/높은 콘트라스트 유제층이 함께 있어 필터로 콘트라스트를 조절하며, 필터 없이 사용 시 약 2.5호 정도입니다.",
+                    "4호 필터 이상은 필터 밀도로 빛이 반감되어 노광을 두 배로 늘려야 합니다. 호수지는 번호가 높을수록 콘트라스트가 강합니다.",
+                    "버닝은 특정 영역 노광 추가(하이라이트 디테일), 닷징은 노광 차단(섀도우 디테일)으로 톤을 조절합니다.",
+                    "포토그램(카메라 없이 물체+빛)·스팟팅(흰점 메우기)·엣칭(검은점 긁기) 등 마무리/실험 기법을 활용할 수 있습니다.",
+                ],
+            },
+            {
+                title: "출력과 조명 기본",
+                summary: "디지털 출력 장치와 조명 세팅 핵심을 함께 정리했습니다.",
+                bullets: [
+                    "디지털 프린터: 디지털 C-프린터(약품 관리 필요·저렴), 잉크젯(용지 다양·보존성 우수), 염료승화, 레이저가 있으며 안료 잉크는 정확·보존성이 높고, 염료는 색역이 넓으나 수분에 약합니다.",
+                    "스캐너는 평판·필름·드럼·가상 드럼 등으로 아날로그 이미지를 디지털화합니다.",
+                    "주조명은 분위기와 그림자를 만들고 보조조명은 그림자를 완화합니다. 조명비 2:1(1스톱)은 부드럽고 8:1(3스톱)은 드라마틱합니다.",
+                    "직사광은 강한 대비·짙은 그림자, 확산광은 부드러운 톤을 만듭니다. 역광은 실루엣, 정면광은 평면적, 측광은 질감 표현, 45° 사광은 자연스러운 입체감을 줍니다.",
+                    "플래시는 색온도 약 5500K, 가이드 넘버 GN=f값×거리로 계산하며, 빛은 거리 제곱에 반비례합니다. Canon EOS 5D Mark IV 동조 한계는 1/200s입니다.",
+                ],
+            },
+        ],
+    },
+];
+
+const renderStudyNoteParts = (chapter) => {
+    if (!chapter) return "";
+    return chapter.parts
+        .map(
+            (part, index) => `
+        <div class="study-note-card bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
+            <div class="flex items-start justify-between mb-2">
+                <div>
+                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Part ${index + 1}</div>
+                    <h3 class="text-lg font-bold text-gray-800">${part.title}</h3>
+                </div>
+                <span class="text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-700">현장 정리</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">${part.summary}</p>
+            <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                ${part.bullets.map((bullet) => `<li>${bullet}</li>`).join("")}
+            </ul>
+        </div>`
+        )
+        .join("");
+};
+
 const pickRandom = (arr, n) => {
     const copy = [...arr];
     const result = [];
@@ -1583,49 +1881,40 @@ function renderContent(category, searchTerm = "") {
             html += createCalendar(year, month, monthlyEvents[key] || {});
         });
 } else if (category === "studyNotes") {
-        const studyNoteSources = [
-            {
-                label: "학습 자료",
-                src: "https://lapis-pufferfish-855.notion.site/ebd/2ba07014e3fd803aa90cf383e137b0a1",
-                title: "학습 자료",
-            },
-            {
-                label: "사진사 요약",
-                src: "https://lapis-pufferfish-855.notion.site/ebd/22407014e3fd8032bb15c18cd6f82ec3",
-                title: "사진사 요약",
-            },
-        ];
-
-        const toggleButtons = studyNoteSources
+        const initialChapter = studyNoteChapters[0];
+        const chapterButtons = studyNoteChapters
             .map(
-                (note, index) => `
-            <button
-                class="note-toggle px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold transition-all ${index === 0 ? "active bg-gray-800 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50"}"
-                data-src="${note.src}"
-                data-title="${note.title}"
-            >
-                ${note.label}
-            </button>
-        `
+                (chapter, index) => `
+                <button
+                    class="chapter-tab w-full text-left px-4 py-3 rounded-lg border transition-all ${index === 0
+                        ? "bg-gray-800 text-white border-transparent shadow-md"
+                        : "bg-white text-gray-800 border-gray-200 hover:bg-gray-50"}
+                    data-index="${index}"
+                >
+                    <div class="font-semibold">${chapter.title}</div>
+                    <p class="text-xs ${index === 0 ? "text-gray-100" : "text-gray-500"}">파트 ${chapter.parts.length}개 요약</p>
+                </button>`
             )
             .join("");
 
         html = `
         <div class="content-card p-6 md:p-8 mb-6">
             <h2 class="text-3xl font-bold text-gray-800 mb-2 text-center">학습 노트</h2>
-            <p class="text-gray-600 text-center mb-4">학습 자료와 사진사 요약을 선택해서 확인해 보세요.</p>
-            <div class="flex flex-wrap items-center justify-center gap-3 mb-4">
-                ${toggleButtons}
-            </div>
-            <div class="w-full overflow-hidden rounded-xl shadow-lg border border-gray-200" style="height: 80vh;">
-                <iframe
-                    id="studyNotesFrame"
-                    src="${studyNoteSources[0].src}"
-                    title="${studyNoteSources[0].title}"
-                    allowfullscreen
-                    frameborder="0"
-                    style="width: 100%; height: 100%;"
-                ></iframe>
+            <p class="text-gray-600 text-center mb-6">각 챕터를 선택하면 세 개 파트로 정리된 교재 화면이 나타납니다. 옆에서 수업하며 바로 설명하세요.</p>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-4 space-y-2">
+                    ${chapterButtons}
+                </div>
+                <div class="lg:col-span-8 space-y-3">
+                    <div class="rounded-xl bg-gray-50 border border-gray-200 p-4">
+                        <p class="text-xs font-semibold text-gray-500 uppercase">현재 선택</p>
+                        <h3 class="text-xl font-bold text-gray-900" id="studyNoteActiveTitle">${initialChapter.title}</h3>
+                        <p class="text-sm text-gray-600" id="studyNoteActiveDescription">${initialChapter.description}</p>
+                    </div>
+                    <div id="studyNoteDetail" class="overflow-y-auto pr-1" style="max-height: 70vh;">
+                        ${renderStudyNoteParts(initialChapter)}
+                    </div>
+                </div>
             </div>
         </div>`;
 
@@ -1725,20 +2014,35 @@ function renderContent(category, searchTerm = "") {
     } else if (category === "quiz") {
         initQuizPage();
     } else if (category === "studyNotes") {
-        const frame = document.getElementById("studyNotesFrame");
-        const toggles = document.querySelectorAll(".note-toggle");
-        toggles.forEach((btn) => {
+        const detail = document.getElementById("studyNoteDetail");
+        const titleEl = document.getElementById("studyNoteActiveTitle");
+        const descEl = document.getElementById("studyNoteActiveDescription");
+        const chapterTabs = document.querySelectorAll(".chapter-tab");
+
+        const renderChapter = (index) => {
+            const chapter = studyNoteChapters[index];
+            if (!chapter) return;
+            if (titleEl) titleEl.textContent = chapter.title;
+            if (descEl) descEl.textContent = chapter.description;
+            if (detail) {
+                detail.innerHTML = renderStudyNoteParts(chapter);
+                detail.scrollTop = 0;
+            }
+        };
+
+        chapterTabs.forEach((btn) => {
             btn.addEventListener("click", () => {
-                toggles.forEach((b) => b.classList.remove("active", "bg-gray-800", "text-white", "shadow-md"));
-                btn.classList.add("active", "bg-gray-800", "text-white", "shadow-md");
-                if (frame && btn.dataset.src) {
-                    frame.src = btn.dataset.src;
-                    if (btn.dataset.title) {
-                        frame.title = btn.dataset.title;
-                    }
-                }
+                chapterTabs.forEach((tab) => {
+                    tab.classList.remove("bg-gray-800", "text-white", "border-transparent", "shadow-md");
+                    tab.classList.add("bg-white", "text-gray-800", "border-gray-200");
+                });
+                btn.classList.remove("bg-white", "text-gray-800", "border-gray-200");
+                btn.classList.add("bg-gray-800", "text-white", "border-transparent", "shadow-md");
+                const index = Number(btn.dataset.index || 0);
+                renderChapter(index);
             });
         });
+
     } else if (category !== "home") {
         setupCardFlipListeners();
     }
