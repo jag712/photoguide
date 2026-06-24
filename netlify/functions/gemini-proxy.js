@@ -1,5 +1,3 @@
-// netlify/functions/gemini-proxy.js
-const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
   // CORS 예외 처리 및 POST 요청 검증
