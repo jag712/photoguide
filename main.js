@@ -30,35 +30,6 @@ function getKoreanHolidays(year) {
     ];
 }
 
-function getAdmissionEventDefinitions(currentYear, nextYear) {
-    return [
-        {
-            start: new Date(currentYear, 11, 29),
-            end: new Date(currentYear, 11, 31),
-            title: "경일 원서접수",
-            color: "bg-purple-600",
-        },
-        {
-            start: new Date(currentYear, 11, 29),
-            end: new Date(nextYear, 0, 14),
-            title: "서울예대 원서접수",
-            color: "bg-yellow-500",
-        },
-        {
-            start: new Date(nextYear, 0, 13),
-            end: new Date(nextYear, 0, 13),
-            title: "경일 정시 면접",
-            color: "bg-purple-700",
-        },
-        {
-            start: new Date(nextYear, 0, 19),
-            end: new Date(nextYear, 0, 23),
-            title: "예대 정시 주간",
-            color: "bg-yellow-600",
-        },
-    ];
-}
-
 function buildMonthlyEvents(monthsToShow) {
     const today = new Date();
     const currentYear = today.getFullYear();
@@ -73,7 +44,6 @@ function buildMonthlyEvents(monthsToShow) {
     const allEvents = [
         ...getKoreanHolidays(currentYear),
         ...getKoreanHolidays(nextYear),
-        ...getAdmissionEventDefinitions(currentYear, nextYear),
     ];
 
     allEvents.forEach((event) => {
