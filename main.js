@@ -552,7 +552,11 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
                 if (attempt <= MAX_RETRIES) {
                     controller = new AbortController();
                     clearInterval(iconChangeInterval);
-                    showModal(title, `<p class="text-red-500">네트워크 오류가 발생했습니다. 재시도 중... (${attempt}/${MAX_RETRIES})</p>`, true, abort);
+                    // 💡 안내 메시지를 변경하고, 아래에 2초 대기 코드를 추가했습니다.
+                    showModal(title, `<p class="text-red-500">네트워크 지연이 발생했습니다. 2초 후 재시도 중... (${attempt}/${MAX_RETRIES})</p>`, true, abort);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
                     continue;
                 }
                 console.error("Gemini proxy call error:", error);
