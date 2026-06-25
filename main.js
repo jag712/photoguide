@@ -464,7 +464,7 @@ function hideModal() {
 }
 
 function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
-    const MAX_RETRIES = 2;
+    const MAX_RETRIES = 0; // 429 연속 발생 방지: 재시도 없이 즉시 안내
     let attempt = 0;
     let controller = new AbortController();
     let abortedByUser = false;
@@ -522,6 +522,12 @@ function callGemini(prompt, useSchema = false, title = "AI 응답 생성 중") {
             });
             clearTimeout(timeoutId);
             if (!response.ok) {
+                if (response.status === 429) {
+                    clearInterval(iconChangeInterval);
+                    hideModal();
+                    showModal('요청 한도 초과', `<p class="text-yellow-600 font-semibold">⚠️ AI 요청이 너무 많습니다.</p><p class="text-sm text-gray-600 mt-2">잠시 후(1~2분) 다시 시도해 주세요.</p>`, false);
+                    return null;
+                }
                 throw new Error(`프록시 호출 실패. 상태 코드: ${response.status}`);
             }
             const result = await response.json();
@@ -1694,7 +1700,20 @@ function renderContent(category, searchTerm = "") {
         if (searchTerm) {
             const jamoSearch = typeof Jamo !== "undefined" ? Jamo.jamo(searchTerm.toLowerCase()) : "";
             const allData = Object.values(photographyData).flat();
-            itemsToRender = allData.filter((item) => item && item.q && (item.q.toLowerCase().includes(searchTerm.toLowerCase()) || item.a.toLowerCase().includes(searchTerm.toLowerCase()) || (item.keywords && item.keywords.toLowerCase().includes(searchTerm.toLowerCase())) || (jamoSearch && (Jamo.jamo(item.q.toLowerCase()).includes(jamoSearch) || (item.keywords && Jamo.jamo(item.keywords.toLowerCase()).includes(jamoSearch))))));
+            itemsToRender = allData.filter((item) => {
+                if (!item || !item.q) return false;
+                const q = item.q.toLowerCase();
+                const a = (item.a || "").toLowerCase();
+                const kw = (item.keywords || "").toLowerCase();
+                const term = searchTerm.toLowerCase();
+                if (q.includes(term) || a.includes(term) || kw.includes(term)) return true;
+                if (jamoSearch && typeof Jamo !== "undefined") {
+                    try {
+                        return Jamo.jamo(q).includes(jamoSearch) || (item.keywords && Jamo.jamo(kw).includes(jamoSearch));
+                    } catch (e) { return false; }
+                }
+                return false;
+            });
         } else {
             itemsToRender = photographyData[category] || [];
         }
@@ -1812,6 +1831,9 @@ function setupGeminiButtons() {
     document.querySelectorAll(".gemini-btn").forEach((btn) => {
         btn.addEventListener("click", async (e) => {
             e.stopPropagation();
+            // 중복 클릭 방지: 이미 요청 중이면 무시
+            if (e.currentTarget.dataset.loading === "true") return;
+            e.currentTarget.dataset.loading = "true";
             const { action, q: question, a: answer } = e.currentTarget.dataset;
             if (!question || !answer) {
                 console.error("Missing data on Gemini button", e.currentTarget);
@@ -1842,6 +1864,8 @@ function setupGeminiButtons() {
                     writeGeminiCache(cacheKey, responseText);
                 }
             }
+            // 요청 완료 후 플래그 해제
+            e.currentTarget.dataset.loading = "false";
         });
     });
 }
