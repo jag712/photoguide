@@ -21,19 +21,10 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="antialiased">
-    <header class="top-header">
-      <nav class="top-header-inner">
-        <div class="top-header-row">
-          <a href="#" id="homeLink" data-category="home" class="brand-mark">
-            <span class="brand-badge"><i class="fas fa-aperture"></i></span>
-            <span class="brand-title">쮸쀼의 비밀교실</span>
-          </a>
-          <div class="top-search">
-            <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" placeholder="용어 검색..." />
-          </div>
-        </div>
-        <div class="top-nav">
+    <header class="mag-header">
+      <nav class="mag-nav">
+        <a href="#" id="homeLink" data-category="home" class="mag-wordmark">쮸쀼의 비밀교실</a>
+        <div class="mag-nav-links">
           <a href="#" class="nav-item active" data-category="home">남은 일정</a>
           <a href="#" class="nav-item" data-category="visualization">시각화</a>
           <a href="#" class="nav-item" data-category="studyNotes">학습 노트</a>
@@ -46,6 +37,8 @@
           <a href="#" class="nav-item" data-category="lighting">조명과 필터</a>
           <a href="#" class="nav-item" data-category="history">사진사 & 사조</a>
           <a href="#" class="nav-item" data-category="quiz">퀴즈</a>
+          <span class="mag-search-icon"><i class="fas fa-search"></i></span>
+          <input type="text" id="searchInput" placeholder="용어 검색..." class="mag-search-input" />
         </div>
       </nav>
     </header>
