@@ -1557,7 +1557,21 @@ function renderContent(category, searchTerm = "") {
     if (category === "home") {
         const monthsToShow = getUpcomingMonthsUntilNextJanuary();
         const monthlyEvents = buildMonthlyEvents(monthsToShow);
-        html = `<div class="content-card p-6 md:p-8 mb-6 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">오늘부터 내년 1월까지 입시 일정과 공휴일</p></div>`;
+                const dashboardTiles = [
+            { n: "01", label: "시각화", cat: "visualization" },
+            { n: "02", label: "학습 노트", cat: "studyNotes" },
+            { n: "03", label: "CMS 가이드", cat: "cms" },
+            { n: "04", label: "카메라 구조와 원리", cat: "structure" },
+            { n: "05", label: "노출", cat: "exposure" },
+            { n: "06", label: "렌즈와 광학", cat: "lens" },
+            { n: "07", label: "디지털", cat: "digital" },
+            { n: "08", label: "필름 현상 인화", cat: "film" },
+            { n: "09", label: "조명과 필터", cat: "lighting" },
+            { n: "10", label: "사진사 & 사조", cat: "history" },
+            { n: "11", label: "퀴즈", cat: "quiz", cta: true },
+        ];
+        const tilesHtml = dashboardTiles.map(t => `<a href="#" class="dashboard-tile${t.cta ? " dashboard-tile-cta" : ""}" data-category="${t.cat}"><span class="dashboard-tile-num">${t.n}</span><span class="dashboard-tile-label">${t.label}</span></a>`).join("");
+        html = `<div class="dashboard-header"><h2 class="brand-title">오늘의 콘택트시트</h2><span class="dashboard-header-date">${new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}</span></div><div class="dashboard-grid">${tilesHtml}</div><div class="content-card p-6 md:p-8 mb-6 mt-8 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">오늘부터 내년 1월까지 입시 일정과 공휴일</p></div>`;
         monthsToShow.forEach(({ year, month }) => {
             const key = `${year}-${month}`;
             html += createCalendar(year, month, monthlyEvents[key] || {});
@@ -1768,6 +1782,19 @@ function handleNavClick(e) {
     renderContent(category);
 }
 document.querySelectorAll("nav a").forEach((link) => link.addEventListener("click", handleNavClick));
+mainContent.addEventListener("click", (e) => {
+    const tile = e.target.closest(".dashboard-tile");
+    if (!tile) return;
+    e.preventDefault();
+    const targetNavLink = document.querySelector(`nav a[data-category="${tile.dataset.category}"]`);
+    if (targetNavLink) {
+        targetNavLink.click();
+    } else {
+        searchInput.value = "";
+        document.querySelectorAll("nav a").forEach((link) => link.classList.remove("active"));
+        renderContent(tile.dataset.category);
+    }
+});
 searchInput.addEventListener("input", () => {
     const searchTerm = searchInput.value;
     if (searchTerm.length > 0) {
