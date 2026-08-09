@@ -185,6 +185,68 @@ body {
   border-color: var(--text-muted);
 }
 
+/* --- 용어 인덱스 리스트 --- */
+.term-count {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+.term-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 0.5px solid var(--border);
+  border-left: 0.5px solid var(--border);
+}
+.term-item {
+  padding: 14px 16px;
+  border-right: 0.5px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.term-item:hover {
+  background-color: var(--accent-soft);
+}
+.term-item.active {
+  background-color: var(--accent-soft);
+}
+.term-item-num {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.term-item.active .term-item-num {
+  color: var(--accent);
+}
+.term-item-q {
+  font-size: 14px;
+  color: var(--text);
+  margin-top: 4px;
+}
+.term-detail {
+  margin-top: 14px;
+  padding: 16px;
+  background-color: var(--accent-soft);
+  border-left: 2px solid var(--accent);
+}
+.term-detail-label {
+  font-size: 10px;
+  color: var(--accent);
+}
+.term-detail-text {
+  font-size: 13px;
+  color: var(--text);
+  margin-top: 6px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.term-detail-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* --- 아코디언 UI 스타일 (시각화, CMS 페이지용) --- */
 .question {
   cursor: pointer;

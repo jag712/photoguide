@@ -1530,20 +1530,25 @@ function createChart(canvasId, label, data, backgroundColor, borderColor) {
     });
 }
 
-function setupCardFlipListeners() {
-    const cards = document.querySelectorAll(".quiz-card");
-    cards.forEach((card) => {
-        card.addEventListener("click", (e) => {
-            if (e.target.closest(".gemini-btn")) {
-                return;
-            }
-            const wasFlipped = card.classList.contains("is-flipped");
-            cards.forEach((c) => c.classList.remove("is-flipped"));
-            if (!wasFlipped) {
-                card.classList.add("is-flipped");
-            }
-        });
+function setupTermListListeners() {
+    const grid = document.getElementById("termGrid");
+    const detail = document.getElementById("termDetail");
+    if (!grid || !detail) return;
+    const items = window.__currentTermItems || [];
+    grid.addEventListener("click", (e) => {
+        const el = e.target.closest(".term-item");
+        if (!el) return;
+        const idx = Number(el.dataset.idx);
+        const item = items[idx];
+        if (!item) return;
+        grid.querySelectorAll(".term-item").forEach((n) => n.classList.remove("active"));
+        el.classList.add("active");
+        const num = String(idx + 1).padStart(2, "0");
+        detail.innerHTML = `<div class="term-detail-label">${num} · ${item.q}</div><div class="term-detail-text">${item.a.replace(/\n/g, "<br>")}</div><div class="term-detail-actions"><button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${item.q.replace(/"/g, "&quot;")}" data-a="${item.a.replace(/"/g, "&quot;")}">쉽게 설명</button><button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${item.q.replace(/"/g, "&quot;")}" data-a="${item.a.replace(/"/g, "&quot;")}">깊이 알아보기</button></div>`;
+        detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        setupGeminiButtons();
     });
+    grid.querySelectorAll(".term-item")[0]?.classList.add("active");
 }
 
 function renderContent(category, searchTerm = "") {
@@ -1700,25 +1705,11 @@ function renderContent(category, searchTerm = "") {
             itemsToRender = photographyData[category] || [];
         }
         if (itemsToRender.length > 0) {
-            const cardsHtml = itemsToRender.map((item) => `
-                <div class="quiz-card">
-                    <div class="quiz-card-inner">
-                        <div class="quiz-card-front">
-                            <h3 class="quiz-card-question">${item.q}</h3>
-                        </div>
-                        <div class="quiz-card-back">
-                            <div class="quiz-card-answer-text">
-                                <p>${item.a.replace(/\n/g, "<br>")}</p>
-                            </div>
-                            <div class="mt-4 flex flex-wrap gap-2 justify-center">
-                                <button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${item.q.replace(/"/g, "&quot;")}" data-a="${item.a.replace(/"/g, "&quot;")}">✨ 쉽게 설명</button>
-                                <button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${item.q.replace(/"/g, "&quot;")}" data-a="${item.a.replace(/"/g, "&quot;")}">✨ 깊이 알아보기</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join("");
-            html = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">${cardsHtml}</div>`;
+            const itemsHtml = itemsToRender.map((item, idx) => `<div class="term-item" data-idx="${idx}"><div class="term-item-num">${String(idx + 1).padStart(2, "0")}</div><div class="term-item-q">${item.q}</div></div>`).join("");
+            const num = String(1).padStart(2, "0");
+            const detailHtml = `<div class="term-detail" id="termDetail"><div class="term-detail-label">${num} · ${itemsToRender[0].q}</div><div class="term-detail-text">${itemsToRender[0].a.replace(/\n/g, "<br>")}</div><div class="term-detail-actions"><button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${itemsToRender[0].q.replace(/"/g, "&quot;")}" data-a="${itemsToRender[0].a.replace(/"/g, "&quot;")}">쉽게 설명</button><button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${itemsToRender[0].q.replace(/"/g, "&quot;")}" data-a="${itemsToRender[0].a.replace(/"/g, "&quot;")}">깊이 알아보기</button></div></div>`;
+            html = `<div class="term-count">${category ? "" : "검색 결과 · "}${itemsToRender.length}개 항목</div><div class="term-grid" id="termGrid">${itemsHtml}</div>${detailHtml}`;
+            window.__currentTermItems = itemsToRender;
         } else {
             const categoryTitle = document.querySelector(`[data-category="${category}"]`)?.textContent || "콘텐츠";
             html = `<div class="content-card p-8 text-center"><h2 class="text-2xl font-bold text-gray-800 mb-4">검색 결과 없음 😢</h2><p class="text-gray-600">'<span id="search-term">${searchTerm}</span>'에 대한 검색 결과를 찾을 수 없습니다.</p><p class="mt-4 text-sm text-gray-500">오타를 확인하시거나 다른 검색어로 다시 시도해 보세요.</p></div>`;
@@ -1745,7 +1736,7 @@ function renderContent(category, searchTerm = "") {
             });
         });
     } else if (category !== "home") {
-        setupCardFlipListeners();
+        setupTermListListeners();
     }
     setupGeminiButtons();
     if (category === "visualization") {
