@@ -185,7 +185,7 @@ body {
   border-color: var(--text-muted);
 }
 
-/* --- 용어 인덱스 리스트 --- */
+/* --- 용어 타일 그리드 --- */
 .term-count {
   font-size: 11px;
   letter-spacing: 0.03em;
@@ -194,54 +194,69 @@ body {
 }
 .term-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-top: 0.5px solid var(--border);
-  border-left: 0.5px solid var(--border);
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
 }
-.term-item {
-  padding: 14px 16px;
-  border-right: 0.5px solid var(--border);
-  border-bottom: 0.5px solid var(--border);
+@media (max-width: 640px) {
+  .term-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.term-tile {
   cursor: pointer;
-  transition: background-color 0.15s ease;
 }
-.term-item:hover {
-  background-color: var(--accent-soft);
+.term-tile-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 2px;
 }
-.term-item.active {
-  background-color: var(--accent-soft);
-}
-.term-item-num {
+.term-tile-label {
   font-size: 10px;
-  color: var(--text-muted);
-}
-.term-item.active .term-item-num {
-  color: var(--accent);
-}
-.term-item-q {
-  font-size: 14px;
+  letter-spacing: 0.02em;
   color: var(--text);
-  margin-top: 4px;
+  padding: 8px 2px;
+  line-height: 1.4;
+}
+.term-tile.active .term-tile-label {
+  color: var(--accent-dark);
 }
 .term-detail {
-  margin-top: 14px;
-  padding: 16px;
-  background-color: var(--accent-soft);
-  border-left: 2px solid var(--accent);
+  margin-top: 24px;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+@media (max-width: 640px) {
+  .term-detail {
+    flex-direction: column;
+  }
+}
+.term-detail-image {
+  width: 160px;
+  aspect-ratio: 1 / 1;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 .term-detail-label {
   font-size: 10px;
-  color: var(--accent);
+  letter-spacing: 0.03em;
+  color: var(--accent-dark);
+}
+.term-detail-title {
+  font-family: "Noto Serif KR", serif;
+  font-size: 19px;
+  color: var(--text);
+  margin-top: 6px;
 }
 .term-detail-text {
   font-size: 13px;
-  color: var(--text);
-  margin-top: 6px;
-  line-height: 1.7;
+  color: var(--text-secondary);
+  margin-top: 10px;
+  line-height: 1.75;
   white-space: pre-wrap;
 }
 .term-detail-actions {
-  margin-top: 12px;
+  margin-top: 14px;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
