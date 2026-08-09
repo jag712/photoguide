@@ -1557,21 +1557,19 @@ function renderContent(category, searchTerm = "") {
     if (category === "home") {
         const monthsToShow = getUpcomingMonthsUntilNextJanuary();
         const monthlyEvents = buildMonthlyEvents(monthsToShow);
-                const dashboardTiles = [
-            { n: "01", label: "시각화", cat: "visualization" },
-            { n: "02", label: "학습 노트", cat: "studyNotes" },
-            { n: "03", label: "CMS 가이드", cat: "cms" },
-            { n: "04", label: "카메라 구조와 원리", cat: "structure" },
-            { n: "05", label: "노출", cat: "exposure" },
-            { n: "06", label: "렌즈와 광학", cat: "lens" },
-            { n: "07", label: "디지털", cat: "digital" },
-            { n: "08", label: "필름 현상 인화", cat: "film" },
-            { n: "09", label: "조명과 필터", cat: "lighting" },
-            { n: "10", label: "사진사 & 사조", cat: "history" },
-            { n: "11", label: "퀴즈", cat: "quiz", cta: true },
+        const magItems = [
+            { cat: "카메라 구조와 원리", title: "AF와 MF, 초점을 맞추는 두 방식", key: "structure", color: "#c7d3d9" },
+            { cat: "노출", title: "조리개, 셔터, 감도 — 빛을 통제하는 세 손잡이", key: "exposure", color: "#3a5a78" },
+            { cat: "렌즈와 광학", title: "초점거리가 화각을 결정하는 법", key: "lens", color: "#5b7a8c" },
+            { cat: "디지털", title: "센서와 픽셀, 디지털 이미지의 기초", key: "digital", color: "#7d93a0" },
+            { cat: "필름 현상 인화", title: "암실에서 이미지가 떠오르는 순간", key: "film", color: "#1f2b33" },
+            { cat: "조명과 필터", title: "빛을 조각하는 도구들", key: "lighting", color: "#4a6b74" },
+            { cat: "사진사 & 사조", title: "카메라 너머의 시선들", key: "history", color: "#2f6f6a" },
+            { cat: "퀴즈", title: "오늘 배운 내용, 바로 점검하기", key: "quiz", color: "#264653" },
         ];
-        const tilesHtml = dashboardTiles.map(t => `<a href="#" class="dashboard-tile${t.cta ? " dashboard-tile-cta" : ""}" data-category="${t.cat}"><span class="dashboard-tile-num">${t.n}</span><span class="dashboard-tile-label">${t.label}</span></a>`).join("");
-        html = `<div class="dashboard-header"><h2 class="brand-title">오늘의 콘택트시트</h2><span class="dashboard-header-date">${new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}</span></div><div class="dashboard-grid">${tilesHtml}</div><div class="content-card p-6 md:p-8 mb-6 mt-8 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">오늘부터 내년 1월까지 입시 일정과 공휴일</p></div>`;
+        const featured = magItems[1];
+        const gridHtml = magItems.filter(i => i !== featured).map(i => `<a href="#" class="mag-card" data-category="${i.key}"><div class="mag-card-image" style="background-color:${i.color};"></div><div class="mag-card-cat">${i.cat}</div><div class="mag-card-title">${i.title}</div></a>`).join("");
+        html = `<div><div class="mag-hero-image" style="background-color:${featured.color};"></div><div class="mag-eyebrow">${featured.cat} · 실기 가이드</div><h2 class="mag-headline">${featured.title}</h2><p class="mag-excerpt">노출의 삼각형은 사진의 밝기를 결정짓는 세 요소가 어떻게 서로를 보완하는지를 보여준다. 이 관계를 이해하는 순간부터 카메라는 도구가 아니라 표현의 언어가 된다.</p><a href="#" class="mag-readmore" data-category="${featured.key}">더 읽기</a></div><div class="mag-section-label">최신 학습 콘텐츠</div><div class="mag-grid">${gridHtml}</div><div class="content-card p-6 md:p-8 mb-6 mt-10 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">오늘부터 내년 1월까지 입시 일정과 공휴일</p></div>`;
         monthsToShow.forEach(({ year, month }) => {
             const key = `${year}-${month}`;
             html += createCalendar(year, month, monthlyEvents[key] || {});
@@ -1783,7 +1781,7 @@ function handleNavClick(e) {
 }
 document.querySelectorAll("nav a").forEach((link) => link.addEventListener("click", handleNavClick));
 mainContent.addEventListener("click", (e) => {
-    const tile = e.target.closest(".dashboard-tile");
+    const tile = e.target.closest(".dashboard-tile, .mag-card, .mag-readmore");
     if (!tile) return;
     e.preventDefault();
     const targetNavLink = document.querySelector(`nav a[data-category="${tile.dataset.category}"]`);
