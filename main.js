@@ -1530,20 +1530,28 @@ function createChart(canvasId, label, data, backgroundColor, borderColor) {
     });
 }
 
-function setupCardFlipListeners() {
-    const cards = document.querySelectorAll(".quiz-card");
-    cards.forEach((card) => {
-        card.addEventListener("click", (e) => {
-            if (e.target.closest(".gemini-btn")) {
-                return;
-            }
-            const wasFlipped = card.classList.contains("is-flipped");
-            cards.forEach((c) => c.classList.remove("is-flipped"));
-            if (!wasFlipped) {
-                card.classList.add("is-flipped");
-            }
-        });
+function setupTermListListeners() {
+    const grid = document.getElementById("termGrid");
+    const detail = document.getElementById("termDetail");
+    if (!grid || !detail) return;
+    const items = window.__currentTermItems || [];
+    const palette = window.__currentTermPalette || ["#3a5a78"];
+    grid.addEventListener("click", (e) => {
+        const el = e.target.closest(".term-tile");
+        if (!el) return;
+        const idx = Number(el.dataset.idx);
+        const item = items[idx];
+        if (!item) return;
+        grid.querySelectorAll(".term-tile").forEach((n) => n.classList.remove("active"));
+        el.classList.add("active");
+        const num = String(idx + 1).padStart(2, "0");
+        const color = palette[idx % palette.length];
+        detail.dataset.idx = String(idx);
+        detail.innerHTML = `<div class="term-detail-image" style="background-color:${color};"></div><div><div class="term-detail-label">${num} · 용어 설명</div><div class="term-detail-title">${item.q}</div><div class="term-detail-text">${item.a.replace(/\n/g, "<br>")}</div><div class="term-detail-actions"><button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${item.q.replace(/"/g, "&quot;")}" data-a="${item.a.replace(/"/g, "&quot;")}">쉽게 설명</button><button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${item.q.replace(/"/g, "&quot;")}" data-a="${item.a.replace(/"/g, "&quot;")}">깊이 알아보기</button></div></div>`;
+        detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        setupGeminiButtons();
     });
+    grid.querySelectorAll(".term-tile")[0]?.classList.add("active");
 }
 
 function renderContent(category, searchTerm = "") {
@@ -1557,7 +1565,19 @@ function renderContent(category, searchTerm = "") {
     if (category === "home") {
         const monthsToShow = getUpcomingMonthsUntilNextJanuary();
         const monthlyEvents = buildMonthlyEvents(monthsToShow);
-        html = `<div class="content-card p-6 md:p-8 mb-6 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">오늘부터 내년 1월까지 입시 일정과 공휴일</p></div>`;
+        const magItems = [
+            { cat: "카메라 구조와 원리", title: "AF와 MF, 초점을 맞추는 두 방식", key: "structure", color: "#c7d3d9" },
+            { cat: "노출", title: "조리개, 셔터, 감도 — 빛을 통제하는 세 손잡이", key: "exposure", color: "#3a5a78" },
+            { cat: "렌즈와 광학", title: "초점거리가 화각을 결정하는 법", key: "lens", color: "#5b7a8c" },
+            { cat: "디지털", title: "센서와 픽셀, 디지털 이미지의 기초", key: "digital", color: "#7d93a0" },
+            { cat: "필름 현상 인화", title: "암실에서 이미지가 떠오르는 순간", key: "film", color: "#1f2b33" },
+            { cat: "조명과 필터", title: "빛을 조각하는 도구들", key: "lighting", color: "#4a6b74" },
+            { cat: "사진사 & 사조", title: "카메라 너머의 시선들", key: "history", color: "#2f6f6a" },
+            { cat: "퀴즈", title: "오늘 배운 내용, 바로 점검하기", key: "quiz", color: "#264653" },
+        ];
+        const featured = magItems[1];
+        const gridHtml = magItems.filter(i => i !== featured).map(i => `<a href="#" class="mag-card" data-category="${i.key}"><div class="mag-card-image" style="background-color:${i.color};"></div><div class="mag-card-cat">${i.cat}</div><div class="mag-card-title">${i.title}</div></a>`).join("");
+        html = `<div><div class="mag-hero-image" style="background-color:${featured.color};"></div><div class="mag-eyebrow">${featured.cat} · 실기 가이드</div><h2 class="mag-headline">${featured.title}</h2><p class="mag-excerpt">노출의 삼각형은 사진의 밝기를 결정짓는 세 요소가 어떻게 서로를 보완하는지를 보여준다. 이 관계를 이해하는 순간부터 카메라는 도구가 아니라 표현의 언어가 된다.</p><a href="#" class="mag-readmore" data-category="${featured.key}">더 읽기</a></div><div class="mag-section-label">최신 학습 콘텐츠</div><div class="mag-grid">${gridHtml}</div><div class="content-card p-6 md:p-8 mb-6 mt-10 text-center"><h2 class="text-3xl font-bold text-gray-800 mb-2">주요 학사 일정 ✨</h2><p class="text-gray-600">오늘부터 내년 1월까지 입시 일정과 공휴일</p></div>`;
         monthsToShow.forEach(({ year, month }) => {
             const key = `${year}-${month}`;
             html += createCalendar(year, month, monthlyEvents[key] || {});
@@ -1688,25 +1708,13 @@ function renderContent(category, searchTerm = "") {
             itemsToRender = photographyData[category] || [];
         }
         if (itemsToRender.length > 0) {
-            const cardsHtml = itemsToRender.map((item) => `
-                <div class="quiz-card">
-                    <div class="quiz-card-inner">
-                        <div class="quiz-card-front">
-                            <h3 class="quiz-card-question">${item.q}</h3>
-                        </div>
-                        <div class="quiz-card-back">
-                            <div class="quiz-card-answer-text">
-                                <p>${item.a.replace(/\n/g, "<br>")}</p>
-                            </div>
-                            <div class="mt-4 flex flex-wrap gap-2 justify-center">
-                                <button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${item.q.replace(/"/g, "&quot;")}" data-a="${item.a.replace(/"/g, "&quot;")}">✨ 쉽게 설명</button>
-                                <button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${item.q.replace(/"/g, "&quot;")}" data-a="${item.a.replace(/"/g, "&quot;")}">✨ 깊이 알아보기</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join("");
-            html = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">${cardsHtml}</div>`;
+            const tilePalette = ["#3a5a78", "#5b7a8c", "#7d93a0", "#c2571b", "#1f2b33", "#4a6b74", "#2f6f6a", "#264653"];
+            const itemsHtml = itemsToRender.map((item, idx) => `<div class="term-tile" data-idx="${idx}"><div class="term-tile-image" style="background-color:${tilePalette[idx % tilePalette.length]};"></div><div class="term-tile-label">${item.q}</div></div>`).join("");
+            const first = itemsToRender[0];
+            const detailHtml = `<div class="term-detail" id="termDetail" data-idx="0"><div class="term-detail-image" style="background-color:${tilePalette[0]};"></div><div><div class="term-detail-label">01 · 용어 설명</div><div class="term-detail-title">${first.q}</div><div class="term-detail-text">${first.a.replace(/\n/g, "<br>")}</div><div class="term-detail-actions"><button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="explain" data-q="${first.q.replace(/"/g, "&quot;")}" data-a="${first.a.replace(/"/g, "&quot;")}">쉽게 설명</button><button class="gemini-btn text-xs font-semibold py-1 px-3 rounded-full" data-action="deepen" data-q="${first.q.replace(/"/g, "&quot;")}" data-a="${first.a.replace(/"/g, "&quot;")}">깊이 알아보기</button></div></div></div>`;
+            html = `<div class="term-count">${searchTerm ? "검색 결과 · " : ""}${itemsToRender.length}개 항목</div><div class="term-grid" id="termGrid">${itemsHtml}</div>${detailHtml}`;
+            window.__currentTermItems = itemsToRender;
+            window.__currentTermPalette = tilePalette;
         } else {
             const categoryTitle = document.querySelector(`[data-category="${category}"]`)?.textContent || "콘텐츠";
             html = `<div class="content-card p-8 text-center"><h2 class="text-2xl font-bold text-gray-800 mb-4">검색 결과 없음 😢</h2><p class="text-gray-600">'<span id="search-term">${searchTerm}</span>'에 대한 검색 결과를 찾을 수 없습니다.</p><p class="mt-4 text-sm text-gray-500">오타를 확인하시거나 다른 검색어로 다시 시도해 보세요.</p></div>`;
@@ -1733,7 +1741,7 @@ function renderContent(category, searchTerm = "") {
             });
         });
     } else if (category !== "home") {
-        setupCardFlipListeners();
+        setupTermListListeners();
     }
     setupGeminiButtons();
     if (category === "visualization") {
@@ -1768,6 +1776,19 @@ function handleNavClick(e) {
     renderContent(category);
 }
 document.querySelectorAll("nav a").forEach((link) => link.addEventListener("click", handleNavClick));
+mainContent.addEventListener("click", (e) => {
+    const tile = e.target.closest(".dashboard-tile, .mag-card, .mag-readmore");
+    if (!tile) return;
+    e.preventDefault();
+    const targetNavLink = document.querySelector(`nav a[data-category="${tile.dataset.category}"]`);
+    if (targetNavLink) {
+        targetNavLink.click();
+    } else {
+        searchInput.value = "";
+        document.querySelectorAll("nav a").forEach((link) => link.classList.remove("active"));
+        renderContent(tile.dataset.category);
+    }
+});
 searchInput.addEventListener("input", () => {
     const searchTerm = searchInput.value;
     if (searchTerm.length > 0) {
