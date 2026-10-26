@@ -1,1 +1,5 @@
+# Serve the service-worker kill switch directly. Browsers refuse a
+# service worker script behind a redirect, so without this rule old
+# installs never receive the kill switch and keep their cached app.
+/service-worker.js  /service-worker.js  200!
 /*  https://lucida.friendkim.com/  301!
